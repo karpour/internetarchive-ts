@@ -1,0 +1,21 @@
+{
+  "name": "internetarchive-ts",
+  "version": "0.1.0",
+  "description": "Archive.org API wrapper written in Typescript",
+  "main": "/dist/InternetArchive.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "archive.org",
+    "internet",
+    "archive",
+    "api"
+  ],
+  "author": "Thomas Novotny",
+  "license": "ISC",
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}
