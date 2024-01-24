@@ -2,8 +2,6 @@
  * Common request options
  * See {@link https://archive.org/developers/md-read.html#common-options}
  */
-
-
 export type IaReadRequestCommonOptions = {
     /**
      * Only return the item’s PRIMARY server in the server field

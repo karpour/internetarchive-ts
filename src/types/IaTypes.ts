@@ -2,6 +2,8 @@
 
 // Utility types
 
+import { IaTaskPriority } from "./IaTask";
+
 export type NoUnderscoreString<T extends string> =
   T extends `${infer Prefix}_${infer Suffix}` ?
   `${Prefix}--${NoUnderscoreString<Suffix>}`
@@ -11,22 +13,82 @@ export type RecursivePartial<T> = {
   [P in keyof T]?: RecursivePartial<T[P]>;
 };
 
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
 
+export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
+
+
+// Metadata types
+
+export type RawMetadata<T extends IaBaseMetadataType> = { [K in keyof T]: StringOrStringArray<T[K]>; };
+
+export type RawMetadataOptional<T extends Record<string, any> | undefined> = T extends undefined ? { [K in keyof T]: StringOrStringArray<T[K]>; } | undefined : { [K in keyof T]: StringOrStringArray<T[K]>; };
+
+
+export type IaMetadataValidFieldType = string | number | undefined | boolean;
+
+export type IaBaseMetadataType = {
+  [key: string]: IaMetadataValidFieldType | string[];
+};
+
+export type IaRawMetadataType = {
+  [key: string]: string | string[];
+};
+
+export type IaRawRawMetadataType = {
+  [key: string]: string;
+};
+
+export type IaMetadataRaw<T extends IaBaseMetadataType> = {
+  [K in keyof T]: T[K] extends IaMetadataValidFieldType ? `${T[K]}` : (T[K] extends string[] ? T[K] : never);
+} & {};
+
+export type IaPatchData = ({
+  '-patch': string;
+  '-target': IaRequestTarget,
+} | {
+  '-changes': string;
+}) & {
+  'priority': IaTaskPriority,
+};
+
+export const IA_CURATION_STATES = ["dark", "approved", "freeze", "un-dark"] as const;
+
+export type IaCurationState = typeof IA_CURATION_STATES[number];
+
+export type IaCuration = `[curator]${string}[/curator][date]${string}[/date]${`[state]${IaCurationState}[/state]` | ''}[comment]${string}[/comment]`;
+
+export type IaParsedCuration<T extends IaCuration> = Prettify<T extends `[curator]${infer Curator extends string}[/curator][date]${string}[/date]${`[state]${infer State extends string}[/state]` | ''}[comment]${infer Comment extends string}[/comment]` ?
+  {
+    curator: Curator,
+    date: Date,
+    comment: Comment;
+  } & (State extends IaCurationState ?
+    { state: State; } :
+    { state: undefined; }
+  ) : never>;
+
+
+// Types for testing
+
+type AssertEqual<T, U> = (<G>() => G extends T ? 1 : 2) extends (<G>() => G extends U ? 1 : 2) ? T : never;
+
+/** Trigger a compiler error when a value is _not_ an exact type. */
+declare const exactType: <T, U>(draft: T & AssertEqual<T, U>, expected: U) => U;
+
+// HTTP Types
 
 /** HTTP Methods used in this library */
 export type HttpMethod = 'GET' | 'OPTIONS' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-export type IaHeaderMetaEntry<T extends string, V extends string> = `x-archive-meta-${NoUnderscoreString<T>}:${V}`;
 
 
-function replaceUnderScores<T extends string>(str: T): NoUnderscoreString<T> {
+export function replaceUnderScores<T extends string>(str: T): NoUnderscoreString<T> {
   return str.replaceAll('_', "--") as NoUnderscoreString<T>;
 }
 
-function createIaHeaderMetaEntry<K extends string, V extends string>(key: K, value: V): IaHeaderMetaEntry<K, V> {
-  // TODO replace newlines, trim
-  return `x-archive-meta-${replaceUnderScores(key)}:${value}`;
-}
 
 type IaAuthHeader<A extends string, S extends string> = { Authorization: `LOW ${A}:${S}`; };
 
@@ -297,11 +359,6 @@ export type IaGetTasksBasicParams = {
 
   cursor?: string;
 };
-
-export type Prettify<T> = {
-  [k in keyof T]: T[k];
-} & {};
-
 /**
  * Get Tasks Query Parameters
  * See {@link https://archive.org/services/docs/api/tasks.html}
@@ -378,13 +435,16 @@ export type HttpParams = Record<string, string>;
 // TODO
 export type IaUserInfo = Record<string, string>;
 
-export type IaRequestTarget = 'metadata' | 'files' | string;
+
+export type IaMetadataRequestTarget = "metadata";
+export type IaFileRequestTarget = `files/${string}`;
+export type IaCustomJsonRequestTarget = string;
+
+export type IaRequestTarget = IaMetadataRequestTarget | IaFileRequestTarget | IaCustomJsonRequestTarget;
 
 export type StringOrStringArray<T> = T extends any[] ? string | string[] : string;
 
-export type RawMetadata<T extends Record<string, any> | undefined> = { [K in keyof T]: StringOrStringArray<T[K]>; };
 
-export type RawMetadataOptional<T extends Record<string, any> | undefined> = T extends undefined ? { [K in keyof T]: StringOrStringArray<T[K]>; } | undefined : { [K in keyof T]: StringOrStringArray<T[K]>; };
 
 export type IaFixerOp = string;
 

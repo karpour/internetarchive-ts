@@ -1,10 +1,11 @@
-import { IaItemData, IaItemMetadata, IaRequestTarget, IaTaskPriority } from "../types";
+import { IaBaseMetadataType, IaItemData, IaItemMetadata, IaRequestTarget, IaTaskPriority } from "../types";
 import IaRequest from "./IaRequest";
+import { prepareFilesPatch } from "./prepareFilesPatch";
 import preparePatch from "./preparePatch";
+import { prepareTargetPatch } from "./prepareTargetPatch";
 
 
 class IaMetadataRequest extends IaRequest {
-
     public constructor() {
         super((() => {
             return {
@@ -13,24 +14,22 @@ class IaMetadataRequest extends IaRequest {
             };
         })());
     }
-
-
-
 }
 
-export type IaPatchData = ({
-    '-patch': string
-    '-target': IaRequestTarget,
-} | {
-    '-changes': string
-}) & {
-    'priority': IaTaskPriority,
+
+
+
+export function validateMetadata(metadata: object): asserts metadata is IaBaseMetadataType {
+    return true;
 }
 
+type IaMultiMetadata = {
+    [target in IaRequestTarget]: IaBaseMetadataType
+}
 
 function prepareBody(
     url: string,
-    metadata: IaItemMetadata | IaMultiMetadata,
+    metadata: IaMultiMetadata,
     sourceMetadata: IaItemData,
     target: IaRequestTarget,
     priority: IaTaskPriority = -5,
@@ -42,14 +41,15 @@ function prepareBody(
     // Write to many targets
     let patch: any;
     let data:IaPatchData;
-    if (validateMetadataArray(metadata)) {
+    if (validateMetadata(metadata)) {
         const changes: any[] = [];
 
-        for (let key in Object.keys(metadata)) {
+        for (const entry in Object.entries(metadata)) {
+            const [key, metadata] = entry
             if (key == 'metadata') {
                 try {
                     patch = preparePatch({
-                        metadata: metadata[key],
+                        metadata: metadata,
                         sourceMetadata: sourceMetadata.metadata,
                         append,
                         appendList,
@@ -68,14 +68,13 @@ function prepareBody(
                     insert
                 });
             } else {
-                key = key.split('/')[0];
                 patch = prepareTargetPatch({
                     metadata,
                     sourceMetadata,
                     append,
                     target,
                     appendList,
-                    key,
+                    key: key.split('/')[0],
                     insert
                 });
             }

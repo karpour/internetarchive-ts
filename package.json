@@ -15,7 +15,6 @@
   "author": "Thomas Novotny",
   "license": "ISC",
   "dependencies": {
-  },
-  "devDependencies": {
+    "rfc6902": "^5.1.1"
   }
 }

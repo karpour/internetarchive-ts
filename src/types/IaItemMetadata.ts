@@ -19,13 +19,12 @@ export type IaItemBaseMetadata = {
 };
 
 export type IaItemMetadata = IaItemBaseMetadata & {
-
     // Optional fields
     /** Date of publication */
     date?: string;
     /** Title of media */
     title?: string;
-    /** Describes the media stored in the item. */
+    /** Describes the media stored in the item. Description can contain HTML */
     description?: string;
     /** Email address of the account that uploaded the item to archive.org. */
     uploader?: string;
@@ -38,9 +37,10 @@ export type IaItemMetadata = IaItemBaseMetadata & {
     /** The language the media is written or recorded in. */
     language?: string | string[];
     /** The date and time in UTC that the media was captured. */
-    scandate?: Date;
-    /** Imagecount gives an indication of the size of the content of an item (outside of file size, which is represented in the size field). Originally used only for books, the field has been repurposed over time to provide similar information for other mediatypes. */
-    imagecount?: number;
+    scandate?: string;
+    /** Imagecount gives an indication of the size of the content of an item (outside of file size, which is represented in the size field). 
+     * Originally used only for books, the field has been repurposed over time to provide similar information for other mediatypes. */
+    imagecount?: string;
     /** The person or organization that funded the digitization or collection of this media. */
     sponsor?: string;
     /** Machinery used to digitize or collect the media */
@@ -48,7 +48,7 @@ export type IaItemMetadata = IaItemBaseMetadata & {
     /** Source of media */
     source?: string;
     /** Indicates the current state of a scanned book. */
-    repub_state?: number;
+    repub_state?: string;
     /** Collection contents are restricted access */
     access_restricted?: string;
     /** Collection file formats that are available to users in an Access Restricted collection */
@@ -194,7 +194,7 @@ export type IaItemMetadata = IaItemBaseMetadata & {
     /**  */
     segments?: string;
     /**  */
-    numeric_id?: number; //conv
+    numeric_id?: string; //conv
 
     /**  */
     type?: string;
@@ -205,7 +205,7 @@ export type IaItemMetadata = IaItemBaseMetadata & {
     /**  */
     backup_location?: string;
     /** */
-    year?: number;
+    year?: string;
 
     search_collection?: string;
 
