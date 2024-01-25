@@ -26,7 +26,6 @@ export type RawMetadata<T extends IaBaseMetadataType> = { [K in keyof T]: String
 
 export type RawMetadataOptional<T extends Record<string, any> | undefined> = T extends undefined ? { [K in keyof T]: StringOrStringArray<T[K]>; } | undefined : { [K in keyof T]: StringOrStringArray<T[K]>; };
 
-
 export type IaMetadataValidFieldType = string | number | undefined | boolean;
 
 export type IaBaseMetadataType = {
@@ -126,74 +125,44 @@ type IaSortOptionsType = {
   readonly [key: string]: IaSortOption;
 };
 
-export enum IaSortOptions {
-  __random_desc = "__random desc",
-  __random_asc = "__random asc",
-  __sort_desc = "__sort desc",
-  __sort_asc = "__sort asc",
-  addeddate_desc = "addeddate desc",
-  addeddate_asc = "addeddate asc",
-  avg_rating_desc = "avg_rating desc",
-  avg_rating_asc = "avg_rating asc",
-  call_number_desc = "call_number desc",
-  call_number_asc = "call_number asc",
-  createdate_desc = "createdate desc",
-  createdate_asc = "createdate asc",
-  creatorSorter_desc = "creatorSorter desc",
-  creatorSorter_asc = "creatorSorter asc",
-  creatorSorterRaw_desc = "creatorSorterRaw desc",
-  creatorSorterRaw_asc = "creatorSorterRaw asc",
-  date_desc = "date desc",
-  date_asc = "date asc",
-  downloads_desc = "downloads desc",
-  downloads_asc = "downloads asc",
-  foldoutcount_desc = "foldoutcount desc",
-  foldoutcount_asc = "foldoutcount asc",
-  headerImage_desc = "headerImage desc",
-  headerImage_asc = "headerImage asc",
-  identifier_desc = "identifier desc",
-  identifier_asc = "identifier asc",
-  identifierSorter_desc = "identifierSorter desc",
-  identifierSorter_asc = "identifierSorter asc",
-  imagecount_desc = "imagecount desc",
-  imagecount_asc = "imagecount asc",
-  indexdate_desc = "indexdate desc",
-  indexdate_asc = "indexdate asc",
-  item_size_desc = "item_size desc",
-  item_size_asc = "item_size asc",
-  languageSorter_desc = "languageSorter desc",
-  languageSorter_asc = "languageSorter asc",
-  licenseurl_desc = "licenseurl desc",
-  licenseurl_asc = "licenseurl asc",
-  mediatype_desc = "mediatype desc",
-  mediatype_asc = "mediatype asc",
-  mediatypeSorter_desc = "mediatypeSorter desc",
-  mediatypeSorter_asc = "mediatypeSorter asc",
-  month_desc = "month desc",
-  month_asc = "month asc",
-  nav_order_desc = "nav_order desc",
-  nav_order_asc = "nav_order asc",
-  num_reviews_desc = "num_reviews desc",
-  num_reviews_asc = "num_reviews asc",
-  programSorter_desc = "programSorter desc",
-  programSorter_asc = "programSorter asc",
-  publicdate_desc = "publicdate desc",
-  publicdate_asc = "publicdate asc",
-  reviewdate_desc = "reviewdate desc",
-  reviewdate_asc = "reviewdate asc",
-  stars_desc = "stars desc",
-  stars_asc = "stars asc",
-  titleSorter_desc = "titleSorter desc",
-  titleSorter_asc = "titleSorter asc",
-  titleSorterRaw_desc = "titleSorterRaw desc",
-  titleSorterRaw_asc = "titleSorterRaw asc",
-  week_desc = "week desc",
-  week_asc = "week asc",
-  year_desc = "year desc",
-  year_asc = "year asc",
-};
+const IA_SORTABLE_FIELDS = [
+  "__random",
+  "__sort",
+  "addeddate",
+  "avg_rating",
+  "call_number",
+  "createdate",
+  "creatorSorter",
+  "creatorSorterRaw",
+  "date",
+  "downloads",
+  "foldoutcount",
+  "headerImage",
+  "identifier",
+  "identifierSorter",
+  "imagecount",
+  "indexdate",
+  "item_size",
+  "languageSorter",
+  "licenseurl",
+  "mediatype",
+  "mediatypeSorter",
+  "month",
+  "nav_order",
+  "num_reviews",
+  "programSorter",
+  "publicdate",
+  "reviewdate",
+  "stars",
+  "titleSorter",
+  "titleSorterRaw",
+  "week",
+  "year"
+] as const;
 
-export type IaSortOption = `${IaSortOptions}`;
+export type IaSortableField = typeof IA_SORTABLE_FIELDS[number];
+
+export type IaSortOption = `${IaSortableField} asc` | `${IaSortableField} desc`;
 
 export type IaQueryOutput = "json" | "xml" | "csv" | "tables" | "rss";
 
@@ -245,8 +214,6 @@ export const IA_QUERY_FIELDS = [
 
 export type IaQueryField = typeof IA_QUERY_FIELDS[number];
 
-
-
 export const IA_DATE_RANGES = [
   "addeddate",
   "createdate",
@@ -258,7 +225,7 @@ export const IA_DATE_RANGES = [
   "oai_updatedate"
 ] as const;
 
-export type IaDateRange = typeof IA_DATE_RANGES[number];;
+export type IaDateRange = typeof IA_DATE_RANGES[number];
 
 /** 
  * All possible media types
@@ -326,7 +293,7 @@ export type SearchResultDoc = {
 
 /**
  * Get Tasks Basic Query Parameters
- * See {@link https://archive.org/services/docs/api/tasks.html}
+ * @see {@link https://archive.org/services/docs/api/tasks.html | Tasks API}
  */
 export type IaGetTasksBasicParams = {
   /** task identifier */
@@ -359,9 +326,11 @@ export type IaGetTasksBasicParams = {
 
   cursor?: string;
 };
+
+
 /**
- * Get Tasks Query Parameters
- * See {@link https://archive.org/services/docs/api/tasks.html}
+ * Params for the {@link Catalog.getTasks} method
+ * @see {@link https://archive.org/services/docs/api/tasks.html | Tasks API}
  */
 export type IaGetTasksParams = Prettify<IaGetTasksBasicParams & {
   /** 
@@ -375,7 +344,6 @@ export type IaGetTasksParams = Prettify<IaGetTasksBasicParams & {
   catalog?: 0 | 1;
   /** A list of all completed tasks matching the supplied criteria */
   history?: 0 | 1;
-
   /** 
    * The item identifier, if provided will return tasks 
    * for only this item filtered by other criteria provided in params.
@@ -412,7 +380,6 @@ export const IA_ITEM_TAB_URL_TYPES = [
   'about',
   'collection'
 ] as const;
-
 
 export type IaItemTabUrlType = typeof IA_ITEM_TAB_URL_TYPES[number];
 

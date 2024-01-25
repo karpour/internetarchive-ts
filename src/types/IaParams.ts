@@ -1,9 +1,5 @@
-import { HttpHeaders, HttpParams, IaRequestTarget } from ".";
-import { IaAuthConfig, IaQueryOutput } from "../IaTypes";
-import { AuthBase } from "../auth/AuthBase";
-import ArchiveSession from "../session/ArchiveSession";
-import { HttpMethod } from "./HttpMethod";
-import { Mapping, MutableMapping, dict } from "./pythontypes";
+import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaItemBaseMetadata, IaItemMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType } from ".";
+import IaSession from "../session/IaSession";
 
 
 export type IaDebugParams = {
@@ -23,9 +19,9 @@ export type IaSessionParams = {
 
 export type IaGetSessionParams = {
     /** Optional archiveSession object. If not defined, one will be created internally */
-    archiveSession?: ArchiveSession,
+    archiveSession?: IaSession,
     /** Configuration */
-    config?: Mapping,
+    config?: IaAuthConfig,
     /** Path to config file */
     configFile?: string,
 };
@@ -85,10 +81,9 @@ export type MetadataRequestConstructorParams = {
 export type IaItemModifyMetadataParams = {
     append: boolean,
     appendList: boolean,
-    headers?: Mapping,
+    headers?: HttpHeaders,
     insert?: boolean,
     priority: number,
-    requestKwargs?: Mapping,
     target?: IaRequestTarget,
     timeout?: number;
 } & IaSessionParams & IaDebugParams;
@@ -97,8 +92,8 @@ export type IaModifyMetadataParams = IaItemModifyMetadataParams & IaGetItemParam
 
 // Upload
 
-export type IaItemUploadParams = {
-    metadata?: Mapping,
+export type IaItemUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType> = {
+    metadata?: M,
     headers?: HttpHeaders,
     queueDerive: boolean,
     verbose: boolean,
@@ -109,10 +104,9 @@ export type IaItemUploadParams = {
     retriesSleep?: number,
     debug: boolean,
     validateIdentifier: boolean,
-    requestKwargs?: MutableMapping;
 } & IaSessionParams;
 
-export type IaUploadParams = IaItemUploadParams & IaGetItemParams;
+export type IaUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType> = IaItemUploadParams<M> & IaGetItemParams;
 
 // Download
 
@@ -184,13 +178,6 @@ export type IaSessionSearchItemsParams = {
     maxRetries?: number;
 };
 
-export type MountHttpAdapterParams = {
-    protocol?: string,
-    maxRetries?: number,
-    statusForcelist?: number[],
-    host?: string,
-};
-
 
 export type IaSearchItemsParams = IaSessionSearchItemsParams & IaGetSessionParams;
 
@@ -224,3 +211,23 @@ export type S3RequestConstructorParams = {
     fileMetadata?: any,
     queueDerive?: any,
 } & IaSessionParams;
+
+/**
+ * Params for the {@link Catalog.submitTask} method
+ */
+export type IaSubmitTaskParams = {
+    /** Identifier */
+    identifier: string,
+    /** Task command to submit. See {@link https://archive.org/services/docs/api/tasks.html#supported-tasks | Supported task commands} */
+    cmd: IaTaskType,
+    /** A reasonable explanation for why the task is being submitted */
+    comment?: string,
+    /** Task priority from 10 to -10 */
+    priority: IaTaskPriority,
+    /** Extra POST data to submit with the request. 
+     * Refer to {@link https://archive.org/services/docs/api/tasks.html#request-entity | Tasks API Request Entity} */
+    data?: Record<string, any>,
+    /** Additional headers to add to the request */
+    headers?: HttpHeaders;
+};
+
