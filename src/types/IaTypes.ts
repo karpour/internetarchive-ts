@@ -46,6 +46,24 @@ export type IaMetadataRaw<T extends IaBaseMetadataType> = {
   [K in keyof T]: T[K] extends IaMetadataValidFieldType ? `${T[K]}` : (T[K] extends string[] ? T[K] : never);
 } & {};
 
+export type IaMetaType = 'meta' | 'file';
+
+export type IaMetaDataHeaderKey<K extends string, MT extends IaMetaType> = `x-archive-${MT}-${NoUnderscoreString<K>}`;
+export type IaMetaDataHeaderIndexedKey<K extends string, N extends number, MT extends IaMetaType> = `x-archive-${MT}${LeftPad2<N>}-${NoUnderscoreString<K>}`;
+
+export type IaMetaDataHeaders<T extends IaRawRawMetadataType, MT extends IaMetaType> = {
+  [K in keyof T as (K extends string ? IaMetaDataHeaderKey<K, MT> : never)]: T[K];
+};
+
+export type LeftPad2<N extends number> = `${N}` extends `${number}.${number}` ? never : (
+  `${N}` extends `${number}e${number}` ?
+  never :
+  (N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ?
+    `${0}${N}` :
+    N
+  )
+);
+
 export type IaPatchData = ({
   '-patch': string;
   '-target': IaRequestTarget,
@@ -442,33 +460,33 @@ export type IaCheckIdentifierResponse = {
 type FlattenedArrayKey<KEY extends string, IDX extends `${number}`> = IDX extends 0 ? KEY : `${KEY}[${IDX}]`;
 
 type AddFlattenedKeys<KEY extends string, T extends string[]> = {
-    [K in keyof T as K extends `${0}` ? KEY : (K extends `${number}` ? FlattenedArrayKey<KEY, K> : never)]: T[K];
+  [K in keyof T as K extends `${0}` ? KEY : (K extends `${number}` ? FlattenedArrayKey<KEY, K> : never)]: T[K];
 } & {};
 
 type FlattenedArrays<T extends { [key: string]: string | string[]; }> = {
-    [K in keyof T]: T[K] extends string[] ? (
-        K extends string ?
-        AddFlattenedKeys<K, T[K]> :
-        never
-    ) : T[K];
+  [K in keyof T]: T[K] extends string[] ? (
+    K extends string ?
+    AddFlattenedKeys<K, T[K]> :
+    never
+  ) : T[K];
 };
 
 type ValuesOf<T> = T[keyof T];
 type ObjectValuesOf<T> = Exclude<
-    Extract<ValuesOf<T>, object>,
-    Array<any>
+  Extract<ValuesOf<T>, object>,
+  Array<any>
 >;
 
 type UnionToIntersection<U> = (U extends any
-    ? (k: U) => void
-    : never) extends ((k: infer I) => void)
-    ? I
-    : never;
+  ? (k: U) => void
+  : never) extends ((k: infer I) => void)
+  ? I
+  : never;
 
 type NonObjectKeysOf<T> = {
-    [K in keyof T]: T[K] extends Array<any> ?
-    K :
-    T[K] extends object ? never : K
+  [K in keyof T]: T[K] extends Array<any> ?
+  K :
+  T[K] extends object ? never : K
 }[keyof T];
 
 // DeepFlatten utility types
