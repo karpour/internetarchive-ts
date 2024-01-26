@@ -4,6 +4,7 @@ import { IaApiError } from "../error";
 import IaValueError from "../error/IaValueError";
 import IaSession from "../session/IaSession";
 import { Mapping } from "../types";
+import { handleIaApiError } from "../util/handleIaApiError";
 import { raiseForStatus } from "../utils";
 import Catalog from "./Catalog";
 
@@ -113,9 +114,11 @@ export class CatalogTask implements IaTaskDict {
     ): Promise<string> {
         const host = (session.host === 'archive.org') ? 'catalogd.archive.org' : session.host;
         const url = `${session.protocol}//${host}/services/tasks.php`;
-        const params = { 'task_log': taskId };
+        const params = { task_log: taskId };
         const response = await session.get(url, { params });
-        raiseForStatus(response);
+        if (!response.ok) {
+            throw handleIaApiError(response);
+        }
         if (response.body) {
             return response.text()
         }

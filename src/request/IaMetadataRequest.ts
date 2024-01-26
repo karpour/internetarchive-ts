@@ -1,16 +1,18 @@
-import { IaBaseMetadataType, IaItemData, IaItemMetadata, IaRequestTarget, IaTaskPriority } from "../types";
-import IaRequest from "./IaRequest";
+import log from "../logging/log";
+import { IaBaseMetadataType, IaItemData, IaPatchData, IaRequestTarget, IaTaskPriority, Prettify } from "../types";
+import IaRequest, { IaRequestConstructorParams } from "./IaRequest";
 import { prepareFilesPatch } from "./prepareFilesPatch";
 import preparePatch from "./preparePatch";
 import { prepareTargetPatch } from "./prepareTargetPatch";
 
 
-class IaMetadataRequest extends IaRequest {
-    public constructor() {
-        super((() => {
+export class IaMetadataRequest extends IaRequest {
+    public constructor(url:string, params: IaMetadataRequestPrepareBodyParams) {
+        super(url, (() => {
             return {
+                ...params,
                 method: "POST",
-                url: "bbb"
+                body: prepareBody(params),
             };
         })());
     }
@@ -19,33 +21,44 @@ class IaMetadataRequest extends IaRequest {
 
 
 
-export function validateMetadata(metadata: object): asserts metadata is IaBaseMetadataType {
+export function validateMetadata(metadata: object): metadata is IaBaseMetadataType {
     return true;
 }
 
 type IaMultiMetadata = {
     [target in IaRequestTarget]: IaBaseMetadataType
-}
+};
 
-function prepareBody(
-    url: string,
-    metadata: IaMultiMetadata,
+export type IaMetadataRequestPrepareBodyParams = {
+    metadata: IaMultiMetadata | IaBaseMetadataType,
     sourceMetadata: IaItemData,
-    target: IaRequestTarget,
-    priority: IaTaskPriority = -5,
+    target?: IaRequestTarget,
+    priority: IaTaskPriority,
     append: boolean,
     appendList: boolean,
-    insert: boolean
-): string | Buffer {
+    insert: boolean;
+};
+
+export type IaMetadataRequestConstructorParams = Prettify<IaMetadataRequestPrepareBodyParams & IaRequestConstructorParams>
+
+export function prepareBody({
+    metadata,
+    sourceMetadata,
+    target = "metadata",
+    priority = -5,
+    append = false,
+    appendList = false,
+    insert = false
+}: IaMetadataRequestPrepareBodyParams): string {
 
     // Write to many targets
     let patch: any;
-    let data:IaPatchData;
+    let data: IaPatchData;
     if (validateMetadata(metadata)) {
         const changes: any[] = [];
 
-        for (const entry in Object.entries(metadata)) {
-            const [key, metadata] = entry
+        for (const entry of Object.entries(metadata)) {
+            const [key, metadata] = entry;
             if (key == 'metadata') {
                 try {
                     patch = preparePatch({
@@ -74,7 +87,7 @@ function prepareBody(
                     append,
                     target,
                     appendList,
-                    key: key.split('/')[0],
+                    key: key.split('/')[0]!,
                     insert
                 });
             }
@@ -87,8 +100,7 @@ function prepareBody(
         log.debug(`submitting metadata request: ${data}`);
     } else {
         // Write to single target
-        if (!target || target == 'metadata') {
-            target = 'metadata';
+        if (target === 'metadata') {
             try {
                 patch = preparePatch({
                     metadata,
@@ -100,7 +112,7 @@ function prepareBody(
             } catch (err: any) {
                 throw new Error();// ItemLocateError;
             }
-        } else if (target.includes('files')) {
+        } else if (target.startsWith('files/')) {
             patch = prepareFilesPatch(metadata, sourceMetadata.files, append, target, appendList, insert);
         } else {
             metadata = { target: metadata };
@@ -113,5 +125,5 @@ function prepareBody(
         };
         log.debug(`submitting metadata request: ${data}`);
     }
-    return Buffer.from(JSON.stringify(data));
+    return JSON.stringify(data);
 }

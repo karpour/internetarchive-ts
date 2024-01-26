@@ -1,4 +1,4 @@
-import { NoUnderscoreString, replaceUnderScores } from "./IaTypes";
+import { NoUnderscoreString, replaceUnderScores } from "../types/IaTypes";
 
 /** Header Entry for setting a meta value */
 export type IaHeaderMetaEntry<T extends string, V extends string> = `x-archive-meta-${NoUnderscoreString<T>}:${V}`;

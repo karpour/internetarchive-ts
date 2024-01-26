@@ -1,44 +1,10 @@
-import { IaBaseMetadataType, IaFileRotation, IaFileSource, IaMetadataRaw, IaRawRawMetadataType, Optional } from ".";
-import { IaTypeError } from "../error";
-import { RawifiedMetadata } from "./flatcrap";
+import { IaBaseMetadataType, IaFileRotation, IaFileSource, IaMetadataRaw, Optional } from ".";
 
 
 export type IaFileMetadataRaw<T extends IaFileBaseMetadata = IaFileBaseMetadata> = IaMetadataRaw<T>;
 
 export type IaFilesXmlMetadata = Omit<Optional<IaFileExtendedMetadata, 'mtime' | 'size'>, 'name'> & { name: `${string}_files.xml`; };
 
-
-export function convertToRawMetadata<T extends IaBaseMetadataType>(metadata: T): RawifiedMetadata<T> {
-    const rawMetadata: IaRawRawMetadataType = {};
-    for (const entry of Object.entries(metadata)) {
-        const [key, value] = entry;
-        switch (typeof value) {
-            case "string":
-            case "number":
-            case "bigint":
-            case "boolean":
-                rawMetadata[key] = `${value}`;
-                break;
-            // @ts-ignore 
-            case "object":
-                if (Array.isArray(value)) {
-                    for (let i = 0; i < value.length; i++) {
-                        if (value !== undefined && value !== null) {
-                            rawMetadata[`${key}[${i}]`] = `${value[i]}`;
-                        }
-                    }
-                    break;
-                }
-            case "symbol":
-            case "function":
-                throw new IaTypeError(`Metadata object key "${key}" has illegal value of type "${typeof value}"`);
-            //case "undefined":
-            default:
-                break;
-        }
-    }
-    return rawMetadata as RawifiedMetadata<T>;
-}
 
 export type IaFileBaseMetadata = {
     /** Path to file name */

@@ -1,20 +1,21 @@
 import { IaItemMetadata } from "../types/IaItemMetadata";
-import { IaItemData, IaSimplelistEntry } from "../types/IaItemData";
+import { IaItemData, IaSimplelistEntry, ItemDataKey } from "../types/IaItemData";
 import { IaFileExtendedMetadata, IaFilesXmlMetadata } from "../types/IaFileMetadata";
 import { IaItemReview } from "../types";
+import { createHash } from "crypto";
 
-type Mapping = any;
 
 function identifierListAsItems(...args: any[]) { }
 function hash(...args: any[]) { return 1; }
 
 
-const EXCLUDED_ITEM_METADATA_KEYS = ['workable_servers', 'server'] as const;
+const EXCLUDED_ITEM_METADATA_KEYS:ItemDataKey[] = ['workable_servers', 'server'] as const;
 
 export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata>
     implements IaItemData<ItemMetaType> {
 
-    protected exists: boolean;
+    protected exists: boolean = false;
+    //protected readonly _collection:IaCollection[] = []
 
 
     public get created(): number {
@@ -82,12 +83,12 @@ export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata>
     }
 
 
-    public constructor(identifier: string, protected itemData: IaItemData<ItemMetaType>) {
+    public constructor(protected itemData: IaItemData<ItemMetaType>) {
         this.load();
     }
 
     public get identifier(): string {
-        return this.metadata.identifier ?? '';
+        return this.metadata.identifier;
     }
 
     public toString(): string {
@@ -96,55 +97,31 @@ export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata>
     }
 
 
-    public load(itemMetadata?: Mapping): void {
-        if (itemMetadata) {
-            this.itemMetadata = itemMetadata;
-        }
-
-        this.exists = this.itemMetadata !== undefined;
-
-        for (let key in this.itemMetadata) {
-            (this as any)[key] = this.itemMetadata[key];
-        }
-
-
-        if (!this.identifier) {
-            this.identifier ??= this.metadata.identifier;
-        }
-
+    public load(itemData?: IaItemData<ItemMetaType>): void {
+        if(itemData) this.itemData = itemData;
         let mc = this.metadata.collection ?? [];
-        this.collection = identifierListAsItems(mc, this.session);
+        //this.collection = identifierListAsItems(mc, this.session);
     }
 
 
+    // TODO this might fail due to fields not being sorted the same way
     public equals(other: IaBaseItem): boolean {
-        return (this.itemMetadata == other.itemMetadata || (
-            this.itemMetadata.keys() == other.itemMetadata.keys() && true
-        ));
-        // TODO
-        //        or(this.item_metadata.keys() == other.item_metadata.keys()
-        //            and all(this.item_metadata[x] == other.item_metadata[x]
-        //                    for x in this.item_metadata
-        //                    if x not in this.EXCLUDED_ITEM_METADATA_KEYS)))
-
+        return this.hash() == other.hash();
     }
 
 
+    // TODO change return type to -1, 0, 1
     public lessOrEqual(other: IaBaseItem): boolean {
-        //return this.identifier <= other.identifier
-        // TODO string sorting
-        return false;
+        return this.identifier.localeCompare(other.identifier) != 1
     }
 
-    public hash(): number {
-        const withoutExcludedKeys: Partial<IaItemMetadata> = {};
-        const items = this.itemMetadata.items();
-        for (let key in items) {
-            if (!EXCLUDED_ITEM_METADATA_KEYS.includes(key)) {
-                withoutExcludedKeys[key] = items[key];
-            }
+    public hash(): string {
+        const items:Partial<IaItemData> = {...this.itemData};
+        for(const key of EXCLUDED_ITEM_METADATA_KEYS) {
+            delete items[key];
         }
-        return hash(JSON.stringify(without_excluded_keys)); // type: ignore
-        // return hash(json.dumps(without_excluded_keys, sort_keys=True, check_circular=False))  # type: ignore
+        const hash = createHash('md5');
+        hash.update(JSON.stringify(items));
+        return hash.digest('hex');
     }
 }

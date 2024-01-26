@@ -98,3 +98,4 @@ export type IaItemData<ItemMetaType extends IaItemMetadata = IaItemMetadata> = {
 
 };
 
+export type ItemDataKey = keyof IaItemData;

@@ -1,10 +1,25 @@
 import Catalog from "../catalog/Catalog";
 import CatalogTask from "../catalog/CatalogTask";
 import { IaApiError } from "../error";
-import { HttpHeaders, IaAuthConfig, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaMediaType, IaTaskPriority, IaTaskType } from "../types";
+import IaCollection from "../item/IaCollection";
+import { IaItem } from "../item/IaItem";
+import log from "../logging/log";
+import {
+    HttpHeaders,
+    IaAuthConfig,
+    IaGetTasksBasicParams,
+    IaGetTasksParams,
+    IaHttpRequestDeleteParams,
+    IaHttpRequestGetParams,
+    IaHttpRequestPostParams,
+    IaItemData,
+    IaTaskPriority,
+    IaTaskType
+} from "../types";
 import getUserAgent from "../util/getUserAgent";
 import { handleIaApiError } from "../util/handleIaApiError";
 import { getConfig } from "./config";
+import { createS3AuthHeader } from "./createS3AuthHeader";
 
 class ArchiveSessionCookies {
     setCookie(cookie: any) {
@@ -12,16 +27,8 @@ class ArchiveSessionCookies {
     }
 }
 
-function createCookie(name: string, data: string | undefined, params: any): any {
 
-}
 
-function getMediaTypeClass(mediatype?: IaMediaType): typeof IaItem | typeof IaCollection {
-    if (mediatype === "collection") {
-        return IaCollection;
-    }
-    return IaItem;
-}
 
 /** 
  * The {@link IaSession} class collects together useful 
@@ -31,21 +38,20 @@ function getMediaTypeClass(mediatype?: IaMediaType): typeof IaItem | typeof IaCo
  * @example
  *
  * import {IaSession} from "internetarchive-ts";
- * const s = new ArchiveSession();
+ * const s = new IaSession();
  * const item = await getItem('nasa');
  */
 export class IaSession {
     public readonly host: string;
     public readonly protocol: string;
     public readonly url: string;
-    protected auth?: HttpHeaders;
-    protected secure: boolean;
-    protected config: IaAuthConfig;
-    protected configFile: string;
-    protected log: any;
     public readonly userEmail?: string;
     public readonly accessKey?: string;
     public readonly secretKey?: string;
+    protected readonly auth?: HttpHeaders;
+    protected readonly secure: boolean;
+    protected readonly config: IaAuthConfig;
+    protected readonly configFile: string;
     /** HTTP Headers */
     public headers: HttpHeaders;
 
@@ -64,13 +70,11 @@ export class IaSession {
         configFile: string = "",
         protected debug: boolean = false,
     ) {
-        //super();
-
         this.cookies = new ArchiveSessionCookies();
 
         this.config = getConfig(config, configFile);
         this.configFile = configFile;
-        for (let ck in this.config.cookies ?? {}) {
+        /*for (let ck in this.config.cookies ?? {}) {
             const rawCookie = `${ck}=${this.config.cookies[ck]}`;
             const cookieDict = parseDictCookies(rawCookie);
             if (!cookieDict[ck]) {
@@ -81,7 +85,7 @@ export class IaSession {
                 path: cookieDict.path ?? '/'
             });
             this.cookies.setCookie(cookie);
-        }
+        }*/
 
         this.secure = this.config.general?.secure ?? true;
         this.host = this.config.general?.host ?? 'archive.org';
@@ -102,8 +106,8 @@ export class IaSession {
         this.accessKey = this.config.s3?.access;
         this.secretKey = this.config.s3?.secret;
 
-        if(this.accessKey && this.secretKey) {
-            this.auth = createS3AuthHeader(this.accessKey, this.secretKey)
+        if (this.accessKey && this.secretKey) {
+            this.auth = createS3AuthHeader(this.accessKey, this.secretKey);
         }
 
         this.headers = {};
@@ -118,15 +122,11 @@ export class IaSession {
      *      Metadata will automatically be retrieved from Archive.org if nothing is provided.
      * @returns 
      */
-    public async getItem(identifier: string, itemMetadata?: IaItemData): Promise<IaItem | IaCollection> {
-        if (!itemMetadata) {
-            this.log.debug(`no metadata provided for "${identifier}", retrieving now.`);
-        }
-        itemMetadata = await this.getMetadata(identifier) ?? {};
-        const mediatype = itemMetadata?.metadata?.mediatype;
-
+    public async getItem(identifier: string): Promise<IaItem | IaCollection> {
+        const itemData = await this.getMetadata(identifier);
+        const mediatype = itemData.metadata.mediatype;
         const itemClass: typeof IaItem = mediatype === "collection" ? IaCollection : IaItem;
-        return new itemClass(this, identifier, itemMetadata as any);
+        return new itemClass(this, itemData);
     }
 
     /**
@@ -137,7 +137,7 @@ export class IaSession {
     public async getMetadata(identifier: string): Promise<IaItemData> {
         const url = `${this.url}/metadata/${identifier}`;
         try {
-            const response = await this.get(url, this.auth);
+            const response = await this.get(url);
             if (response.ok) {
                 return response.json() as Promise<IaItemData>;
             } else {
@@ -145,28 +145,53 @@ export class IaSession {
             }
         } catch (err: any) {
             const errorMsg = `Error retrieving metadata from ${url}, ${err.message}`;
-            this.log.error(errorMsg);
+            log.error(errorMsg);
             throw new IaApiError(errorMsg, { cause: err });
         }
     }
 
-    public async get(url: string, auth?: HttpHeaders, params: any = {}): Promise<Response> {
-        const queryString = new URLSearchParams(params).toString();
-        const fullUrl = url + (queryString && `?${queryString}`);
-        return fetch(fullUrl, {
+    public async get(url: string, {
+        params,
+        auth,
+        headers
+    }: IaHttpRequestGetParams = {}): Promise<Response> {
+        const urlObj = new URL(url);
+        if (params) {
+            for (const param of Object.entries(params)) {
+                const [key, value] = param;
+                if (value !== undefined) {
+                    urlObj.searchParams.set(key, `${value}`);
+                }
+            }
+        }
+        return fetch(urlObj.href, {
             method: "GET",
-            headers: { ...this.headers, ...auth }
+            headers: {
+                ...this.headers,
+                ...headers,
+                ...(auth ?? this.auth)
+            }
         });
     }
 
-    public async post(url: string, auth?: HttpHeaders): Promise<Response> {
+    public async post(url: string, {
+        params,
+        auth,
+        headers,
+        data
+    }: IaHttpRequestPostParams): Promise<Response> {
         return fetch(url, {
             method: "POST",
             headers: { ...this.headers, ...auth }
         });
     }
 
-    public async delete(url: string, auth?: HttpHeaders): Promise<Response> {
+    public async delete(url: string, {
+        params: params,
+        auth,
+        headers,
+        data
+    }: IaHttpRequestDeleteParams): Promise<Response> {
         return fetch(url, {
             method: "DELETE",
             headers: { ...this.headers, ...auth }
@@ -200,12 +225,12 @@ export class IaSession {
     public async s3IsOverloaded(identifier?: string, accessKey?: string): Promise<boolean> {
         const url = `${this.protocol}//s3.us.archive.org`;
         const params = {
-            'check_limit': 1,
-            'bucket': identifier,
+            check_limit: '1',
+            bucket: identifier,
             accessKey,
         };
         try {
-            const response = await this.get(url, undefined, params);
+            const response = await this.get(url, { params });
             try {
                 const json = await response.json();
                 return json.over_limit != 0;
@@ -356,3 +381,5 @@ export class IaSession {
 }
 
 export default IaSession;
+
+

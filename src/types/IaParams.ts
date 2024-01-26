@@ -1,4 +1,4 @@
-import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaItemBaseMetadata, IaItemMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType } from ".";
+import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaItemBaseMetadata, IaItemMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType, Prettify } from ".";
 import IaSession from "../session/IaSession";
 
 
@@ -83,16 +83,28 @@ export type IaItemModifyMetadataParams = {
     appendList: boolean,
     headers?: HttpHeaders,
     insert?: boolean,
-    priority: number,
+    priority: IaTaskPriority,
     target?: IaRequestTarget,
     timeout?: number;
 } & IaSessionParams & IaDebugParams;
 
 export type IaModifyMetadataParams = IaItemModifyMetadataParams & IaGetItemParams;
 
+//Request
+
+export type IaHttpRequestParams = {
+    params?: Record<string, string | number | undefined>,
+    auth?: HttpHeaders,
+    headers?: HttpHeaders;
+};
+
+export type IaHttpRequestGetParams = IaHttpRequestParams;
+export type IaHttpRequestPostParams = IaHttpRequestParams & { data: any; };
+export type IaHttpRequestDeleteParams = IaHttpRequestParams & { data: any; };
+
 // Upload
 
-export type IaItemUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType> = {
+export type IaItemUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType> = Prettify<{
     metadata?: M,
     headers?: HttpHeaders,
     queueDerive: boolean,
@@ -104,7 +116,14 @@ export type IaItemUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType
     retriesSleep?: number,
     debug: boolean,
     validateIdentifier: boolean,
-} & IaSessionParams;
+} & IaSessionParams>;
+
+export type IaItemUploadFileParams<M extends IaBaseMetadataType = IaBaseMetadataType, F extends IaFileBaseMetadata = IaFileBaseMetadata> = Prettify<IaItemUploadParams<M> & {
+    // TODO change
+    key: string,
+    fileMetadata: F;
+    deleteLocalFile: boolean;
+}>;
 
 export type IaUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType> = IaItemUploadParams<M> & IaGetItemParams;
 
