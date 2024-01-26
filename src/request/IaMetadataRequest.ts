@@ -54,7 +54,7 @@ export function prepareBody({
     // Write to many targets
     let patch: any;
     let data: IaPatchData;
-    if (validateMetadata(metadata)) {
+    if (!validateMetadata(metadata)) {
         const changes: any[] = [];
 
         for (const entry of Object.entries(metadata)) {

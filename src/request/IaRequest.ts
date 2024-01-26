@@ -4,33 +4,7 @@
  */
 
 import { createS3AuthHeader } from "../session/createS3AuthHeader";
-import { HttpMethod, Prettify } from "../types/IaTypes";
-
-
-export type IaSessionParams = {
-    /** IA-S3 accessKey to use when making the given request. */
-    accessKey: string;
-    /** IA-S3 secretKey to use when making the given request. */
-    secretKey: string;
-};
-
-export type IaRequestConstructorParams = Prettify<{
-    /** Method */
-    method: HttpMethod;
-    /** A Headers object */
-    headers?: Record<string, string>;
-    files?: string[];
-    data?: string[];
-    params?: Record<string, string>;
-    cookies?: Record<string, string>;
-    hooks?: any;
-    auth?: IaSessionParams;
-    /** Accept a compressed response
-     * @default true
-     */
-    compression?: boolean;
-} & Exclude<RequestInit, 'method' | 'headers'>>;
-
+import { IaRequestConstructorParams } from "../types/IaParams";
 
 /**
  * A base class for Internet Archive Requests

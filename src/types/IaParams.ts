@@ -1,4 +1,4 @@
-import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaItemBaseMetadata, IaItemMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType, Prettify } from ".";
+import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType, Prettify } from ".";
 import IaSession from "../session/IaSession";
 
 
@@ -12,10 +12,10 @@ export type IaSessionParams = {
     accessKey: string;
     /** IA-S3 secretKey to use when making the given request. */
     secretKey: string;
-} | {
+}; /*| {
     accessKey?: undefined;
     secretKey?: undefined;
-};
+};*/
 
 export type IaGetSessionParams = {
     /** Optional archiveSession object. If not defined, one will be created internally */
@@ -225,11 +225,28 @@ export type IaSearchParams = {
 
 
 
-export type S3RequestConstructorParams = {
-    metadata?: any,
-    fileMetadata?: any,
-    queueDerive?: any,
-} & IaSessionParams;
+export type S3RequestConstructorParams = Prettify<{
+    metadata?: IaBaseMetadataType,
+    fileMetadata?: IaBaseMetadataType,
+    queueDerive?: boolean,
+} & IaRequestConstructorParams>;
+
+export type IaRequestConstructorParams = Prettify<{
+    /** Method */
+    method: HttpMethod;
+    /** A Headers object */
+    headers?: Record<string, string>;
+    files?: string[];
+    data?: string[];
+    params?: Record<string, string>;
+    cookies?: Record<string, string>;
+    hooks?: any;
+    auth?: IaSessionParams;
+    /** Accept a compressed response
+     * @default true
+     */
+    compression?: boolean;
+} & Omit<RequestInit, 'method' | 'headers'>>;
 
 /**
  * Params for the {@link Catalog.submitTask} method

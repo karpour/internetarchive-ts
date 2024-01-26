@@ -1,8 +1,9 @@
 
 
-// Utility types
 
 import { IaTaskPriority } from "./IaTask";
+
+// Utility types
 
 export type NoUnderscoreString<T extends string> =
   T extends `${infer Prefix}_${infer Suffix}` ?
@@ -22,39 +23,85 @@ export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
 // Metadata types
 
-export type RawMetadata<T extends IaBaseMetadataType> = { [K in keyof T]: StringOrStringArray<T[K]>; };
+export type testmeta = {
+  a: string;
+  b: number | number[];
+};
 
-export type RawifiedMetadata<T extends IaBaseMetadataType> = Prettify<DeepFlatten<FlattenedArrays<IaMetadataRaw<T>>>>;
+const a: IaBaseMetadataType = {
+  a: "aa",
+  b: [1, 2, 3]
+};
 
-export type RawMetadataOptional<T extends Record<string, any> | undefined> = T extends undefined ? { [K in keyof T]: StringOrStringArray<T[K]>; } | undefined : { [K in keyof T]: StringOrStringArray<T[K]>; };
+const b: testmeta = {
+  a: "aa",
+  b: [1, 2, 3]
+};
 
+type ccc = RawMetadata<{
+  a: "aa",
+  b: [1, 2, 3];
+  c: undefined;
+}>;
+
+type mm = RawFlattenedMetadata<ccc>;
+
+/** Valid metadata field types */
 export type IaMetadataValidFieldType = string | number | undefined | boolean;
 
-export type IaBaseMetadataType = {
-  [key: string]: IaMetadataValidFieldType | string[];
-};
+/**
+ * The most basic metadata type, allowing for keys to be of type string, boolean, number or undefined, or arrays of those primitives.
+ */
+export type IaBaseMetadataType = { [key: string]: IaMetadataValidFieldType | IaMetadataValidFieldType[]; };
 
-export type IaRawMetadataType = {
-  [key: string]: string | string[];
-};
+/**
+ * Raw metadata type (keys are strings or string[])
+ */
+export type IaRawMetadata<T extends IaBaseMetadataType = IaBaseMetadataType> = { [K in keyof T]: StringOrStringArray<T[K]>; };
+
+/**
+ * Raw Flattened Metadata type
+ * Any keys that are arrays will be flattened.
+ * 
+ * @example
+ * type x = RawFlattenedMetadata<{ a: "a", b: ["c", "d", "e"]; }>;
+ * // Results in the following type
+ * {
+ *  a: "a";
+ *  b: "c";
+ *  "b[1]": "d";
+ *  "b[2]": "e";
+ * }
+ */
+export type RawFlattenedMetadata<T extends IaBaseMetadataType> = Prettify<DeepFlatten<FlattenedArrays<IaRawMetadata<T>>>>;
 
 export type IaRawRawMetadataType = {
   [key: string]: string;
 };
 
-export type IaMetadataRaw<T extends IaBaseMetadataType> = {
-  [K in keyof T]: T[K] extends IaMetadataValidFieldType ? `${T[K]}` : (T[K] extends string[] ? T[K] : never);
-} & {};
+/**
+ * Type of metadata, used for metadata requests
+ */
+export type IaMetaType = 'meta' | 'filemeta';
 
-export type IaMetaType = 'meta' | 'file';
-
+/**
+ * HTTP header key that represents a metadata key without index
+ */
 export type IaMetaDataHeaderKey<K extends string, MT extends IaMetaType> = `x-archive-${MT}-${NoUnderscoreString<K>}`;
+
+/**
+ * HTTP header key that represents a metadata key with index
+ */
 export type IaMetaDataHeaderIndexedKey<K extends string, N extends number, MT extends IaMetaType> = `x-archive-${MT}${LeftPad2<N>}-${NoUnderscoreString<K>}`;
 
-export type IaMetaDataHeaders<T extends IaRawRawMetadataType, MT extends IaMetaType> = {
-  [K in keyof T as (K extends string ? IaMetaDataHeaderKey<K, MT> : never)]: T[K];
+// TODO add flatten
+export type IaMetaDataHeaders<T extends IaRawMetadata, MT extends IaMetaType> = {
+  [K in keyof T as (K extends string ? IaMetaDataHeaderKey<K, MT> : never)]: string;
 };
 
+/**
+ * Adds a leading zero to a positive integer, making the string at least 2 characters long
+ */
 export type LeftPad2<N extends number> = `${N}` extends `${number}.${number}` ? never : (
   `${N}` extends `${number}e${number}` ?
   never :
@@ -64,6 +111,9 @@ export type LeftPad2<N extends number> = `${N}` extends `${number}.${number}` ? 
   )
 );
 
+/**
+ * Patch payload data
+ */
 export type IaPatchData = ({
   '-patch': string;
   '-target': IaRequestTarget,
@@ -73,10 +123,13 @@ export type IaPatchData = ({
   'priority': IaTaskPriority,
 };
 
+/** Possible curation states for an Internet Archive item */
 export const IA_CURATION_STATES = ["dark", "approved", "freeze", "un-dark"] as const;
 
+/** Curation state an Internet Archive item */
 export type IaCurationState = typeof IA_CURATION_STATES[number];
 
+/** Raw curation string of an Internet Archive item */
 export type IaCuration = `[curator]${string}[/curator][date]${string}[/date]${`[state]${IaCurationState}[/state]` | ''}[comment]${string}[/comment]`;
 
 export type IaParsedCuration<T extends IaCuration> = Prettify<T extends `[curator]${infer Curator extends string}[/curator][date]${string}[/date]${`[state]${infer State extends string}[/state]` | ''}[comment]${infer Comment extends string}[/comment]` ?
@@ -418,7 +471,19 @@ export type IaCustomJsonRequestTarget = string;
 
 export type IaRequestTarget = IaMetadataRequestTarget | IaFileRequestTarget | IaCustomJsonRequestTarget;
 
-export type StringOrStringArray<T> = T extends any[] ? string | string[] : string;
+export type ToStringArray<T extends IaMetadataValidFieldType[]> = {
+  [K in keyof T]: T extends undefined ? string | undefined : `${T[K]}`
+};
+
+export type ToString<T extends IaMetadataValidFieldType> = T extends undefined ? string | undefined : `${T}`;
+
+export type StringOrStringArray<T extends IaMetadataValidFieldType | IaMetadataValidFieldType[]> =
+  T extends IaMetadataValidFieldType[] ?
+  ToStringArray<T> : (
+    T extends IaMetadataValidFieldType ?
+    ToString<T> :
+    never
+  );
 
 
 
@@ -463,12 +528,16 @@ type AddFlattenedKeys<KEY extends string, T extends string[]> = {
   [K in keyof T as K extends `${0}` ? KEY : (K extends `${number}` ? FlattenedArrayKey<KEY, K> : never)]: T[K];
 } & {};
 
-type FlattenedArrays<T extends { [key: string]: string | string[]; }> = {
+type FlattenedArrays<T extends { [key: string]: string | string[] | undefined; }> = {
   [K in keyof T]: T[K] extends string[] ? (
     K extends string ?
     AddFlattenedKeys<K, T[K]> :
     never
-  ) : T[K];
+  ) : (
+    T[K] extends string ?
+    T[K] :
+    never
+  )
 };
 
 type ValuesOf<T> = T[keyof T];

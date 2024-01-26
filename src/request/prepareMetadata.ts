@@ -1,3 +1,4 @@
+import { IaBaseMetadataType, IaRawMetadata } from "../types";
 import {extractKeyAndIndex, makeArray} from "../util";
 
 
@@ -10,12 +11,12 @@ import {extractKeyAndIndex, makeArray} from "../util";
  * @param insert 
  * @returns A filtered metadata dict to be used for generating IA S3 and Metadata API requests.
  */
-export function prepareMetadata(
-    newMetadata: Record<string, string>,
-    sourceMetadata: Record<string, string | string[]> = {},
+export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMetadataType>(
+    newMetadata: M,
+    sourceMetadata?: S,
     append: boolean = false,
     appendList: boolean = false,
-    insert: boolean = false) {
+    insert: boolean = false):{
 
     // Copy of the new Metadata, will be populated in the next for loop
     const metadata: Record<string, string> = {};
@@ -23,7 +24,7 @@ export function prepareMetadata(
     // Make a deepcopy of sourceMetadata if it exists. A deepcopy is
     // necessary to avoid modifying the original dict.
     sourceMetadata = sourceMetadata ? structuredClone(sourceMetadata) : {};
-    let preparedMetadata: Record<string, string | string[]> = {};
+    let preparedMetadata: IaRawMetadata = {};
 
     // Create indexedKeys counter dict. i.e.: {'subject': 3} -- subject
     // (with the index removed) appears 3 times in the metadata dict.
@@ -102,10 +103,9 @@ export function prepareMetadata(
 
         // Only filter the given indexed key if it has not already been filtered.
         if (!_done.includes(key)) {
-            const [parsedKey, idx] = extractKeyAndIndex(key);
+            const [parsedKey, kidx] = extractKeyAndIndex(key);
             let indexes: number[] = [];
             for (let k in metadata) {
-                const kidx = extractKeyAndIndex(key)[1];
                 if (!kidx) {
                     continue;
                 } else if (parsedKey !== key) {

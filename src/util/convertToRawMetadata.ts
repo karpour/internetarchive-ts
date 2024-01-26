@@ -1,10 +1,9 @@
-import { IaBaseMetadataType, IaRawRawMetadataType } from "../types";
+import { IaBaseMetadataType, IaRawRawMetadataType, RawFlattenedMetadata } from "../types";
 import { IaTypeError } from "../error";
-import { RawifiedMetadata } from "../types/flatcrap";
 
 
 
-export function convertToRawMetadata<T extends IaBaseMetadataType>(metadata: T): RawifiedMetadata<T> {
+export function convertToRawFlattenedMetadata<T extends IaBaseMetadataType>(metadata: T): RawFlattenedMetadata<T> {
     const rawMetadata: IaRawRawMetadataType = {};
     for (const entry of Object.entries(metadata)) {
         const [key, value] = entry;
@@ -34,5 +33,5 @@ export function convertToRawMetadata<T extends IaBaseMetadataType>(metadata: T):
                 break;
         }
     }
-    return rawMetadata as RawifiedMetadata<T>;
+    return rawMetadata as RawFlattenedMetadata<T>;
 }

@@ -6,16 +6,7 @@ import { RawMetadataOptional, StringOrStringArray } from ".";
 
 
 
-export type IaItemDataRaw<ItemMetaType extends IaItemMetadata = IaItemMetadata> = {
-    [key in keyof IaItemData<ItemMetaType>]:
-    (IaItemData[key] extends Array<Record<string, any>> ?
-        Array<RawMetadataOptional<IaItemData[key][number]>> :
-        (IaItemData[key] extends Record<string, any> ? // TODO replace Record
-            RawMetadataOptional<IaItemData[key]> :
-            StringOrStringArray<IaItemData[key]>
-        )
-    );
-};
+
 
 export type IaSimplelistEntry = {
 

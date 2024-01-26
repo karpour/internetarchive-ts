@@ -1,10 +1,11 @@
+import { IaBaseMetadataType } from "../types";
 import { deleteKeysFromObject } from "./deleteKeysFromObject";
 import { prepareMetadata } from "./prepareMetadata";
 import { createPatch } from "rfc6902";
 
 export type IaPreparePatchParams = {
-    metadata: Readonly<Record<string, string>>,
-    sourceMetadata: Readonly<Record<string, string | string[]>>,
+    metadata: Readonly<IaBaseMetadataType>,
+    sourceMetadata: Readonly<IaBaseMetadataType>,
     append: boolean,
     appendList?: boolean,
     insert?: boolean;
