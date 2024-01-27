@@ -1,8 +1,4 @@
-import { StringOrStringArray, IaMediaType, IaCollectionId } from ".";
-
-export type IaItemMetadataRaw<T extends IaItemBaseMetadata = IaItemBaseMetadata> = {
-    [K in keyof T]: StringOrStringArray<T[K]>;
-};
+import { IaMediaType, IaCollectionId } from ".";
 
 export type IaItemBaseMetadata = {
     /** Unique identifier for an item on the archive.org web site. Used in the URL for the item, ie archive.org/details/[identifier]. */
@@ -106,7 +102,7 @@ export type IaItemMetadata = IaItemBaseMetadata & {
     /** Screen name of the account that updated the item */
     updater?: string | string[];
     /** Date the item was updated by updater */
-    updatedate?: Date | Date[];
+    updatedate?: string | string[];
     /** Timestamp in the metadata table for the last time the item’s row in that table was written */
     updated?: string | string[];
     /** Email of the person who scanned/captured the media in the item */

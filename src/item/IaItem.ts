@@ -18,6 +18,9 @@ import { getMd5, makeArray, patternsMatch, validateS3Identifier } from "../util"
 import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import { normFilepath } from "../util/normFilePath";
 import { IaFile } from "../files";
+import { getFileSize } from "../util/getFileSize";
+import S3Request from "../request/S3Request";
+import { chunkGenerator } from "../util/chunkGenerator";
 
 
 
@@ -56,6 +59,9 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
     };
 
     public readonly session: IaSession;
+
+    // TODO
+    tasks: any;
 
     /**
      * 
@@ -338,7 +344,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
     public getReview(): Response {
         const url = `${this.session.url}/services/reviews.php`;
         const params = { identifier: this.identifier };
-        const response = await this.session.get(url, { params});
+        const response = await this.session.get(url, { params });
         if (!response.ok) {
             throw handleIaApiError(response);
         }
@@ -373,7 +379,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         const url = `${this.session.url}/services/reviews.php`;
         const params: HttpParams = { identifier: this.identifier };
         const data: IaReviewData = { title, body, stars };
-        const response = await this.session.post(url, { params, data});
+        const response = await this.session.post(url, { params, data });
         if (!response.ok) {
             throw handleIaApiError(response);
         }
@@ -488,7 +494,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             checksum = false,
             destdir,
             noDirectory = false,
-            retries,
+            retries = 10,
             itemIndex,
             ignoreErrors = false,
             onTheFly = false,
@@ -499,7 +505,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             excludeSource = [],
             stdout = false,
             params,
-            timeout
+            timeout = 120
         }: IaItemDownloadParams = {}
     ): Response[] | string[] {
 
@@ -644,30 +650,22 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         appendList = false,
         insert = false,
         priority = 0,
-        accessKey,
-        secretKey,
         debug = false,
         headers = {},
     }: IaItemModifyMetadataParams): Promise<Request | Response> {
-        accessKey = accessKey ?? this.session.accessKey;
-        secretKey = secretKey ?? this.session.secretKey;
-
-        const _headers = { ...this.session.headers, headers };
+        headers = { ...this.session.headers, ...headers };
 
         const url = `${this.session.url}/metadata/${this.identifier}`;
         // TODO: currently files and metadata targets do not support dict's,
         // but they might someday?? refactor this check.
         const sourceMetadata = this.itemData;
-        const request = new IaMetadataRequest(url,{
+        const request = new IaMetadataRequest(url, {
             // TODO
-            method: 'POST',
-            headers: _headers,
+            headers,
             metadata,
             sourceMetadata,
             target,
             priority,
-            accessKey,
-            secretKey,
             append,
             appendList,
             insert
@@ -742,8 +740,6 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             metadata,
             fileMetadata,
             headers = {},
-            accessKey,
-            secretKey,
             queueDerive = false,
             verbose = false,
             verify = false,
@@ -752,10 +748,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             retries = 0,
             retriesSleep = 30,
             debug = false,
-        }: IaItemUploadFileParams<M,F>): Promise<Request | Response> {
-
-        accessKey ??= this.session.accessKey;
-        secretKey ??= this.session.secretKey;
+        }: IaItemUploadFileParams<M, F>): Promise<Request | Response> {
 
         // Set checksum after delete.
         checksum = deleteLocalFile ?? checksum;
@@ -822,124 +815,98 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
 
         const buildRequest = () => {
             body.seek(0, os.SEEK_SET);
-            if (verbose) {
-                try {
-                    // hack to raise exception so we get some output for
-                    // empty files.
-                    if (size == 0) throw new Error();
+            let data;
 
-                    chunkSize = 1048576;
-                    expectedSize = math.ceil(size / chunkSize);
-                    chunks = chunk_generator(body, chunkSize);
-                    progressGenerator = tqdm(chunks,
-                        desc = ` uploading ${key}`,
-                        dynamic_ncols = true,
-                        total = expectedSize,
-                        unit = 'MiB');
-                    data = undefined;
-                    // pre_encode is needed because http doesn't know that it
-                    // needs to encode a TextIO object when it's wrapped
-                    // in the Iterator from tqdm.
-                    // So, this FileAdapter provides pre-encoded output
-                    data = IterableToFileAdapter(
-                        progressGenerator,
-                        size,
-                        pre_encode = isinstance(body, io.TextIOBase));
-                } catch (err) {
-                    console.error(` uploading ${key}`);
-                    data = body;
-                }
-            } else {
                 data = body;
-            }
+
 
             _headers.update(this.session.headers);
-            request = S3Request(method = 'PUT',
-                url = url,
-                headers = _headers,
-                data = data,
-                metadata = metadata,
-                fileMetadata = fileMetadata,
-                accessKey = accessKey,
-                secretKey = secretKey,
-                queueDerive = queueDerive);
-            return request;
+            return new S3Request(url,{
+                method :'PUT',
+                headers,
+                auth: this.auth,
+                data,
+                metadata,
+                fileMetadata,
+                queueDerive
+            });
         };
+
+
         if (debug) {
             const preparedRequest = this.session.prepareRequest(buildRequest());
             body.close();
             return preparedRequest;
         } else {
-            try{
-            while (true) {
-                errorMsg = (`s3 is overloaded, sleeping for ${retriesSleep} seconds and retrying. ${retries} retries left.`);
-                if (retries > 0) {
-                    if (this.session.s3_is_overloaded(accessKey = accessKey)) {
-                        sleep(retriesSleep);
-                        log.info(errorMsg);
-                        if (verbose) {
-                            console.error(` warning: {errorMsg}`);
+            try {
+                while (true) {
+                    const errorMsg = (`s3 is overloaded, sleeping for ${retriesSleep} seconds and retrying. ${retries} retries left.`);
+                    if (retries > 0) {
+                        if (await this.session.s3IsOverloaded()) {
+                            await sleepMs(retriesSleep);
+                            log.info(errorMsg);
+                            if (verbose) {
+                                console.error(` warning: {errorMsg}`);
+                            }
+                            retries -= 1;
+                            continue;
                         }
+                    }
+                    const preparedRequest = buildRequest();
+
+                    // chunked transfer-encoding is NOT supported by IA-S3.
+                    // It should NEVER be set. Requests adds it in certain
+                    // scenarios (e.g. if content-length is 0). Stop it.
+                    if (preparedRequest.headers.get('transfer-encoding') === 'chunked') {
+                        preparedRequest.headers.delete('transfer-encoding')
+                    }
+                    const response = this.session.send(preparedRequest, {stream: true});
+                    if ((response.status == 503) && (retries > 0)) {
+                        const text = await response.text();
+                        if (text.includes('appears to be spam')) {
+                            // TODO 503 error obj
+                            log.info('detected as spam, upload failed');
+                            break;
+                        }
+                        log.info(errorMsg);
+                        await sleepMs(retriesSleep);
                         retries -= 1;
                         continue;
+                    }else {
+                        if (response.status == 503){
+                            log.info('maximum retries exceeded, upload failed.');
+                            break;
+                        }
                     }
-                }
-                request = _build_request();
-                preparedRequest = request.prepare();
+                    if (!response.ok) {
+                        throw handleIaApiError(response);
+                    }
+                    log.info(`uploaded ${key} to ${url}`);
+                    if (deleteLocalFile && response.status == 200) {
+                        log.info(`${key} successfully uploaded to https://archive.org/download/${this.identifier}/${key} and verified, deleting local copy`);
+                        body.close();
+                        os.remove(filename);
+                    }
+                    return response;
+                } catch (err) {
+                    try {
+                        msg = get_s3_xml_text(exc.response.content);
+                    } catch (err) {  // probably HTTP 500 error and response is invalid XML;
+                        msg = ('IA S3 returned invalid XML (HTTP status code {exc.response.statusCode}). This is a server side error which is either temporary, or requires the intervention of IA admins.');
 
-                // chunked transfer-encoding is NOT supported by IA-S3.
-                // It should NEVER be set. Requests adds it in certain
-                // scenarios (e.g. if content-length is 0). Stop it.
-                if (preparedRequest.headers['transfer-encoding'] === 'chunked') {
-                    delete preparedRequest.headers['transfer-encoding'];
-                }
-                response = this.session.send(preparedRequest, stream = true, requestKwargs);
-                if (response.statusCode == 503) and(retries > 0){
-                    if (response.content.includes('appears to be spam')) {
-                        log.info('detected as spam, upload failed');
-                        break;
+                        errorMsg = ` error uploading {key} to {this.identifier}, {msg}`;
+                        log.error(errorMsg);
+                        if (verbose)
+                            console.error(` error uploading {key}: {msg}`);
+                        // Raise HTTPError with error message.
+                        //throw type(exc)(errorMsg, response=exc.response, request=exc.request)
+                        throw new Error(errorMsg);
+                    } finally {
+                        body.close();
                     }
-                    log.info(errorMsg);
-                    if (verbose) {
-                        console.error(` warning: {errorMsg}`);
-                    }
-                    sleep(retriesSleep);
-                    retries -= 1;
-                    continue;
-                }else {
-                    if response.statusCode == 503:
-                        log.info('maximum retries exceeded, upload failed.');
-                    break;
-                }
-                if (!response.ok) {
-                    throw handleIaApiError(response);
-                }
-                log.info(`uploaded {key} to {url}`);
-                if (deleteLocalFile && response.statusCode == 200) {
-                    log.info(`${key} successfully uploaded to https://archive.org/download/${this.identifier}/${key} and verified, deleting local copy`);
-                    body.close();
-                    os.remove(filename);
-                }
-                response.close();
-                return response;
-            } catch (err) {
-                try {
-                    msg = get_s3_xml_text(exc.response.content);
-                } catch (err) {  # probably HTTP 500 error and response is invalid XML;
-                    msg = ('IA S3 returned invalid XML (HTTP status code {exc.response.statusCode}). This is a server side error which is either temporary, or requires the intervention of IA admins.');
-
-                    errorMsg = ` error uploading {key} to {this.identifier}, {msg}`;
-                    log.error(errorMsg);
-                    if (verbose)
-                        console.error(` error uploading {key}: {msg}`);
-                    // Raise HTTPError with error message.
-                    //throw type(exc)(errorMsg, response=exc.response, request=exc.request)
-                    throw new Error(errorMsg);
-                } finally {
-                    body.close();
                 }
             }
-        }
+        
     }
 
     // TODO fix examples
@@ -989,20 +956,20 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @returns 
      */
     public async upload(files: IaFileObject | IaFileObject[] | string | string[], {
-        metadata,
-        headers,
-        accessKey,
-        secretKey,
-        queueDerive = true,
-        verbose = false,
-        verify = false,
-        checksum = false,
-        deleteLocalFiles = false,
-        retries,
-        retriesSleep,
-        debug = false,
-        validateIdentifier = false,
-    }: IaItemUploadParams): Promise<Request[] | Response[]> {
+                metadata,
+                headers,
+                accessKey,
+                secretKey,
+                queueDerive = true,
+                verbose = false,
+                verify = false,
+                checksum = false,
+                deleteLocalFiles = false,
+                retries,
+                retriesSleep,
+                debug = false,
+                validateIdentifier = false,
+            }: IaItemUploadParams): Promise<Request[] | Response[]> {
         let remoteDirName = undefined;
         const _files = makeArray(files);
 
@@ -1102,8 +1069,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
                     retries,
                     retriesSleep,
                     debug,
-                    validateIdentifier,
-                    requestKwargs
+                    validateIdentifier
                 });
                 responses.push(response);
             }
@@ -1112,3 +1078,5 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         return responses;
     }
 }
+
+

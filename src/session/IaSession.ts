@@ -4,6 +4,7 @@ import { IaApiError } from "../error";
 import IaCollection from "../item/IaCollection";
 import { IaItem } from "../item/IaItem";
 import log from "../logging/log";
+import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import {
     HttpHeaders,
     IaAuthConfig,
@@ -42,6 +43,9 @@ class ArchiveSessionCookies {
  * const item = await getItem('nasa');
  */
 export class IaSession {
+    send(request: IaMetadataRequest, params:any):Response {
+        throw new Error("Method not implemented.");
+    }
     public readonly host: string;
     public readonly protocol: string;
     public readonly url: string;

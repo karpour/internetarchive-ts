@@ -1,13 +1,10 @@
-export type IaReviewData = {
-    title: string,
-    body: string,
-    stars?: number;
-};
-
+import { convertIaItemReview } from "../util/convertIaItemReview";
 
 export type IaItemReviewRaw = {
     [key in keyof IaItemReview]: string;
-}
+};
+
+export type IaItemReviewRating = 0 | 1 | 2 | 3 | 4 | 5;
 
 export type IaItemReview = {
     /** Multiline text */
@@ -26,5 +23,5 @@ export type IaItemReview = {
     /** Date and time (UTC) of when the review was first submitted */
     createdate: Date;
     /** From 0 (zero) to 5 (five) */
-    stars: 0 | 1 | 2 | 3 | 4 | 5;
+    stars: IaItemReviewRating;
 };

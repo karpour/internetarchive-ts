@@ -1,6 +1,15 @@
 import { IaBaseMetadataType, IaRawMetadata } from "../types";
-import {extractKeyAndIndex, makeArray} from "../util";
+import { extractKeyAndIndex, makeArray } from "../util";
+import { convertToRawMetadata } from "../util/convertToRawMetadata";
 
+
+type IaPrepareMetadataParams<M extends IaBaseMetadataType, S extends IaBaseMetadataType> = {
+    newMetadata: M,
+    sourceMetadata?: S,
+    append: boolean,
+    appendList: boolean,
+    insert: boolean;
+};
 
 /**
  * Prepare a metadata object for an {@link S3Request} or a {@link IaMetadataRequest}
@@ -11,20 +20,21 @@ import {extractKeyAndIndex, makeArray} from "../util";
  * @param insert 
  * @returns A filtered metadata dict to be used for generating IA S3 and Metadata API requests.
  */
-export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMetadataType>(
-    newMetadata: M,
-    sourceMetadata?: S,
-    append: boolean = false,
-    appendList: boolean = false,
-    insert: boolean = false):{
+export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMetadataType>({
+    newMetadata,
+    sourceMetadata,
+    append = false,
+    appendList = false,
+    insert = false }: IaPrepareMetadataParams<M, S>): IaRawMetadata<M & S> {
 
     // Copy of the new Metadata, will be populated in the next for loop
     const metadata: Record<string, string> = {};
 
+    // TODO convert source and new metadata to raw
     // Make a deepcopy of sourceMetadata if it exists. A deepcopy is
     // necessary to avoid modifying the original dict.
-    sourceMetadata = sourceMetadata ? structuredClone(sourceMetadata) : {};
-    let preparedMetadata: IaRawMetadata = {};
+    const _sourceMetadata: IaRawMetadata = sourceMetadata !== undefined ? convertToRawMetadata(sourceMetadata) : {};
+    const preparedMetadata: IaRawMetadata = {};
 
     // Create indexedKeys counter dict. i.e.: {'subject': 3} -- subject
     // (with the index removed) appears 3 times in the metadata dict.
@@ -39,7 +49,7 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
             indexedKeys[parsedKey] = cnt === undefined ?
                 // Initialize count.
                 // If key without index exists, already count it here
-                (sourceMetadata[parsedKey] !== undefined ? 2 : 1) :
+                (_sourceMetadata[parsedKey] !== undefined ? 2 : 1) :
                 // Otherwise, increase counter
                 cnt + 1;
         }
@@ -50,7 +60,7 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
     for (const key in indexedKeys) {
         preparedMetadata[key] = [
             // Initialize the value in the preparedMetadata dict.
-            ...makeArray(sourceMetadata[key] ?? []),
+            ...makeArray(_sourceMetadata[key] ?? []),
             // Fill the value of the preparedMetadata key with "" values
             // so all indexed items can be indexed in order.
             ...(new Array(indexedKeys[key]! - 1).fill(""))
@@ -71,20 +81,18 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
                 // TODO
                 (preparedMetadata[parsedKey] as string[]).push(metadata[key]!);
             }
-        }
-
-        // If append is True, append value to sourceMetadata value.
-        else if (appendList && sourceMetadata[key] !== undefined) {
+        } else if (appendList && _sourceMetadata[key] !== undefined) {
+            // If append is True, append value to sourceMetadata value.
 
             // TODO WTF
-        } else if (append && sourceMetadata[key] !== undefined) {
-            preparedMetadata[key] = `${sourceMetadata[key]} ${metadata[key]}`;
-        } else if (insert && sourceMetadata[parsedKey]) {
+        } else if (append && _sourceMetadata[key] !== undefined) {
+            preparedMetadata[key] = `${_sourceMetadata[key]} ${metadata[key]}`;
+        } else if (insert && _sourceMetadata[parsedKey]) {
             const index = idx ?? 0;
-            sourceMetadata[parsedKey] = makeArray(sourceMetadata[parsedKey]!).splice(index, 0, metadata[key]!);
-            let insert_md: string[] = [];
+            const tempArray = makeArray(_sourceMetadata[parsedKey]!).splice(index, 0, metadata[key]!);
+            const insert_md: string[] = [];
 
-            for (let _v of sourceMetadata[parsedKey]!) {
+            for (let _v of tempArray) {
                 if (!insert_md.includes(_v) && _v) {
                     insert_md.push(_v);
                 }
@@ -126,5 +134,5 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
         }
     }
 
-    return preparedMetadata;
+    return preparedMetadata as IaRawMetadata<M & S>;
 }

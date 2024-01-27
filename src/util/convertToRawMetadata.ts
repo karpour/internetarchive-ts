@@ -1,37 +1,33 @@
-import { IaBaseMetadataType, IaRawRawMetadataType, RawFlattenedMetadata } from "../types";
+import { IaBaseMetadataType, IaMetadataValidFieldType, StringOrStringArray, IaRawMetadata } from "../types";
 import { IaTypeError } from "../error";
 
+export function convertToStringOrStringArray<T extends IaMetadataValidFieldType | IaMetadataValidFieldType[]>(value: T): StringOrStringArray<T> {
+    switch (typeof value) {
+        case "string":
+        case "number":
+        case "bigint":
+        case "boolean":
+            return `${value}` as StringOrStringArray<T>;
+        case "undefined":
+            return undefined as StringOrStringArray<T>;
+        // @ts-ignore 
+        case "object":
+            if (Array.isArray(value)) {
+                return value.map(v => `${v}`) as StringOrStringArray<T>;
+            }
+        // Intentional fallthrough here
+        //case "symbol":
+        //case "function":
+        default:
+            throw new IaTypeError(`Can not convert unallowed value "${typeof value}"`);
+    }
+}
 
-
-export function convertToRawFlattenedMetadata<T extends IaBaseMetadataType>(metadata: T): RawFlattenedMetadata<T> {
-    const rawMetadata: IaRawRawMetadataType = {};
+export function convertToRawMetadata<T extends IaBaseMetadataType>(metadata: T): IaRawMetadata<T> {
+    const rawMetadata: IaRawMetadata = {};
     for (const entry of Object.entries(metadata)) {
         const [key, value] = entry;
-        switch (typeof value) {
-            case "string":
-            case "number":
-            case "bigint":
-            case "boolean":
-                rawMetadata[key] = `${value}`;
-                break;
-            // @ts-ignore 
-            case "object":
-                if (Array.isArray(value)) {
-                    for (let i = 0; i < value.length; i++) {
-                        if (value !== undefined && value !== null) {
-                            rawMetadata[`${key}[${i}]`] = `${value[i]}`;
-                        }
-                    }
-                    break;
-                }
-            // Intentional fallthrough here
-            case "symbol":
-            case "function":
-                throw new IaTypeError(`Metadata object key "${key}" has illegal value of type "${typeof value}"`);
-            //case "undefined":
-            default:
-                break;
-        }
+        rawMetadata[key] = convertToStringOrStringArray(value);
     }
-    return rawMetadata as RawFlattenedMetadata<T>;
+    return rawMetadata as IaRawMetadata<T>;
 }

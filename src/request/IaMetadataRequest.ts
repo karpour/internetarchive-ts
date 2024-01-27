@@ -1,13 +1,12 @@
 import log from "../logging/log";
-import { IaBaseMetadataType, IaItemData, IaPatchData, IaRequestTarget, IaTaskPriority, Prettify } from "../types";
-import IaRequest, { IaRequestConstructorParams } from "./IaRequest";
+import { IaBaseMetadataType, IaMetadataRequestConstructorParams, IaMetadataRequestPrepareBodyParams, IaPatchData } from "../types";
+import IaRequest from "./IaRequest";
 import { prepareFilesPatch } from "./prepareFilesPatch";
 import preparePatch from "./preparePatch";
 import { prepareTargetPatch } from "./prepareTargetPatch";
 
-
 export class IaMetadataRequest extends IaRequest {
-    public constructor(url:string, params: IaMetadataRequestPrepareBodyParams) {
+    public constructor(url: string, params: IaMetadataRequestConstructorParams) {
         super(url, (() => {
             return {
                 ...params,
@@ -25,21 +24,9 @@ export function validateMetadata(metadata: object): metadata is IaBaseMetadataTy
     return true;
 }
 
-type IaMultiMetadata = {
-    [target in IaRequestTarget]: IaBaseMetadataType
-};
 
-export type IaMetadataRequestPrepareBodyParams = {
-    metadata: IaMultiMetadata | IaBaseMetadataType,
-    sourceMetadata: IaItemData,
-    target?: IaRequestTarget,
-    priority: IaTaskPriority,
-    append: boolean,
-    appendList: boolean,
-    insert: boolean;
-};
 
-export type IaMetadataRequestConstructorParams = Prettify<IaMetadataRequestPrepareBodyParams & IaRequestConstructorParams>
+
 
 export function prepareBody({
     metadata,
@@ -62,7 +49,7 @@ export function prepareBody({
             if (key == 'metadata') {
                 try {
                     patch = preparePatch({
-                        metadata: metadata,
+                        metadata,
                         sourceMetadata: sourceMetadata.metadata,
                         append,
                         appendList,

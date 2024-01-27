@@ -1,4 +1,4 @@
-import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType, Prettify } from ".";
+import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType, Prettify } from ".";
 import IaSession from "../session/IaSession";
 
 
@@ -151,7 +151,7 @@ export type IaItemDownloadParams = {
     excludeSource?: string | string[],
     stdout?: boolean,
     params?: HttpParams,
-    timeout?: number | [number, number];
+    timeout?: number;
 };
 
 // Download
@@ -267,3 +267,16 @@ export type IaSubmitTaskParams = {
     headers?: HttpHeaders;
 };
 
+export type IaMetadataRequestPrepareBodyParams = {
+    metadata: IaMultiMetadata | IaBaseMetadataType,
+    sourceMetadata: IaItemData,
+    target?: IaRequestTarget,
+    priority: IaTaskPriority,
+    append: boolean,
+    appendList: boolean,
+    insert: boolean;
+};
+
+
+export type IaMetadataRequestConstructorParams =
+    Prettify<IaMetadataRequestPrepareBodyParams & Omit<IaRequestConstructorParams,'method'>>;

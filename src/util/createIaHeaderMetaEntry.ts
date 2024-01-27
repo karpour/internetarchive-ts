@@ -1,16 +1,9 @@
-import { IaMetaDataHeaderIndexedKey, IaMetaType, NoUnderscoreString, replaceUnderScores } from "../types/IaTypes";
+import { IaMetaDataHeaderIndexedKey, IaMetaType } from "../types/IaTypes";
+import { replaceUnderScores } from "./replaceUnderScores";
 import { leftPad2 } from "./leftPad2";
 
-/** Header Entry for setting a meta value */
-export type IaHeaderMetaEntry<T extends string, V extends string> = `x-archive-meta-${NoUnderscoreString<T>}:${V}`;
-
-
-export function createIaHeaderMetaKey<K extends string, N extends number, MT extends IaMetaType>(key: K, metaType: MT, idx: N): IaMetaDataHeaderIndexedKey<K, N, MT> {
-  return `x-archive-${metaType}${leftPad2(idx)}-${replaceUnderScores(key)}`;
-}
-
-
-export function createIaHeaderMetaEntry<K extends string, V extends string>(key: K, value: V): IaHeaderMetaEntry<K, V> {
-  // TODO replace newlines, trim
-  return `x-archive-meta-${replaceUnderScores(key)}:${value}`;
+export function createIaHeaderMetaKey<K extends string, N extends number | undefined, MT extends IaMetaType>(key: K, metaType: MT, idx?: N): IaMetaDataHeaderIndexedKey<K, N, MT> {
+  // because rfc822 http headers disallow _ in names, IA-S3 will
+  // translate two hyphens in a row (--) into an underscore (_).
+  return `x-archive-${metaType}${idx !== undefined ? leftPad2(idx) : ''}-${replaceUnderScores(key)}` as IaMetaDataHeaderIndexedKey<K, N, MT>;
 }
