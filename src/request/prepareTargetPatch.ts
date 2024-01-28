@@ -1,5 +1,5 @@
-import { IaRequestTarget, Prettify } from "../types";
-import preparePatch, { IaPreparePatchParams } from "./preparePatch";
+import { IaBaseMetadataType, IaPreparePatchParams, IaRequestTarget, Prettify } from "../types";
+import preparePatch from "./preparePatch";
 
 export type IaPrepareTargetPatchParams = Prettify<IaPreparePatchParams & {
     target: IaRequestTarget,
@@ -14,8 +14,10 @@ export function prepareTargetPatch({
     appendList,
     key,
     insert }: IaPrepareTargetPatchParams) {
-
-    let newMetadata: Record<string, any> | string = {};
+    throw new Error("Not implemented");
+    // TODO i have no clue
+    /*
+    let newMetadata: IaBaseMetadataType = {};
 
     for (const _k in metadata) {
         const parts = _k.split('/');
@@ -29,7 +31,7 @@ export function prepareTargetPatch({
             sourceMetadata = sourceMetadata[_k] ?? {};
         else
             sourceMetadata[_k] = (sourceMetadata[_k] ?? {})[_k] ?? {};
-    }
+    }*/
     return preparePatch({ metadata, sourceMetadata, append, appendList, insert });
 }
 

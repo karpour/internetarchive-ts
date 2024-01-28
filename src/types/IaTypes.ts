@@ -18,6 +18,8 @@ export type Prettify<T> = {
   [K in keyof T]: T[K];
 } & {};
 
+export type NumberFromString<T> = T extends `${infer N extends number}` ? N : never;
+
 export type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
 type ExcludeUndefinedKeys<T> = {
@@ -112,23 +114,6 @@ type FlattenedMetaDataHeaderIndexArrays<T extends IaRawMetadata, MT extends IaMe
 };
 
 type IaMetadataHeaderUrlEncodedString = `url${string}`;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * Patch payload data
@@ -387,10 +372,18 @@ export type IaGetTasksBasicParams = {
   /** Task run state (see below) */
   wait_admin?: number;
 
-  'submittime>'?: Date;
-  'submittime<'?: Date;
-  'submittime>='?: Date;
-  'submittime<='?: Date;
+  /** YYYY-MM-DD */
+  'submittime>'?: string;
+
+  /** YYYY-MM-DD */
+  'submittime<'?: string;
+
+  /** YYYY-MM-DD */
+  'submittime>='?: string;
+
+  /** YYYY-MM-DD */
+  'submittime<='?: string;
+
 
   /** The current default is 50 tasks per request, but the caller may request more with the limit parameter 
    * The current maximum limit is 500 tasks. Values outside this range are clamped to the server maximum.
@@ -474,7 +467,7 @@ export type IaUserInfo = Record<string, string>;
 
 
 export type IaMetadataRequestTarget = "metadata";
-export type IaFileRequestTarget = `files/${string}`;
+export type IaFileRequestTarget<T extends string = string> = `files/${T}`;
 export type IaCustomJsonRequestTarget = string;
 
 export type IaRequestTarget = IaMetadataRequestTarget | IaFileRequestTarget | IaCustomJsonRequestTarget;

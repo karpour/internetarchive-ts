@@ -1,11 +1,6 @@
-import S3Auth from "../auth/S3Auth";
-import { session } from "../conftest.spec";
-import { IaApiError } from "../error";
-import IaValueError from "../error/IaValueError";
+import { IaApiError, IaValueError } from "../error";
 import IaSession from "../session/IaSession";
-import { Mapping } from "../types";
 import { handleIaApiError } from "../util/handleIaApiError";
-import { raiseForStatus } from "../utils";
 import Catalog from "./Catalog";
 
 /** See {@link https://archive.org/developers/tasks.html#wait-admin-and-run-states} */

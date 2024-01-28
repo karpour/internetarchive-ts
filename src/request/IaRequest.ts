@@ -3,7 +3,6 @@
  * @file A base class for Internet Archive Requests
  */
 
-import { createS3AuthHeader } from "../session/createS3AuthHeader";
 import { IaRequestConstructorParams } from "../types/IaParams";
 
 /**
@@ -17,7 +16,7 @@ class IaRequest extends Request {
                 // Compression turned on by default
                 ...(params.compression !== false && { "Accept-Encoding": "deflate, gzip" }),
                 // only add auth header if accessKey is provided
-                ...(params.auth && createS3AuthHeader(params.auth.accessKey, params.auth.secretKey)),
+                ...params.auth,
                 ...(params.cookies && { 'Cookie': Object.entries(params.cookies).map(([key, value]) => `${key}=${value}`).join('; ') }),
                 ...params.headers
             },

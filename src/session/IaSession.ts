@@ -43,16 +43,14 @@ class ArchiveSessionCookies {
  * const item = await getItem('nasa');
  */
 export class IaSession {
-    send(request: IaMetadataRequest, params:any):Response {
-        throw new Error("Method not implemented.");
-    }
+
     public readonly host: string;
     public readonly protocol: string;
     public readonly url: string;
     public readonly userEmail?: string;
     public readonly accessKey?: string;
     public readonly secretKey?: string;
-    protected readonly auth?: HttpHeaders;
+    public readonly auth?: HttpHeaders;
     protected readonly secure: boolean;
     protected readonly config: IaAuthConfig;
     protected readonly configFile: string;
@@ -154,11 +152,17 @@ export class IaSession {
         }
     }
 
+
+    // Get method
+
     public async get(url: string, {
         params,
         auth,
-        headers
+        headers,
+        stream,
+        timeout
     }: IaHttpRequestGetParams = {}): Promise<Response> {
+        // TODO handle stream
         const urlObj = new URL(url);
         if (params) {
             for (const param of Object.entries(params)) {
@@ -168,6 +172,7 @@ export class IaSession {
                 }
             }
         }
+        log.verbose(`GET ${urlObj.href}`);
         return fetch(urlObj.href, {
             method: "GET",
             headers: {
@@ -182,24 +187,30 @@ export class IaSession {
         params,
         auth,
         headers,
-        data
+        body
     }: IaHttpRequestPostParams): Promise<Response> {
         return fetch(url, {
             method: "POST",
-            headers: { ...this.headers, ...auth }
+            headers: { ...this.headers, ...headers, ...auth },
+            body
         });
     }
 
     public async delete(url: string, {
-        params: params,
+        params,
         auth,
         headers,
-        data
+        body
     }: IaHttpRequestDeleteParams): Promise<Response> {
         return fetch(url, {
             method: "DELETE",
-            headers: { ...this.headers, ...auth }
+            headers: { ...this.headers, ...headers, ...auth },
+            body
         });
+    }
+
+    public async send(request: IaMetadataRequest, params?: any): Promise<Response> {
+        return fetch(request)
     }
 
     /**

@@ -1,4 +1,4 @@
-import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType, Prettify } from ".";
+import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType, Prettify } from ".";
 import IaSession from "../session/IaSession";
 
 
@@ -96,11 +96,12 @@ export type IaHttpRequestParams = {
     params?: Record<string, string | number | undefined>,
     auth?: HttpHeaders,
     headers?: HttpHeaders;
+    timeout?: number;
 };
 
-export type IaHttpRequestGetParams = IaHttpRequestParams;
-export type IaHttpRequestPostParams = IaHttpRequestParams & { data: any; };
-export type IaHttpRequestDeleteParams = IaHttpRequestParams & { data: any; };
+export type IaHttpRequestGetParams = IaHttpRequestParams & { stream?: boolean; };
+export type IaHttpRequestPostParams = IaHttpRequestParams & { body: BodyInit; };
+export type IaHttpRequestDeleteParams = IaHttpRequestParams & { body: BodyInit; };
 
 // Upload
 
@@ -237,11 +238,10 @@ export type IaRequestConstructorParams = Prettify<{
     /** A Headers object */
     headers?: Record<string, string>;
     files?: string[];
-    data?: string[];
     params?: Record<string, string>;
     cookies?: Record<string, string>;
     hooks?: any;
-    auth?: IaSessionParams;
+    auth?: HttpHeaders;
     /** Accept a compressed response
      * @default true
      */
@@ -277,6 +277,24 @@ export type IaMetadataRequestPrepareBodyParams = {
     insert: boolean;
 };
 
+export type IaPreparePatchParams = {
+    metadata: Readonly<IaBaseMetadataType>,
+    sourceMetadata: Readonly<IaBaseMetadataType>,
+    append: boolean,
+    appendList?: boolean,
+    insert?: boolean;
+};
+
+export type IaPrepareFilesPatchParams = {
+    metadata: Readonly<IaBaseMetadataType>,
+    sourceFilesMetadata: Readonly<(IaFileBaseMetadata | IaFilesXmlMetadata)[]>,
+    append: boolean,
+    appendList?: boolean,
+    insert?: boolean;
+    target: IaFileRequestTarget;
+};
+
+
 
 export type IaMetadataRequestConstructorParams =
-    Prettify<IaMetadataRequestPrepareBodyParams & Omit<IaRequestConstructorParams,'method'>>;
+    Prettify<IaMetadataRequestPrepareBodyParams & Omit<IaRequestConstructorParams, 'method'>>;

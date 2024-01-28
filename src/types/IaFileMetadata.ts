@@ -1,7 +1,7 @@
-import { IaBaseMetadataType, IaFileRotation, IaFileSource, IaMetadataRaw, Optional } from ".";
+import { IaBaseMetadataType, IaFileRotation, IaFileSource, IaRawMetadata, Optional } from ".";
 
 
-export type IaFileMetadataRaw<T extends IaFileBaseMetadata = IaFileBaseMetadata> = IaMetadataRaw<T>;
+export type IaFileMetadataRaw<T extends IaFileBaseMetadata = IaFileBaseMetadata> = IaRawMetadata<T>;
 
 export type IaFilesXmlMetadata = Omit<Optional<IaFileExtendedMetadata, 'mtime' | 'size'>, 'name'> & { name: `${string}_files.xml`; };
 

@@ -1,5 +1,6 @@
 import { IaItemMetadata } from "../types/IaItemMetadata";
-import { IaItemData, IaSimplelistEntry, ItemDataKey } from "../types/IaItemData";
+import { IaItemData, ItemDataKey } from "../types/IaItemData";
+import { IaSimplelistEntry } from "../types/IaSimplelistEntry";
 import { IaFileExtendedMetadata, IaFilesXmlMetadata } from "../types/IaFileMetadata";
 import { IaItemReview } from "../types";
 import { createHash } from "crypto";

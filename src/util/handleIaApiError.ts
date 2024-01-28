@@ -22,7 +22,7 @@ import {
  * @throws {IaApiError}
  */
 
-export async function handleIaApiError(response: Response, defaultMessage?: string): Promise<IaApiError> {
+export async function handleIaApiError(response: Response, request?:Request, defaultMessage?: string): Promise<IaApiError> {
     let json;
     try {
         json = await response.json() as { error?: string; };
@@ -30,18 +30,18 @@ export async function handleIaApiError(response: Response, defaultMessage?: stri
     const error = json?.error ?? defaultMessage;
     switch (response.status) {
         case 400:
-            return new IaApiBadRequestError(error, { response });
+            return new IaApiBadRequestError(error, { response, request });
         case 401:
-            return new IaApiUnauthorizedError(error, { response });
+            return new IaApiUnauthorizedError(error, { response, request });
         case 404:
-            return new IaApiNotFoundError(error, { response });
+            return new IaApiNotFoundError(error, { response, request });
         case 405:
-            return new IaApiMethodNotAllowedError(error, { response });
+            return new IaApiMethodNotAllowedError(error, { response, request });
         case 409:
-            return new IaApiConflictError(error, { response });
+            return new IaApiConflictError(error, { response, request });
         case 429:
-            return new IaApiTooManyRequestsError(error, { response });
+            return new IaApiTooManyRequestsError(error, { response, request });
         default:
-            return new IaApiError(error ?? "Unexpected HTTP Response status", { response });
+            return new IaApiError(error ?? "Unexpected HTTP Response status", { response, request });
     }
 }

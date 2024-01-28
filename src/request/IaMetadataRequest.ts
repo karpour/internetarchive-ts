@@ -1,5 +1,5 @@
 import log from "../logging/log";
-import { IaBaseMetadataType, IaMetadataRequestConstructorParams, IaMetadataRequestPrepareBodyParams, IaPatchData } from "../types";
+import { IaBaseMetadataType, IaFileRequestTarget, IaMetadataRequestConstructorParams, IaMetadataRequestPrepareBodyParams, IaPatchData } from "../types";
 import IaRequest from "./IaRequest";
 import { prepareFilesPatch } from "./prepareFilesPatch";
 import preparePatch from "./preparePatch";
@@ -25,7 +25,9 @@ export function validateMetadata(metadata: object): metadata is IaBaseMetadataTy
 }
 
 
-
+export function isFileRequestTarget(target: string): target is IaFileRequestTarget {
+    return target.startsWith("files/");
+}
 
 
 export function prepareBody({
@@ -58,19 +60,20 @@ export function prepareBody({
                 } catch (err: any) {
                     throw err;
                 }
-            } else if (key.startsWith('files')) {
+            } else if (isFileRequestTarget(key)) {
                 patch = prepareFilesPatch({
-                    target: key, // TODO correct?
-                    metadata: metadata[key],
+                    target: key,
+                    metadata,
                     sourceFilesMetadata: sourceMetadata.files,
                     append,
                     appendList,
                     insert
                 });
             } else {
+                throw new Error('Not implemented');
                 patch = prepareTargetPatch({
                     metadata,
-                    sourceMetadata,
+                    sourceMetadata: sourceMetadata.metadata, // Probably wrong
                     append,
                     target,
                     appendList,
@@ -99,11 +102,11 @@ export function prepareBody({
             } catch (err: any) {
                 throw new Error();// ItemLocateError;
             }
-        } else if (target.startsWith('files/')) {
-            patch = prepareFilesPatch(metadata, sourceMetadata.files, append, target, appendList, insert);
+        } else if (isFileRequestTarget(target)) {
+            patch = prepareFilesPatch({ metadata, sourceFilesMetadata: sourceMetadata.files, append, target, appendList, insert });
         } else {
-            metadata = { target: metadata };
-            patch = prepareTargetPatch(metadata, sourceMetadata, append, target, appendList, target, insert);
+            throw new Error('Not implemented');
+            //patch = prepareTargetPatch({metadata: { [target]: metadata }, sourceMetadata, append, target, appendList, insert});
         }
         data = {
             '-patch': JSON.stringify(patch),

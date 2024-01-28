@@ -16,7 +16,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import { IaGetTasksBasicParams, IaGetTasksParams, IaSubmitTaskParams } from "../types";
-import S3Auth from "../auth/S3Auth";
 import IaSession from "../session/IaSession";
 import { IaTaskSummary, IaTaskType } from "../types/IaTask";
 import CatalogTask from "./CatalogTask";
@@ -49,7 +48,6 @@ export function getSortByDate(task: CatalogTask): Date {
  * tasks = c.getTasks('nasa');
  */
 export class Catalog {
-    protected auth: S3Auth;
     protected url: string;
 
     /**
@@ -59,7 +57,6 @@ export class Catalog {
     public constructor(
         public readonly session: IaSession,
     ) {
-        this.auth = new S3Auth(this.session.accessKey, this.session.secretKey);
         this.url = `${this.session.protocol}//${this.session.host}/services/tasks.php`;
     }
 
@@ -100,7 +97,7 @@ export class Catalog {
      * @throws {IaApiError}
      */
     public async makeTasksRequest(params: IaGetTasksParams = {}): Promise<Response> {
-        const response = await this.session.get(this.url, this.auth, { params });
+        const response = await this.session.get(this.url, { params });
         if (response.ok) {
             return response;
         } else {
@@ -233,8 +230,7 @@ export class Catalog {
             data.args.comment = comment;
         }
         return this.session.post(this.url, {
-            json: _data,
-            auth: this.auth,
+            body: JSON.stringify(_data),
             headers
         });
     }

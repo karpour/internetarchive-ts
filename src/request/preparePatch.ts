@@ -1,15 +1,8 @@
-import { IaBaseMetadataType } from "../types";
+import { IaBaseMetadataType, IaItemData, IaPreparePatchParams } from "../types";
 import { deleteKeysFromObject } from "./deleteKeysFromObject";
 import { prepareMetadata } from "./prepareMetadata";
 import { createPatch } from "rfc6902";
 
-export type IaPreparePatchParams = {
-    metadata: Readonly<IaBaseMetadataType>,
-    sourceMetadata: Readonly<IaBaseMetadataType>,
-    append: boolean,
-    appendList?: boolean,
-    insert?: boolean;
-};
 
 
 export default function preparePatch({
@@ -19,7 +12,7 @@ export default function preparePatch({
     appendList = false,
     insert = false }: IaPreparePatchParams) {
 
-    const preparedMetadata = prepareMetadata(metadata, sourceMetadata, append, appendList, insert);
+    const preparedMetadata = prepareMetadata({metadata, sourceMetadata, append, appendList, insert});
     const destinationMetadata = { ...structuredClone(sourceMetadata), ...preparedMetadata };
 
     // Delete metadata items where value is REMOVE_TAG.

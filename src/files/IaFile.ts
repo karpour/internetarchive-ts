@@ -1,14 +1,15 @@
 
-import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFileMetadataRaw } from "../types/IaFileMetadata";
+import { IaFileBaseMetadata, IaFileMetadataRaw } from "../types/IaFileMetadata";
 import { IaItem } from "../item/IaItem";
-import fs, { mkdirSync, existsSync, statSync, readFileSync, unlinkSync, utimesSync } from "fs";
+import fs, { mkdirSync, existsSync, statSync, unlinkSync, utimesSync } from "fs";
 import path from "path";
 import log from "../logging/log";
-import { getMd5, quote, raiseForStatus } from "../utils";
 import { IaBaseFile } from "./IaBaseFile";
 import { IaFileDeleteParams, IaFileDownloadParams } from "../types/IaParams";
 import { handleIaApiError } from "../util/handleIaApiError";
-import { Readable, Writable } from 'stream';
+import { Writable } from 'stream';
+import S3Request from "../request/S3Request";
+import { getMd5 } from "../util";
 
 
 /**
@@ -117,8 +118,7 @@ export class IaFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetadata> 
                 log.info(`skipping "${filePath}", file already exists.`);
                 return false;
             } else if (checksum) {
-                const fp = await fs.promises.open(filePath, 'rb');
-                const md5Sum = await getMd5(fp);
+                const md5Sum = await getMd5(filePath);
                 if (md5Sum === this.metadata.md5) {
                     log.info(`skipping "${filePath}", file already exists based on checksum.`);
                     return false;
@@ -237,21 +237,19 @@ export class IaFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetadata> 
         maxRetries = 2,
         headers = {},
     }: IaFileDeleteParams): Promise<S3Request | Response> {
-        const url = `${this.item.session.protocol}//s3.us.archive.org/${this.identifier}/${quote(this.name)}`;
+        const url = `${this.item.session.protocol}//s3.us.archive.org/${this.identifier}/${encodeURIComponent(this.name)}`;
         /*this.item.session.mountHttpAdapter({
             maxRetries,
             statusForcelist: [503],
             host: 's3.us.archive.org'
         });*/
-        const request = new S3Request({
+        const request = new S3Request(url,{
             method: 'DELETE',
-            url,
             headers: {
                 'x-archive-cascade-delete': cascadeDelete ? '1' : '0',
                 ...headers
             },
-            accessKey,
-            secretKey
+            auth: this.item.session.auth
         });
         if (debug) {
             return request;

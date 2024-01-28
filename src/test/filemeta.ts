@@ -1,4 +1,6 @@
-export const test: IaItemDataRaw = {
+import { IaItemData } from "../types";
+
+export const test: IaItemData = {
     "created": "1690384286",
     "d1": "ia601603.us.archive.org",
     "d2": "ia801603.us.archive.org",

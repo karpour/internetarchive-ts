@@ -16,6 +16,8 @@ export class IaInvalidIdentifierError extends IaTypeError { }
 
 export class IaAuthenticationError extends IaError { }
 
+export class IaFileUploadError extends IaError { }
+
 // API Errors
 
 export type IaApiErrorOptions = Prettify<ErrorOptions & {

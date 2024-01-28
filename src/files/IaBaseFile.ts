@@ -1,4 +1,4 @@
-import { IaFileRotation, IaFileSource } from "../IaTypes";
+import { IaFileRotation, IaFileSource } from "../types";
 import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFileMetadataRaw } from "../types/IaFileMetadata";
 import { strip } from "../util/strip";
 function convertBooleanString(boolString?: string | boolean): boolean | undefined {

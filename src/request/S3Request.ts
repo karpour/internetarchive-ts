@@ -4,16 +4,6 @@ import { prepareMetadata } from "./prepareMetadata";
 import { PACKAGE_VERSION } from "../PACKAGE_VERSION";
 import { prepareMetadataHeaders } from "./prepareMetadataHeaders";
 
-/**
-internetarchive.iarequest
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:copyright: (C) 2012-2021 by Internet Archive.
-:license: AGPL 3, see LICENSE for more details.
-*/
-
-
-
 export class S3Request extends IaRequest {
     public constructor(url: string, {
         metadata,
@@ -22,7 +12,6 @@ export class S3Request extends IaRequest {
         method,
         headers,
         files,
-        data,
         params,
         auth,
         cookies,
@@ -33,11 +22,10 @@ export class S3Request extends IaRequest {
                 'x-archive-auto-make-bucket': '1',
                 'x-archive-queue-derive': queueDerive ? '1' : '0',
                 ...headers,
-                ...prepareMetadataHeaders(prepareMetadata({ scanner: `Internet Archive Javascript library ${PACKAGE_VERSION}`, ...metadata }), 'meta'),
-                ...(fileMetadata ? prepareMetadataHeaders(prepareMetadata(fileMetadata), 'filemeta') : {}),
+                ...prepareMetadataHeaders(prepareMetadata({ metadata: { scanner: `Internet Archive Javascript library ${PACKAGE_VERSION}`, ...metadata } }), 'meta'),
+                ...(fileMetadata ? prepareMetadataHeaders(prepareMetadata({ metadata: fileMetadata }), 'filemeta') : {}),
             },
             files,
-            data,
             params,
             auth,
             cookies,

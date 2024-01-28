@@ -1,23 +1,9 @@
 import { IaItemReview } from "./IaItemReview";
-import { IaItemMetadata } from "./IaItemMetadata";
-import { IaFileExtendedMetadata, IaFilesXmlMetadata } from "./IaFileMetadata";
-import { RawMetadataOptional, StringOrStringArray } from ".";
+import { IaItemBaseMetadata, IaItemMetadata } from "./IaItemMetadata";
+import { IaFilesXmlMetadata, IaFileBaseMetadata} from "./IaFileMetadata";
+import { IaSimplelistEntry } from "./IaSimplelistEntry";
 
-
-
-
-
-
-export type IaSimplelistEntry = {
-
-
-
-};
-
-export type NumberFromString<T> = T extends `${infer N extends number}` ? N : never;
-
-
-export type IaItemData<ItemMetaType extends IaItemMetadata = IaItemMetadata> = {
+export type IaItemData<ItemMetaType extends IaItemBaseMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata = IaFileBaseMetadata> = {
     /** Date the item was created on */
     created: number; // conv
 
@@ -31,7 +17,7 @@ export type IaItemData<ItemMetaType extends IaItemMetadata = IaItemMetadata> = {
     dir: string;
 
     /** File metadata for this item */
-    files: (IaFileExtendedMetadata | IaFilesXmlMetadata)[];
+    files: (ItemFileMetaType | IaFilesXmlMetadata)[];
 
     /** Total number of files in the item */
     files_count: number; // conv
@@ -82,11 +68,8 @@ export type IaItemData<ItemMetaType extends IaItemMetadata = IaItemMetadata> = {
     /** The item is a collection */
     is_collection?: boolean;
 
-
-
     /** Item Reviews */
     reviews?: IaItemReview[]; // TODO
-
 };
 
 export type ItemDataKey = keyof IaItemData;

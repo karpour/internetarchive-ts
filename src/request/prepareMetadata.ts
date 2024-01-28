@@ -4,11 +4,11 @@ import { convertToRawMetadata } from "../util/convertToRawMetadata";
 
 
 type IaPrepareMetadataParams<M extends IaBaseMetadataType, S extends IaBaseMetadataType> = {
-    newMetadata: M,
+    metadata: M,
     sourceMetadata?: S,
-    append: boolean,
-    appendList: boolean,
-    insert: boolean;
+    append?: boolean,
+    appendList?: boolean,
+    insert?: boolean;
 };
 
 /**
@@ -21,14 +21,14 @@ type IaPrepareMetadataParams<M extends IaBaseMetadataType, S extends IaBaseMetad
  * @returns A filtered metadata dict to be used for generating IA S3 and Metadata API requests.
  */
 export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMetadataType>({
-    newMetadata,
+    metadata: metadata,
     sourceMetadata,
     append = false,
     appendList = false,
     insert = false }: IaPrepareMetadataParams<M, S>): IaRawMetadata<M & S> {
 
     // Copy of the new Metadata, will be populated in the next for loop
-    const metadata: Record<string, string> = {};
+    const _metadata: Record<string, string> = {};
 
     // TODO convert source and new metadata to raw
     // Make a deepcopy of sourceMetadata if it exists. A deepcopy is
@@ -39,10 +39,10 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
     // Create indexedKeys counter dict. i.e.: {'subject': 3} -- subject
     // (with the index removed) appears 3 times in the metadata dict.
     const indexedKeys: Record<string, number> = {};
-    for (const entry of Object.entries(newMetadata)) {
+    for (const entry of Object.entries(metadata)) {
         const [key, val] = entry;
         // Convert number values to strings into our new metadata array
-        metadata[key] = `${val}`;
+        _metadata[key] = `${val}`;
         const [parsedKey, idx] = extractKeyAndIndex(key);
         if (idx !== undefined) {
             const cnt = indexedKeys[parsedKey];
@@ -68,28 +68,28 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
     }
 
     // Index all items which contain an index.
-    for (const key in metadata) {
+    for (const key in _metadata) {
         const [parsedKey, idx] = extractKeyAndIndex(key);
 
         // Insert values from indexed keys into preparedMetadata dict.
         if (idx !== undefined && !insert) {
             if (idx < preparedMetadata[parsedKey]!.length) {
                 // This is how it should be
-                (preparedMetadata[parsedKey] as string[])[idx] = metadata[key]!;
+                (preparedMetadata[parsedKey] as string[])[idx] = _metadata[key]!;
             } else {
                 // IDX exceeds array length?
                 // TODO
-                (preparedMetadata[parsedKey] as string[]).push(metadata[key]!);
+                (preparedMetadata[parsedKey] as string[]).push(_metadata[key]!);
             }
         } else if (appendList && _sourceMetadata[key] !== undefined) {
             // If append is True, append value to sourceMetadata value.
 
             // TODO WTF
         } else if (append && _sourceMetadata[key] !== undefined) {
-            preparedMetadata[key] = `${_sourceMetadata[key]} ${metadata[key]}`;
+            preparedMetadata[key] = `${_sourceMetadata[key]} ${_metadata[key]}`;
         } else if (insert && _sourceMetadata[parsedKey]) {
             const index = idx ?? 0;
-            const tempArray = makeArray(_sourceMetadata[parsedKey]!).splice(index, 0, metadata[key]!);
+            const tempArray = makeArray(_sourceMetadata[parsedKey]!).splice(index, 0, _metadata[key]!);
             const insert_md: string[] = [];
 
             for (let _v of tempArray) {
@@ -99,7 +99,7 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
             }
             preparedMetadata[parsedKey] = insert_md;
         } else {
-            preparedMetadata[key] = metadata[key]!;
+            preparedMetadata[key] = _metadata[key]!;
         }
     }
 
@@ -113,12 +113,12 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
         if (!_done.includes(key)) {
             const [parsedKey, kidx] = extractKeyAndIndex(key);
             let indexes: number[] = [];
-            for (let k in metadata) {
+            for (let k in _metadata) {
                 if (!kidx) {
                     continue;
                 } else if (parsedKey !== key) {
                     continue;
-                } else if (metadata[k] !== 'REMOVE_TAG') {
+                } else if (_metadata[k] !== 'REMOVE_TAG') {
                     continue;
                 } else {
                     indexes.push(kidx);
