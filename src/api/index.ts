@@ -1,9 +1,9 @@
 import CatalogTask from "../catalog/CatalogTask";
-import { IaAuthenticationError } from "../error";
+import { IaApiaAuthenticationError } from "../error";
 import { IaFile } from "../files";
 import { IaItem } from "../item/IaItem";
+import { IaSearch } from "../search/IaSearch";
 import IaSession from "../session/IaSession";
-import { getAuthConfig, writeConfigFile } from "../session/config";
 import {
     IaAuthConfig,
     IaGetItemParams,
@@ -13,17 +13,17 @@ import {
     DebugDisabled,
     IaModifyMetadataParams,
     DebugEnabled,
-    IaFileObject,
-    IaUploadParams,
     IaItemDownloadParams,
     IaDeleteItemParams,
     IaGetSessionParams,
     IaGetTasksParams,
     IaSearchItemsParams,
     IaUserInfo,
-    HttpParams
+    IaFileObject,
+    IaUploadParams,
 } from "../types";
-import { raiseForStatus } from "../util";
+import { createS3AuthHeader } from "../util/createS3AuthHeader";
+import { handleIaApiError } from "../util/handleIaApiError";
 
 /**
  * Return a new {@link IaSession} object. The {@link IaSession}
@@ -49,8 +49,8 @@ import { raiseForStatus } from "../util";
  * @param httpAdapterKwargs Keyword arguments that `requests.adapters.HTTPAdapter` takes.
  * @returns a new ArchiveSession object
  */
-export function getSession(config?: Partial<IaAuthConfig>, configFile?: string, debug: boolean = false): IaSession {
-    return new IaSession(config, configFile, debug);
+export function getSession(config?: IaAuthConfig, debug: boolean = false): IaSession {
+    return new IaSession(config);
 }
 
 /**
@@ -74,11 +74,10 @@ export function getItem(
     identifier: string,
     {
         config,
-        configFile,
         archiveSession,
         debug = false
-    }: IaGetItemParams): Promise<IaItem> {
-    archiveSession = archiveSession ?? getSession(config, configFile, debug);
+    }: IaGetItemParams = {}): Promise<IaItem> {
+    archiveSession = archiveSession ?? getSession(config, debug);
     return archiveSession.getItem(identifier);
 }
 
@@ -97,7 +96,6 @@ export function getItem(
  * @param params.globPattern Only return files matching the given glob pattern.
  * @param params.excludePattern Exclude files matching the given glob pattern.
  * @param params.onTheFly Include on-the-fly files (i.e. derivative EPUB)
- * @param params.getItemKwargs Arguments that {@link getItem} takes.
  * @returns Files from an item.
  */
 export async function getFiles<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetadata>(
@@ -215,19 +213,16 @@ export async function deleteFiles(identifier: string, params: IaDeleteItemParams
     return responses;
 }
 
-
 /**
  * Get tasks from the Archive.org catalog.
  * @param params The URL parameters to send with each request sent to the Archive.org catalog API.
  * @returns A set of {@link CatalogTask} objects.
  */
 export async function getTasks(params: IaGetSessionParams & IaGetTasksParams): Promise<CatalogTask[]> {
-    let { archiveSession, config, configFile } = params;
-    archiveSession ??= await getSession(config, configFile, false);
+    let { archiveSession, config } = params;
+    archiveSession ??= await getSession(config, false);
     return archiveSession.getTasks(params);
 }
-
-
 
 /**
  * Search for items on Archive.org.
@@ -241,16 +236,16 @@ export async function getTasks(params: IaGetSessionParams & IaGetTasksParams): P
  * @param params.fields The metadata fields to return in the search results.
  * @param params.sorts 
  * @param params.params The URL parameters to send with each request sent to the Archive.org Advancedsearch Api.
- * @param params.fullTextSearch Beta support for querying the archive.org Full Text Search API [default: false].
- * @param params.dslFts Beta support for querying the archive.org Full Text Search API in dsl (i.e. do not prepend `!L` to the `full_text_search` query [default: false].
+ * @param params.fullTextSearch Beta support for querying the archive.org Full Text Search API.
+ * @param params.dslFts Beta support for querying the archive.org Full Text Search API in dsl (i.e. do not prepend `!L` to the `full_text_search` query.
  * @param params.archiveSession 
  * @param params.config Configuration options for session.
  * @param params.configFile A path to a config file used to configure your session.
- * @param params.maxRetries The number of times to retry a failed request. This can also be an `urllib3.Retry` object. If you need more control (e.g. `status_forcelist`), use a `ArchiveSession` object, and mount your own adapter after the session object has been initialized. For example::
+ * @param params.maxRetries The number of times to retry a failed request.
  * @returns 
  */
 export async function searchItems(query: string, params: IaSearchItemsParams): Promise<IaSearch> {
-    const archiveSession = params.archiveSession ?? await getSession(params.config, params.configFile, false);
+    const archiveSession = params.archiveSession ?? await getSession(params.config, false);
     return archiveSession.searchItems(query, params);
 }
 
@@ -267,7 +262,7 @@ export async function searchItems(query: string, params: IaSearchItemsParams): P
  * @param host 
  * @returns The config file path.
  */
-export async function configure(
+/*export async function configure(
     username: string,
     password: string,
     configFile?: string,
@@ -280,7 +275,7 @@ export async function configure(
     );
     const configFilePath = writeConfigFile(authConfig, configFile);
     return configFilePath;
-}
+}*/
 
 /**
  * 
@@ -289,8 +284,7 @@ export async function configure(
  * @returns The username or an empty string if response contains no username.
  */
 export function getUsername(accessKey: string, secretKey: string): Promise<string> {
-    return getUserInfo(accessKey, secretKey)
-        .then(j => j.username ?? "");
+    return getUserInfo(accessKey, secretKey).then(j => j.username ?? "");
 }
 
 
@@ -298,27 +292,35 @@ export function getUsername(accessKey: string, secretKey: string): Promise<strin
  * Returns details about an Archive.org user given an IA-S3 key pair.
  * @param accessKey IA-S3 accessKey to use when making the given request.
  * @param secretKey IA-S3 secretKey to use when making the given request.
- * @throws AuthenticationError
+ * @throws {IaApiError}
+ * @throws {IaApiaAuthenticationError}
  * @returns Archive.org use info.
  */
 export async function getUserInfo(accessKey: string, secretKey: string): Promise<IaUserInfo> {
-    const url = "https://s3.us.archive.org";
-    const params: HttpParams = { check_auth: "1" };
+    const url = new URL("https://s3.us.archive.org");
+    url.searchParams.set("check_auth", "1");
 
-    const authHeader = `Basic ${Buffer.from(`${accessKey}:${secretKey}`).toString('base64')}`;
-    const queryString = new URLSearchParams(params).toString();
-    const fullUrl = url + (queryString ? `?${queryString}` : '');
-
-    const response = await fetch(fullUrl, {
+    const response = await fetch(url.href, {
         method: 'GET',
-        headers: {
-            Authorization: authHeader,
-        },
+        headers: createS3AuthHeader(accessKey, secretKey)
     });
-    raiseForStatus(response);
+    if (!response.ok) {
+        throw handleIaApiError(response);
+    }
     const json = await response.json();
     if (json.error) {
-        throw new IaAuthenticationError(json.error);
+        throw new IaApiaAuthenticationError(json.error, { response });
     }
     return json;
+}
+
+/**
+* Check if the item identifier is available for creating a new item.
+* @returns true if identifier is available, or false if it is not available.
+* @throws {IaApiError}
+* @throws {IaApiInvalidIdentifierError}
+*/
+export async function isIdentifierAvailable(identifier: string, params?: IaGetSessionParams): Promise<boolean> {
+    const archiveSession = params?.archiveSession ?? await getSession(params?.config, false);
+    return archiveSession.isIdentifierAvailable(identifier);
 }

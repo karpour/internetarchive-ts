@@ -1,5 +1,5 @@
 import { IaTypeError } from "../error";
-import { IaParsedCuration } from "../types";
+import { IaCuration, IaParsedCuration } from "../types";
 
 const RegExp_IaCurationDateString = /^(?<year>\d{4})(?<month>\d{2})(?<day>\d{2})(?<hours>\d{2})(?<minutes>\d{2})(?<seconds>\d{2})$/;
 export function parseDateString(datestr: string): Date {

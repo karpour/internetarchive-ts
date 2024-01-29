@@ -1,7 +1,8 @@
 import { getSession } from '../api';
+import { IaAuthConfig } from '../types';
 
 async function main() {
-    const config = { 's3': { 'access': 'foo', 'secret': 'bar' } };
+    const config:IaAuthConfig = { 's3': { 'access': 'foo', 'secret': 'bar' } };
     const s = getSession(config);
 
     // From the session object, you can access all of the functionality of the internetarchive lib

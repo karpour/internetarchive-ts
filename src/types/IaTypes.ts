@@ -147,6 +147,19 @@ export type IaParsedCuration<T extends IaCuration> = Prettify<T extends `[curato
     { state: undefined; }
   ) : never>;
 
+const enum StupidEnum {
+  A = 'A',
+  B = 'B',
+  C = 'C',
+}
+
+type StupidEnumType = typeof StupidEnum[keyof typeof StupidEnum];
+
+function func(a: StupidEnumType) {
+}
+
+func(StupidEnum.A); // error
+
 
 // Types for testing
 
@@ -423,16 +436,16 @@ export type IaGetTasksParams = Prettify<IaGetTasksBasicParams & {
 
 
 export type IaAuthConfig = {
-  s3: {
+  s3?: {
     'access'?: string;
     'secret'?: string;
   },
-  cookies: {
+  cookies?: {
     'logged-in-user'?: string;
     'logged-in-sig'?: string;
     [key: string]: string | undefined;
   },
-  general: {
+  general?: {
     'screenname'?: string;
     'host'?: string;
     'secure'?: boolean;
@@ -441,12 +454,13 @@ export type IaAuthConfig = {
 
 export type IaAuthConfigSectionName = keyof IaAuthConfig;
 
-export const IA_ITEM_TAB_URL_TYPES = [
-  'about',
-  'collection'
-] as const;
-
-export type IaItemTabUrlType = typeof IA_ITEM_TAB_URL_TYPES[number];
+// TODO cull
+//export const IA_ITEM_TAB_URL_TYPES = [
+//  'about',
+//  'collection'
+//] as const;
+//
+//export type IaItemTabUrlType = typeof IA_ITEM_TAB_URL_TYPES[number];
 
 export const IA_ITEM_URL_TYPES = [
   'details',
@@ -463,7 +477,13 @@ export type IaItemUrlType = typeof IA_ITEM_URL_TYPES[number];
 
 
 // TODO
-export type IaUserInfo = Record<string, string>;
+export type IaUserInfo = {
+  username: string,
+  screenname: string,
+  itemname: `@${string}`,
+  accesskey: string,
+  authorized: boolean;
+};
 
 
 export type IaMetadataRequestTarget = "metadata";
@@ -568,3 +588,8 @@ type DF2<T> = T extends any ? DFBase<T, ObjectValuesOf<T>> : never;
 export type IaMultiMetadata = {
   [target in IaRequestTarget]: IaBaseMetadataType
 };
+
+
+export type IaItemUrls = { [urlKey in IaItemUrlType]: string; };
+
+//export type IaCollectionUrls = { [urlKey in (IaItemUrlType | IaItemTabUrlType)]: urlKey extends IaItemUrlType ? string : string | undefined; };

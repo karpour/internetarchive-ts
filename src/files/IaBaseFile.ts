@@ -88,18 +88,3 @@ export class IaBaseFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetada
         return (this.metadata !== undefined);
     }
 }
-
-
-
-const file = new IaBaseFile<IaFileExtendedMetadata>(null, "name", {
-    format: "Epub",
-    name: "name",
-    md5: "aaa",
-    mtime: 11223455,
-    size: 12345,
-    source: "original",
-    bla: "bla"
-}) as IaBaseFile<IaFileExtendedMetadata> & IaFileExtendedMetadata;
-
-console.log(file.bla);
-console.log(file.exists());

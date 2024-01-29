@@ -67,7 +67,7 @@ export class IaSearch {
         {
             fields = [],
             sorts = [],
-            params,
+            params = {},
             fullTextSearch = false,
             dslFts = false,
             maxRetries = 5
@@ -83,8 +83,8 @@ export class IaSearch {
             this.query = `!L ${this.query}`;
         }
         this.ftsUrl = `${this.session.protocol}//be-api.us.archive.org/ia-pub-fts-api`;
-        this.scrapeUrl = `${this.session.protocol}//${this.session.host}/services/search/v1/scrape`;
-        this.searchUrl = `${this.session.protocol}//${this.session.host}/advancedsearch.php`;
+        this.scrapeUrl = `${this.session.url}/services/search/v1/scrape`;
+        this.searchUrl = `${this.session.url}/advancedsearch.php`;
 
         // Initialize params.
         const defaultParams: IaSearchParams = { q: this.query };
@@ -221,7 +221,7 @@ export class IaSearch {
     }
 
 
-    public _make_results_generator(): AsyncGenerator<any> {
+    public getResultsGenerator(): AsyncGenerator<any> {
         if (this.fts) {
             return this.fullTextSearch();
         } if (this.params.user_aggs !== undefined) {
@@ -277,10 +277,10 @@ export class IaSearch {
     }
 
     public iterAsResults() {
-        return this._make_results_generator();
+        return this.getResultsGenerator();
     }
     public async *iterAsItems(): AsyncGenerator<IaItem> {
-        const generator = this._make_results_generator();
+        const generator = this.getResultsGenerator();
         for await (const result of generator) {
             yield this.session.getItem(result.identifier);
         }

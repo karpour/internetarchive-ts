@@ -1,6 +1,6 @@
 import { IaValueError } from "../error";
 import { IaSession } from "../session/IaSession";
-import { IaItemData, IaItemMetadata, IaItemTabUrlType, IaItemUrlType } from "../types";
+import { IaItemData, IaItemMetadata } from "../types";
 import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
 import { IaItem } from "./IaItem";
 
@@ -10,12 +10,6 @@ export type IaNameCountType = `${string}_count`;
 export class IaCollection<ItemMetaType extends IaItemMetadata = IaItemMetadata> extends IaItem<ItemMetaType> {
     protected searches: any;
     [key: IaNameCountType]: number;
-
-    /** Item URL types. For a collection, this includes Tab url types */
-    declare public urls: {
-        [urlKey in IaItemUrlType | IaItemTabUrlType]: string;
-    };
-
 
     public constructor(archiveSession: IaSession,itemData: IaItemData<ItemMetaType>) {
             super(archiveSession, itemData);
@@ -42,7 +36,7 @@ export class IaCollection<ItemMetaType extends IaItemMetadata = IaItemMetadata> 
         if (!this[`${name}_count`]) {
             this[`${name}_count`] = this.searches[name].numFound;
         }
-        return arrayFromAsyncGenerator(rtn);
+        return arrayFromAsyncGenerator(rtn.getResultsGenerator());
     }
 }
 

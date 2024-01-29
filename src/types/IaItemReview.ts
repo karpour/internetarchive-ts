@@ -5,6 +5,12 @@ export type IaItemReviewRaw = {
 
 export type IaItemReviewRating = 0 | 1 | 2 | 3 | 4 | 5;
 
+export type IaItemPostReview = {
+    title: string,
+    body: string,
+    stars: IaItemReviewRating;
+};
+
 export type IaItemReview = {
     /** Multiline text */
     reviewbody: string;

@@ -1,6 +1,6 @@
 import Catalog from "../catalog/Catalog";
 import CatalogTask from "../catalog/CatalogTask";
-import { IaApiError } from "../error";
+import { IaApiError, IaApiInvalidIdentifierError, IaInvalidIdentifierError } from "../error";
 import IaCollection from "../item/IaCollection";
 import { IaItem } from "../item/IaItem";
 import log from "../logging/log";
@@ -8,6 +8,7 @@ import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import {
     HttpHeaders,
     IaAuthConfig,
+    IaCheckIdentifierResponse,
     IaGetTasksBasicParams,
     IaGetTasksParams,
     IaHttpRequestDeleteParams,
@@ -69,7 +70,7 @@ export class IaSession {
      * @param debug Set debug behaviour
      */
     public constructor(
-        config: IaAuthConfig,
+        config: IaAuthConfig = {},
         protected debug: boolean = false,
     ) {
         this.cookies = new ArchiveSessionCookies();
@@ -91,9 +92,6 @@ export class IaSession {
 
         this.secure = this.config.general?.secure ?? true;
         this.host = this.config.general?.host ?? 'archive.org';
-        if (!this.host.includes('.archive.org')) {
-            this.host += '.archive.org';
-        }
         this.protocol = this.secure ? 'https:' : 'http:';
         this.url = `${this.protocol}//${this.host}`;
 
@@ -148,13 +146,22 @@ export class IaSession {
         } catch (err: any) {
             const errorMsg = `Error retrieving metadata from ${url}, ${err.message}`;
             log.error(errorMsg);
+            log.error(err);
             throw new IaApiError(errorMsg, { cause: err });
         }
     }
 
 
-    // Get method
-
+    /**
+     * Sends a GET Request
+     * @param url URL to get
+     * @param param1.params Search params
+     * @param param1.auth Auth Header, overrides the stored auth of the IaSession instance
+     * @param param1.headers Additional HTTP Headers
+     * @param param1.stream  
+     * @param param1.timeout  
+     * @returns 
+     */
     public async get(url: string, {
         params,
         auth,
@@ -218,8 +225,25 @@ export class IaSession {
         params,
         auth,
         headers,
-        body
+        body,
+        json
     }: IaHttpRequestDeleteParams): Promise<Response> {
+        const urlObj = new URL(url);
+        if (params) {
+            for (const param of Object.entries(params)) {
+                const [key, value] = param;
+                if (value !== undefined) {
+                    urlObj.searchParams.set(key, `${value}`);
+                }
+            }
+        }
+
+        let contentTypeHeader: HttpHeaders;
+        if (json !== undefined) {
+            body = JSON.stringify(json);
+            contentTypeHeader = { 'Content-Type': 'application/json' };
+        }
+
         return fetch(url, {
             method: "DELETE",
             headers: { ...this.headers, ...headers, ...auth },
@@ -410,6 +434,30 @@ export class IaSession {
     //public send(request: Request): Promise<Response> {
     //    return fetch(request);
     //}
+
+    /**
+    * Check if the item identifier is available for creating a new item.
+    * @returns true if identifier is available, or false if it is not available.
+    * @throws {IaApiError}
+    * @throws {IaApiInvalidIdentifierError}
+    */
+    public async isIdentifierAvailable(identifier: string): Promise<boolean> {
+        const url = `${this.url}/services/check_identifier.php`;
+        const params = { output: 'json', identifier: identifier };
+        const response = await this.get(url, { params });
+        if (!response.ok) {
+            throw handleIaApiError(response);
+        }
+        const json = await response.json() as IaCheckIdentifierResponse;
+        if (json.type === "error") {
+            throw new IaApiError(json.message, { response });
+        } else {
+            if (json.code === "invalid") {
+                throw new IaApiInvalidIdentifierError(json.message, { response });
+            }
+            return json.code === "available";
+        }
+    }
 }
 
 export default IaSession;

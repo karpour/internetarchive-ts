@@ -21,9 +21,7 @@ export type IaGetSessionParams = {
     /** Optional archiveSession object. If not defined, one will be created internally */
     archiveSession?: IaSession,
     /** Configuration */
-    config?: IaAuthConfig,
-    /** Path to config file */
-    configFile?: string,
+    config?: IaAuthConfig;
 };
 
 // getItem
@@ -32,8 +30,9 @@ export type IaGetItemParams = IaDebugParams & IaGetSessionParams;
 
 export type DebugEnabled<T extends IaDebugParams> = Omit<T, 'debug'> & { debug: true; };
 export type DebugDisabled<T extends IaDebugParams> = Omit<T, 'debug'> & { debug?: false; };
-// getFiles
 
+
+// getFiles
 export type IaItemGetFilesParams = {
     /** Only return files matching the given filenames */
     files?: string | string[],
@@ -101,7 +100,7 @@ export type IaHttpRequestParams = {
 
 export type IaHttpRequestGetParams = IaHttpRequestParams & { stream?: boolean; };
 export type IaHttpRequestPostParams = IaHttpRequestParams & ({ body?: BodyInit; json?: undefined; } | { body?: undefined; json: Record<string, any>; });
-export type IaHttpRequestDeleteParams = IaHttpRequestParams & { body?: BodyInit; };
+export type IaHttpRequestDeleteParams = IaHttpRequestPostParams;
 
 // Upload
 
@@ -171,7 +170,7 @@ export type IaFileDownloadParams = {
     /** Don't fail if a single file fails to download, continue to download other files. */
     ignoreErrors: boolean;
     /** Write data to the given file-like object (e.g. sys.stdout). */
-    fileobj?: NodeJS.WritableStream;
+    fileobj?: WritableStream;
     /** Rather than downloading files to disk, return a list of response objects. */
     returnResponses: boolean;
     /** If True, leave the time stamp as the current time instead of changing it to that given in the original archive. */
@@ -192,14 +191,14 @@ export type IaFileDownloadParams = {
 export type IaSessionSearchItemsParams = {
     fields: string[],
     sorts?: string[],
-    params: IaSearchParams,
+    params?: Omit<IaSearchParams, 'q'>,
     fullTextSearch?: boolean,
     dslFts?: boolean,
     maxRetries?: number;
 };
 
 
-export type IaSearchItemsParams = IaSessionSearchItemsParams & IaGetSessionParams;
+export type IaSearchItemsParams = Prettify<IaSessionSearchItemsParams & IaGetSessionParams>;
 
 
 export type IaSearchParams = {

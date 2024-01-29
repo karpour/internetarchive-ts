@@ -178,17 +178,17 @@ export class IaFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetadata> 
                     return response;
                 }
 
-                if (stdout) {
-                    fileobj = process.stdout;
-                }
-                if (!fileobj) {
-                    fileobj = fs.createWriteStream(filePath, { flags: 'wb' });
-                }
+                //if (stdout) {
+                //    fileobj = process.stdout;
+                //}
+                //if (!fileobj) {
+                //    fileobj = fs.createWriteStream(filePath, { flags: 'wb' });
+                //}
 
                 await writeReadableStreamToWritable(response.body!, fs.createWriteStream(filePath, { flags: 'wb' }));
 
                 if (ors) {
-                    fileobj.write(process.env.ORS ?? "\n");
+                    fileobj?.getWriter().write(process.env.ORS ?? "\n");
                 }
             } catch (err: any) {
                 log.error(`Error downloading file "${filePath}": ${err.message}`);

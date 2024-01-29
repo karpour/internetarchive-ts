@@ -1,4 +1,4 @@
-import { IApiaAuthenticationError, IaAuthenticationError } from "../error";
+import { IaApiaAuthenticationError, IaAuthenticationError } from "../error";
 import log from "../logging/log";
 import { IaAuthConfig, IaAuthConfigSectionName } from "../types";
 import { existsSync, mkdirSync, chmodSync } from "fs";
@@ -24,13 +24,13 @@ export async function getAuthConfig(email: string, password: string, host: strin
     if (!json.success) {
         const msg = json.values?.reason ?? json.error;
         if (msg == 'account_not_found') {
-            throw new IApiaAuthenticationError('Account not found, check your email and try again.', { response });
+            throw new IaApiaAuthenticationError('Account not found, check your email and try again.', { response });
         } else if (msg == 'account_bad_password') {
-            throw new IApiaAuthenticationError('Incorrect password, try again.', { response });
+            throw new IaApiaAuthenticationError('Incorrect password, try again.', { response });
         } else if (!msg) {
-            throw new IApiaAuthenticationError(`Authentication failed, but no value.reason or error field was set in response.`, { response });
+            throw new IaApiaAuthenticationError(`Authentication failed, but no value.reason or error field was set in response.`, { response });
         } else {
-            throw new IApiaAuthenticationError(`Authentication failed: ${msg}`, { response });
+            throw new IaApiaAuthenticationError(`Authentication failed: ${msg}`, { response });
         }
     }
     const authConfig = {

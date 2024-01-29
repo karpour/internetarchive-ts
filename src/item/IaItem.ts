@@ -1,30 +1,18 @@
 import CatalogTask from "../catalog/CatalogTask";
 import log from "../logging/log";
-import { IaBaseMetadataType, IaCheckIdentifierResponse, IaFileBaseMetadata, IaFileObject, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, Prettify, isIaFileObject } from "../types";
+import { IaFileBaseMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReview, IaItemUrls } from "../types";
 import { IaItemMetadata } from "../types/IaItemMetadata";
-import { createReadStream, statSync, ReadStream, unlinkSync } from 'fs';
 import path from "path";
 import IaSession from "../session/IaSession";
-import { HttpHeaders, HttpParams, IA_ITEM_TAB_URL_TYPES, IA_ITEM_URL_TYPES, IaFixerOp, IaItemDeleteReviewParams, IaItemTabUrlType, IaItemUrlType } from "../types";
+import { HttpHeaders, HttpParams, IA_ITEM_URL_TYPES, IaFixerOp, IaItemDeleteReviewParams, IaItemUrlType } from "../types";
 import { IaTaskPriority } from "../types/IaTask";
-import { IaItemDownloadParams, IaItemGetFilesParams, IaItemUploadParams, IaItemModifyMetadataParams, IaItemUploadFileParams } from "../types/IaParams";
-import { IaReviewData } from "../types/IaItemReview";
+import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams } from "../types/IaParams";
 import { IaBaseItem } from "./IaBaseItem";
-import { IaApiError, IaApiServiceUnavailableError, IaError, IaFileUploadError, IaInvalidIdentifierError, IaTypeError } from "../error";
 import { handleIaApiError } from "../util/handleIaApiError";
-import lstrip from "../util/lstrip";
 import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
-import { getMd5, makeArray, patternsMatch, recursiveFileCount, validateS3Identifier } from "../util";
+import { makeArray, patternsMatch } from "../util";
 import { IaMetadataRequest } from "../request/IaMetadataRequest";
-import { normFilepath } from "../util/normFilePath";
 import { IaFile } from "../files";
-import { getFileSize } from "../util/getFileSize";
-import S3Request from "../request/S3Request";
-import { chunkGenerator } from "../util/chunkGenerator";
-import sleepMs from "../util/sleepMs";
-
-
-
 
 /** 
  * This class represents an archive.org item. Generally this class
@@ -54,35 +42,31 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
     public readonly wikilink?: string;
     static readonly DEFAULT_URL_FORMAT = (itm: IaItem, path: string) => `${itm.session.protocol}//${itm.session.host}/${path}/${itm.identifier}`;
 
-    /** Item URL types. Tab URL types are optional and only exist on Collection items */
-    public urls!: {
-        [urlKey in (IaItemUrlType | IaItemTabUrlType)]: urlKey extends IaItemUrlType ? string : string | undefined;
-    };
-
+    /** Item URL types */
+    public readonly urls: IaItemUrls;
+    /** Session that this Instance uses to access the API */
     public readonly session: IaSession;
 
-    // TODO
+    // TODO tasks
     tasks: any;
 
     /**
      * 
      * @param archiveSession 
      * @param identifier The globally unique Archive.org identifier for this item.
-     *      
-     *      An identifier is composed of any unique combination of
-     *      alphanumeric characters, underscore (`_`) and dash (`-`).While
-     *      there are no official limits it is strongly suggested that they
-     *      be between 5 and 80 characters in length. Identifiers must be
-     *      unique across the entirety of Internet Archive, not simply
-     *      unique within a single collection.
-     *      
-     *      Once defined an identifier can not be changed. It will travel
-     *      with the item or object and is involved in every manner of
-     *      accessing or referring to the item.
+     *     
+     *        An identifier is composed of any unique combination of
+     *        alphanumeric characters, underscore (`_`) and dash (`-`).While
+     *        there are no official limits it is strongly suggested that they
+     *        be between 5 and 80 characters in length. Identifiers must be
+     *        unique across the entirety of Internet Archive, not simply
+     *        unique within a single collection.
+     *        
+     *        Once defined an identifier can not be changed. It will travel
+     *        with the item or object and is involved in every manner of
+     *        accessing or referring to the item.
      * 
-     * @param itemMetadata The Archive.org item metadata used to initialize
-     *      this item.  If no item metadata is provided, it will be
-     *      retrieved from Archive.org using the provided identifier.
+     * @param itemMetadata The Archive.org item metadata used to initialize this item.
      */
     public constructor(
         archiveSession: IaSession,
@@ -90,60 +74,27 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
     ) {
         super(itemData);
         this.session = archiveSession;
+        this.urls = this.makeUrls();
 
-        for (let urlType of IA_ITEM_URL_TYPES) {
-            this.makeURL(urlType);
-        }
-        if (this.metadata.mediatype == 'collection') {
-            for (let tabUrlType of IA_ITEM_TAB_URL_TYPES) {
-                this.makeTabURL(tabUrlType);
-            }
-        }
         if (this.metadata.title) {
             this.wikilink = `* [${this.urls.details} ${this.identifier}] -- ${this.metadata.title}`;
         }
     }
 
-    /** Make URLs for the separate tabs of Collections details page. */
-    protected makeTabURL(tab: IaItemTabUrlType): void {
-        this.makeURL(tab, this.urls.details + `&tab=${tab}`);
+    protected makeUrls(): IaItemUrls {
+        return Object.fromEntries(IA_ITEM_URL_TYPES.map(urlType => [urlType, this.makeURL(urlType)])) as IaItemUrls;
     }
 
-    protected makeURL(path: IaItemUrlType | IaItemTabUrlType, urlFormat: string | ((itm: IaItem, path: string) => string) = IaItem.DEFAULT_URL_FORMAT): void {
-        if (typeof (urlFormat) === "string") {
-            this.urls[path] = urlFormat;
-        } else {
-            this.urls[path] = urlFormat(this, path);
-        }
+    protected makeURL<Path extends IaItemUrlType>(path: Path, urlFormat: ((itm: IaItem, path: string) => string) = IaItem.DEFAULT_URL_FORMAT): string {
+        return urlFormat(this, path);
     }
 
-    public get paths(): string[] {
-        return Object.keys(this.urls);
+    public get paths(): Readonly<string[]> {
+        return IA_ITEM_URL_TYPES;
     }
 
     public async refresh(itemMetadata?: IaItemData<ItemMetaType>): Promise<void> {
         this.load(itemMetadata ?? await this.session.getMetadata(this.identifier) as IaItemData<ItemMetaType>);
-    }
-
-    /**
-     * Check if the item identifier is available for creating a new item.
-     * @returns true if identifier is available, or false if it is not available.
-     * @throws {IaInvalidIdentifierError}
-     */
-    public async isIdentifierAvailable(): Promise<boolean> {
-        const url = `${this.session.url}/services/check_identifier.php`;
-        const params = { output: 'json', identifier: this.identifier };
-        const response = await this.session.get(url, { params });
-        if (!response.ok) throw handleIaApiError(response);
-        const json = await response.json() as IaCheckIdentifierResponse;
-        if (json.type === "error") {
-            throw new IaApiError(json.message, { response });
-        } else {
-            if (json.code === "invalid") {
-                throw new IaInvalidIdentifierError(json.message);
-            }
-            return json.code === "available";
-        }
     }
 
     /**
@@ -219,7 +170,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param headers 
      * @returns 
      */
-    public derive(priority: IaTaskPriority = 0, removeDerived?: string, reducedPriority: boolean = false, data?: Record<string, any> = {}, headers?: HttpHeaders): Response {
+    public async derive(priority: IaTaskPriority = 0, removeDerived?: string, reducedPriority: boolean = false, data: Record<string, any> = {}, headers?: HttpHeaders): Promise<Response> {
         if (removeDerived) {
             if (!data.args) {
                 data.args = { removeDerived: removeDerived };
@@ -257,13 +208,13 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param headers Additional HTTP headers
      * @returns 
      */
-    public fixer(
+    public async fixer(
         ops: IaFixerOp | IaFixerOp[] = 'noop',
-        priority?: IaTaskPriority = 0,
+        priority: IaTaskPriority = 0,
         reducedPriority: boolean = false,
         data: IaFixerData = {},
         headers?: HttpHeaders
-    ): Response {
+    ): Promise<Response> {
         const operations = makeArray(ops);
         data.args ??= {};
         for (let op of operations) {
@@ -292,7 +243,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param requestKwargs 
      * @returns 
      */
-    public undark(comment: string, priority?: IaTaskPriority = 0, reducedPriority: boolean = false, data?: Record<string, any>): Response {
+    public async undark(comment: string, priority: IaTaskPriority = 0, reducedPriority: boolean = false, data?: Record<string, any>): Promise<Response> {
         const response = await this.session.submitTask(
             this.identifier,
             'make_undark.php',
@@ -323,7 +274,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      *        avoid rate-limiting.
      * @returns 
      */
-    public dark(comment: string, priority?: IaTaskPriority = 0, data?: Record<string, any>, reducedPriority: boolean = false): Response {
+    public async dark(comment: string, priority: IaTaskPriority = 0, data?: Record<string, any>, reducedPriority: boolean = false): Promise<Response> {
         const response = await this.session.submitTask(
             this.identifier,
             'make_dark.php',
@@ -342,7 +293,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * 
      * @returns 
      */
-    public getReview(): Response {
+    public async getReview(): Promise<Response> {
         const url = `${this.session.url}/services/reviews.php`;
         const params = { identifier: this.identifier };
         const response = await this.session.get(url, { params });
@@ -362,7 +313,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
     public async deleteReview(data: IaItemDeleteReviewParams): Promise<Response> {
         const url = `${this.session.url}/services/reviews.php`;
         const params = { identifier: this.identifier };
-        const response = await this.session.delete(url, { params, data });
+        const response = await this.session.delete(url, { params, json: data });
         if (!response.ok) {
             throw handleIaApiError(response);
         }
@@ -376,11 +327,10 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param stars 
      * @returns 
      */
-    public async review(title: string, body: string, stars?: number): Promise<Response> {
+    public async review(review: IaItemPostReview): Promise<Response> {
         const url = `${this.session.url}/services/reviews.php`;
         const params: HttpParams = { identifier: this.identifier };
-        const data: IaReviewData = { title, body, stars };
-        const response = await this.session.post(url, { params, data });
+        const response = await this.session.post(url, { params, json: review });
         if (!response.ok) {
             throw handleIaApiError(response);
         }
@@ -483,7 +433,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * 
      * @returns true if if all files have been downloaded successfully.
      */
-    public download(
+    public async download(
         {
             files,
             formats,
@@ -508,7 +458,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             params,
             timeout = 120
         }: IaItemDownloadParams = {}
-    ): Response[] | string[] {
+    ): Promise<Response[] | string[]> {
 
         if (source && !Array.isArray(source)) source = [source];
         if (excludeSource && !Array.isArray(excludeSource)) excludeSource = [excludeSource];
@@ -696,11 +646,11 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             parent: parent,
             list: list,
         };
-        const data = {
+        const json = {
             '-patch': JSON.stringify(patch),
             '-target': 'simplelists',
         };
-        const response = await this.session.post(this.urls.metadata, { data });
+        const response = await this.session.post(this.urls.metadata, { json });
         if (!response.ok) {
             throw handleIaApiError(response);
         }
@@ -735,7 +685,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param options.validateIdentifier Set to true to validate the identifier before uploading the file.
      * @returns 
      */
-    public async uploadFile<M extends IaBaseMetadataType = IaBaseMetadataType, F extends IaFileBaseMetadata = IaFileBaseMetadata>(
+    /*public async uploadFile<M extends IaBaseMetadataType = IaBaseMetadataType, F extends IaFileBaseMetadata = IaFileBaseMetadata>(
         body: string | Buffer | Blob,
         {
             key,
@@ -908,7 +858,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
                 throw handleIaApiError(response, request);
             }
         }
-    }
+    }*/
 
     // TODO fix examples
     /**
@@ -956,7 +906,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param param1.requestKwargs
      * @returns 
      */
-    public async upload(files: IaFileObject | IaFileObject[] | string | string[], {
+    /*public async upload(files: IaFileObject | IaFileObject[] | string | string[], {
         metadata,
         headers,
         accessKey,
@@ -1004,7 +954,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
                 }
             }
             if (typeof (f) === "string" && statSync(f).isDirectory()) {
-                for await (const entry in recursiveIterDirectoryWithKeys(f)) {
+                for await (const entry of recursiveIterDirectoryWithKeys(f)) {
                     let [filePath, key] = entry;
                     fileIndex += 1;
                     // Set derive header if queueDerive is True,
@@ -1076,6 +1026,6 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             }
         }
         return responses;
-    }
+    }*/
 }
 
