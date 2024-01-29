@@ -1,5 +1,5 @@
 import { IaBaseMetadataType, IaItemData, IaPreparePatchParams } from "../types";
-import { deleteKeysFromObject } from "./deleteKeysFromObject";
+import { deleteKeysFromObject } from "../util/deleteKeysFromObject";
 import { prepareMetadata } from "./prepareMetadata";
 import { createPatch } from "rfc6902";
 

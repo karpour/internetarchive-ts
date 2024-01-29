@@ -14,13 +14,14 @@ import {
     IaHttpRequestGetParams,
     IaHttpRequestPostParams,
     IaItemData,
+    IaSessionSearchItemsParams,
     IaTaskPriority,
     IaTaskType
 } from "../types";
 import getUserAgent from "../util/getUserAgent";
 import { handleIaApiError } from "../util/handleIaApiError";
-import { getConfig } from "./config";
-import { createS3AuthHeader } from "./createS3AuthHeader";
+import { createS3AuthHeader } from "../util/createS3AuthHeader";
+import { IaSearch } from "../search/IaSearch";
 
 class ArchiveSessionCookies {
     setCookie(cookie: any) {
@@ -53,7 +54,7 @@ export class IaSession {
     public readonly auth?: HttpHeaders;
     protected readonly secure: boolean;
     protected readonly config: IaAuthConfig;
-    protected readonly configFile: string;
+
     /** HTTP Headers */
     public headers: HttpHeaders;
 
@@ -68,14 +69,13 @@ export class IaSession {
      * @param debug Set debug behaviour
      */
     public constructor(
-        config?: Partial<IaAuthConfig>,
-        configFile: string = "",
+        config: IaAuthConfig,
         protected debug: boolean = false,
     ) {
         this.cookies = new ArchiveSessionCookies();
 
-        this.config = getConfig(config, configFile);
-        this.configFile = configFile;
+        this.config = config;
+
         /*for (let ck in this.config.cookies ?? {}) {
             const rawCookie = `${ck}=${this.config.cookies[ck]}`;
             const cookieDict = parseDictCookies(rawCookie);
@@ -187,9 +187,27 @@ export class IaSession {
         params,
         auth,
         headers,
-        body
+        body,
+        json
     }: IaHttpRequestPostParams): Promise<Response> {
-        return fetch(url, {
+        const urlObj = new URL(url);
+        if (params) {
+            for (const param of Object.entries(params)) {
+                const [key, value] = param;
+                if (value !== undefined) {
+                    urlObj.searchParams.set(key, `${value}`);
+                }
+            }
+        }
+
+        let contentTypeHeader: HttpHeaders;
+        if (json !== undefined) {
+            body = JSON.stringify(json);
+            contentTypeHeader = { 'Content-Type': 'application/json' };
+        }
+
+        log.verbose(`GET ${urlObj.href}`);
+        return fetch(urlObj.href, {
             method: "POST",
             headers: { ...this.headers, ...headers, ...auth },
             body
@@ -210,7 +228,7 @@ export class IaSession {
     }
 
     public async send(request: IaMetadataRequest, params?: any): Promise<Response> {
-        return fetch(request)
+        return fetch(request);
     }
 
     /**
@@ -226,10 +244,9 @@ export class IaSession {
     * @param params.maxRetries 
     * @returns A Search object, yielding search results.
     */
-    // TODO
-    //public searchItems(query: string, params: IaSessionSearchItemsParams): IaSearch {
-    //    return new IaSearch(this, query, params);
-    //}
+    public searchItems(query: string, params: IaSessionSearchItemsParams): IaSearch {
+        return new IaSearch(this, query, params);
+    }
 
     /**
      * 

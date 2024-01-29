@@ -1,4 +1,4 @@
-import { IaMediaType, IaCollectionId } from ".";
+import { IaMediaType, IaCollectionId, IaBaseMetadataType } from ".";
 
 export type IaItemBaseMetadata = {
     /** Unique identifier for an item on the archive.org web site. Used in the URL for the item, ie archive.org/details/[identifier]. */
@@ -12,7 +12,7 @@ export type IaItemBaseMetadata = {
     publicdate?: string;
     /** Indicates to the website what collection(s) this item belongs to. */
     collection: IaCollectionId | IaCollectionId[];
-};
+} & IaBaseMetadataType;
 
 export type IaItemMetadata = IaItemBaseMetadata & {
     // Optional fields

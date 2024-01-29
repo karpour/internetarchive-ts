@@ -27,13 +27,13 @@ export class IaCollection<ItemMetaType extends IaItemMetadata = IaItemMetadata> 
     }
 
     public async getContents() {
-        const defltSrh = `collection:${this.identifier}`;
-        return this.doSearch('contents', this.metadata.search_collection ?? defltSrh);
+        const defaultSearch = `collection:${this.identifier}`;
+        return this.doSearch('contents', this.metadata.search_collection ?? defaultSearch);
     }
 
     public async getSubcollections() {
-        const defltSrh = `collection:${this.identifier}`;
-        return this.doSearch('subcollections', `${defltSrh} AND mediatype:collection`);
+        const defaultSearch = `collection:${this.identifier}`;
+        return this.doSearch('subcollections', `${defaultSearch} AND mediatype:collection`);
     }
 
     protected async doSearch(name: string, query: string) {

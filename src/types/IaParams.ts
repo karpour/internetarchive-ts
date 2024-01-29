@@ -93,15 +93,15 @@ export type IaModifyMetadataParams = IaItemModifyMetadataParams & IaGetItemParam
 //Request
 
 export type IaHttpRequestParams = {
-    params?: Record<string, string | number | undefined>,
+    params?: Record<string, string | number | boolean | undefined>,
     auth?: HttpHeaders,
     headers?: HttpHeaders;
     timeout?: number;
 };
 
 export type IaHttpRequestGetParams = IaHttpRequestParams & { stream?: boolean; };
-export type IaHttpRequestPostParams = IaHttpRequestParams & { body: BodyInit; };
-export type IaHttpRequestDeleteParams = IaHttpRequestParams & { body: BodyInit; };
+export type IaHttpRequestPostParams = IaHttpRequestParams & ({ body?: BodyInit; json?: undefined; } | { body?: undefined; json: Record<string, any>; });
+export type IaHttpRequestDeleteParams = IaHttpRequestParams & { body?: BodyInit; };
 
 // Upload
 
@@ -192,7 +192,7 @@ export type IaFileDownloadParams = {
 export type IaSessionSearchItemsParams = {
     fields: string[],
     sorts?: string[],
-    params?: Partial<IaSearchParams>,
+    params: IaSearchParams,
     fullTextSearch?: boolean,
     dslFts?: boolean,
     maxRetries?: number;
@@ -204,7 +204,6 @@ export type IaSearchItemsParams = IaSessionSearchItemsParams & IaGetSessionParam
 
 export type IaSearchParams = {
     q: string,
-    index?: string,
     scope?: string,
     count?: number,
     size?: number,

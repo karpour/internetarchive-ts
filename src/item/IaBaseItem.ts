@@ -1,19 +1,15 @@
 import { IaItemMetadata } from "../types/IaItemMetadata";
 import { IaItemData, ItemDataKey } from "../types/IaItemData";
 import { IaSimplelistEntry } from "../types/IaSimplelistEntry";
-import { IaFileExtendedMetadata, IaFilesXmlMetadata } from "../types/IaFileMetadata";
-import { IaItemReview } from "../types";
+import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFilesXmlMetadata } from "../types/IaFileMetadata";
+import { IaItemReview, IaRawMetadata } from "../types";
 import { createHash } from "crypto";
 
 
-function identifierListAsItems(...args: any[]) { }
-function hash(...args: any[]) { return 1; }
+const EXCLUDED_ITEM_METADATA_KEYS: ItemDataKey[] = ['workable_servers', 'server'] as const;
 
-
-const EXCLUDED_ITEM_METADATA_KEYS:ItemDataKey[] = ['workable_servers', 'server'] as const;
-
-export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata>
-    implements IaItemData<ItemMetaType> {
+export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata>
+    implements IaItemData<ItemMetaType, ItemFileMetaType> {
 
     protected exists: boolean = false;
     //protected readonly _collection:IaCollection[] = []
@@ -31,7 +27,7 @@ export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata>
     public get dir(): string {
         return this.itemData.dir;
     }
-    public get files(): (IaFileExtendedMetadata | IaFilesXmlMetadata)[] {
+    public get files(): (ItemFileMetaType | IaFilesXmlMetadata)[] {
         return this.itemData.files;
     }
     public get files_count(): number {
@@ -84,7 +80,7 @@ export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata>
     }
 
 
-    public constructor(protected itemData: IaItemData<ItemMetaType>) {
+    public constructor(protected itemData: IaItemData<ItemMetaType, ItemFileMetaType>) {
         this.load();
     }
 
@@ -98,8 +94,8 @@ export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata>
     }
 
 
-    public load(itemData?: IaItemData<ItemMetaType>): void {
-        if(itemData) this.itemData = itemData;
+    public load(itemData?: IaItemData<ItemMetaType, ItemFileMetaType>): void {
+        if (itemData) this.itemData = itemData;
         let mc = this.metadata.collection ?? [];
         //this.collection = identifierListAsItems(mc, this.session);
     }
@@ -113,12 +109,12 @@ export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata>
 
     // TODO change return type to -1, 0, 1
     public lessOrEqual(other: IaBaseItem): boolean {
-        return this.identifier.localeCompare(other.identifier) != 1
+        return this.identifier.localeCompare(other.identifier) != 1;
     }
 
     public hash(): string {
-        const items:Partial<IaItemData> = {...this.itemData};
-        for(const key of EXCLUDED_ITEM_METADATA_KEYS) {
+        const items: Partial<IaItemData<ItemMetaType, ItemFileMetaType>> = { ...this.itemData };
+        for (const key of EXCLUDED_ITEM_METADATA_KEYS) {
             delete items[key];
         }
         const hash = createHash('md5');

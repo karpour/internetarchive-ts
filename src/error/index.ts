@@ -43,6 +43,8 @@ export class IaApiError<Status extends number = number> extends IaError {
     }
 }
 
+export class IApiaAuthenticationError<Status extends number = number> extends IaApiError<Status> { }
+
 /**
  * Indicates some element of the request was malformed or inappropriate. 
  * Often means a required parameter was missing, in either the query 

@@ -1,18 +1,9 @@
-import IaAuthenticationError from "./error/IaAuthenticationError";
+import { IApiaAuthenticationError, IaAuthenticationError } from "../error";
+import log from "../logging/log";
+import { IaAuthConfig, IaAuthConfigSectionName } from "../types";
+import { existsSync, mkdirSync, chmodSync } from "fs";
 import path, { isAbsolute } from "path";
 import { homedir } from "os";
-import { existsSync, chmodSync, mkdirSync } from "fs";
-import ConfigParser from "configparser";
-import { IaAuthConfigSectionName, IaAuthConfig } from "./IaTypes";
-
-
-
-const requests = {
-    post: async (url: string, params: Record<string, any>, data: any, timeout: number) => {
-
-    }
-};
-
 /**
  * 
  * @param email 
@@ -26,7 +17,6 @@ export async function getAuthConfig(email: string, password: string, host: strin
     const body = JSON.stringify({ email, password });
     const response = await fetch(`${url}?${new URLSearchParams(params)}`, {
         body,
-        timeout: 10,
         headers: { "Content-Type": "application/json" }
     });
     const json = await response.json();
@@ -34,13 +24,13 @@ export async function getAuthConfig(email: string, password: string, host: strin
     if (!json.success) {
         const msg = json.values?.reason ?? json.error;
         if (msg == 'account_not_found') {
-            throw new IaAuthenticationError('Account not found, check your email and try again.');
+            throw new IApiaAuthenticationError('Account not found, check your email and try again.', { response });
         } else if (msg == 'account_bad_password') {
-            throw new IaAuthenticationError('Incorrect password, try again.');
+            throw new IApiaAuthenticationError('Incorrect password, try again.', { response });
         } else if (!msg) {
-            throw new IaAuthenticationError(`Authentication failed, but no value.reason or error field was set in response.`);
+            throw new IApiaAuthenticationError(`Authentication failed, but no value.reason or error field was set in response.`, { response });
         } else {
-            throw new IaAuthenticationError(`Authentication failed: ${msg}`);
+            throw new IApiaAuthenticationError(`Authentication failed: ${msg}`, { response });
         }
     }
     const authConfig = {
@@ -59,14 +49,14 @@ export async function getAuthConfig(email: string, password: string, host: strin
     return authConfig;
 }
 
-export function writeConfigFile(authConfig: Partial<IaAuthConfig>, configFile?: string) {
+/*export function writeConfigFile(authConfig: Partial<IaAuthConfig>, configFile?: string) {
     const { configFilePath, isXdg, config } = parseConfigFile(configFile);
     const configParser = new ConfigParser();
 
     for (const section of Object.keys(config)) {
         const s = section as IaAuthConfigSectionName;
         if (authConfig[s]) {
-            config[s] = { ...config[s], ...authConfig[s] };
+            config[s] = { ...config[s], ...authConfig[s] } as any;
         }
         for (const entry in Object.entries(section)) {
             const [key, value] = entry;
@@ -96,7 +86,7 @@ export function writeConfigFile(authConfig: Partial<IaAuthConfig>, configFile?: 
     chmodSync(configFilePath, 0o600);
 
     return configFilePath;
-}
+}*/
 
 function getConfigFilePath(configFile?: string): { configFilePath: string, isXdg: boolean; } {
     let configFilePath = configFile;
@@ -121,9 +111,9 @@ function getConfigFilePath(configFile?: string): { configFilePath: string, isXdg
         candidates.push(path.join(homedir(), '.ia'));
         if (candidates.length > 0) {
             for (let candidate of candidates) {
-                verbose(`Checking for config file at path "${candidate}"`);
+                log.verbose(`Checking for config file at path "${candidate}"`);
                 if (existsSync(candidate)) {
-                    verbose(`Found config file at "${candidate}"`);
+                    log.verbose(`Found config file at "${candidate}"`);
                     configFilePath = candidate;
                     break;
                 }
@@ -140,7 +130,7 @@ function getConfigFilePath(configFile?: string): { configFilePath: string, isXdg
 }
 
 
-export function parseConfigFile(configFile?: string): { configFilePath: string, isXdg: boolean, config: IaAuthConfig; } {
+/*export function parseConfigFile(configFile?: string): { configFilePath: string, isXdg: boolean, config: IaAuthConfig; } {
     const { configFilePath, isXdg } = getConfigFilePath(configFile);
 
     const config: IaAuthConfig = {
@@ -175,4 +165,4 @@ export function parseConfigFile(configFile?: string): { configFilePath: string, 
 export function getConfig(configObj?: Partial<IaAuthConfig>, configFile?: string): IaAuthConfig {
     return parseConfigFile(configFile).config;
     // TODO extract mergeconfig func and use it in both writeconfig and here
-}
+}*/

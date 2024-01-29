@@ -1,9 +1,25 @@
-import { IaItemReview } from "./IaItemReview";
+import { IaItemReview, IaItemReviewRaw } from "./IaItemReview";
 import { IaItemBaseMetadata, IaItemMetadata } from "./IaItemMetadata";
-import { IaFilesXmlMetadata, IaFileBaseMetadata} from "./IaFileMetadata";
+import { IaFilesXmlMetadata, IaFileBaseMetadata } from "./IaFileMetadata";
 import { IaSimplelistEntry } from "./IaSimplelistEntry";
+import { IaRawMetadata } from "./IaTypes";
 
-export type IaItemData<ItemMetaType extends IaItemBaseMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata = IaFileBaseMetadata> = {
+export type IaRawItemData = Omit<IaItemData<IaRawMetadata<IaItemBaseMetadata>, IaRawMetadata<IaFileBaseMetadata>>, 'reviews'> & {
+    reviews?: IaItemReviewRaw[];
+};
+
+export type IaAlternateItemLocationEntry = {
+    server: string,
+    dir: string;
+};
+
+export type IaAlternateItemLocations = {
+    servers?: IaAlternateItemLocationEntry[],
+    workable?: IaAlternateItemLocationEntry[];
+};
+
+
+export type IaItemData<ItemMetaType extends IaItemBaseMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata> = {
     /** Date the item was created on */
     created: number; // conv
 
@@ -15,6 +31,8 @@ export type IaItemData<ItemMetaType extends IaItemBaseMetadata = IaItemMetadata,
 
     /** The item's absolute pathname (on both data nodes) */
     dir: string;
+
+    alternate_locations?: IaAlternateItemLocations;
 
     /** File metadata for this item */
     files: (ItemFileMetaType | IaFilesXmlMetadata)[];
