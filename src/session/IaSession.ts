@@ -1,20 +1,25 @@
 import Catalog from "../catalog/Catalog";
 import CatalogTask from "../catalog/CatalogTask";
-import { IaApiError, IaApiInvalidIdentifierError, IaInvalidIdentifierError } from "../error";
+import { IaApiError, IaApiInvalidIdentifierError } from "../error";
 import IaCollection from "../item/IaCollection";
 import { IaItem } from "../item/IaItem";
 import log from "../logging/log";
 import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import {
     HttpHeaders,
+    IaApiGetRateLimitResult,
     IaAuthConfig,
     IaCheckIdentifierResponse,
+    IaFileBaseMetadata,
     IaGetTasksBasicParams,
     IaGetTasksParams,
     IaHttpRequestDeleteParams,
     IaHttpRequestGetParams,
     IaHttpRequestPostParams,
+    IaItemBaseMetadata,
     IaItemData,
+    IaItemMetadata,
+    IaRawMetadata,
     IaSessionSearchItemsParams,
     IaTaskPriority,
     IaTaskType
@@ -132,14 +137,16 @@ export class IaSession {
     /**
      * Get an item's metadata from the {@link http://blog.archive.org/2013/07/04/metadata-api/ | Metadata API}
      * @param identifier Globally unique Archive.org identifier.
-     * @param requestKwargs Metadata API response.
      */
-    public async getMetadata(identifier: string): Promise<IaItemData> {
+    public async getMetadata
+        <ItemMetaType extends IaItemBaseMetadata = IaItemMetadata,
+            ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata>
+        (identifier: string): Promise<IaItemData<ItemMetaType, ItemFileMetaType>> {
         const url = `${this.url}/metadata/${identifier}`;
         try {
             const response = await this.get(url);
             if (response.ok) {
-                return response.json() as Promise<IaItemData>;
+                return response.json() as Promise<IaItemData<ItemMetaType, ItemFileMetaType>>;
             } else {
                 throw await handleIaApiError(response);
             }
@@ -150,7 +157,6 @@ export class IaSession {
             throw new IaApiError(errorMsg, { cause: err });
         }
     }
-
 
     /**
      * Sends a GET Request
@@ -207,7 +213,7 @@ export class IaSession {
             }
         }
 
-        let contentTypeHeader: HttpHeaders;
+        let contentTypeHeader: HttpHeaders = {};
         if (json !== undefined) {
             body = JSON.stringify(json);
             contentTypeHeader = { 'Content-Type': 'application/json' };
@@ -216,7 +222,7 @@ export class IaSession {
         log.verbose(`GET ${urlObj.href}`);
         return fetch(urlObj.href, {
             method: "POST",
-            headers: { ...this.headers, ...headers, ...auth },
+            headers: { ...this.headers, ...headers, ...contentTypeHeader, ...auth },
             body
         });
     }
@@ -238,7 +244,7 @@ export class IaSession {
             }
         }
 
-        let contentTypeHeader: HttpHeaders;
+        let contentTypeHeader: HttpHeaders = {};
         if (json !== undefined) {
             body = JSON.stringify(json);
             contentTypeHeader = { 'Content-Type': 'application/json' };
@@ -246,7 +252,7 @@ export class IaSession {
 
         return fetch(url, {
             method: "DELETE",
-            headers: { ...this.headers, ...headers, ...auth },
+            headers: { ...this.headers, ...headers, ...contentTypeHeader, ...auth },
             body
         });
     }
@@ -264,7 +270,6 @@ export class IaSession {
     * @param params.params The URL parameters to send with each request sent to the Archive.org Advancedsearch Api.
     * @param params.fullTextSearch Beta support for querying the archive.org Full Text Search API
     * @param params.dslFts Beta support for querying the archive.org Full Text Search API in dsl (i.e. do not prepend `!L` to the `full_text_search` query
-    * @param params.requestKwargs 
     * @param params.maxRetries 
     * @returns A Search object, yielding search results.
     */
@@ -298,10 +303,15 @@ export class IaSession {
             // TODO not a good way of doing this
             return true;
         }
-
     }
 
-    public getTasksApiRateLimit(cmd: IaTaskType = 'derive.php'): Promise<any> {
+    /**
+     * Returns rate limit for specified task type
+     * @param cmd Task type
+     * @returns Rate limit object
+     * @throws {IaApiError}
+     */
+    public getTasksApiRateLimit<T extends IaTaskType>(cmd: IaTaskType = 'derive.php'): Promise<IaApiGetRateLimitResult<T>> {
         return new Catalog(this).getRateLimit(cmd);
     }
 
@@ -346,10 +356,9 @@ export class IaSession {
      * A generator that returns completed tasks.
      * @param identifier Item identifier.
      * @param params Query parameters, refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API} for available parameters.
-     * @param requestKwargs Keyword arguments to be used in :meth:`requests.sessions.Session.get` request.
      * @returns An iterable of completed CatalogTasks.
      */
-    public async *iterHistory(
+    public iterHistory(
         identifier: string,
         params: IaGetTasksBasicParams = {}
     ): AsyncGenerator<CatalogTask> {
@@ -360,8 +369,7 @@ export class IaSession {
             summary: 0,
             history: 1
         };
-        const c = new Catalog(this);
-        return c.iterTasks(getTasksParams);
+        return new Catalog(this).iterTasks(getTasksParams);
     };
 
     /**
@@ -374,7 +382,6 @@ export class IaSession {
         identifier?: string,
         params: IaGetTasksBasicParams = {}
     ): AsyncGenerator<CatalogTask> {
-
         const getTasksParams: IaGetTasksParams = {
             ...params,
             identifier,
@@ -382,15 +389,13 @@ export class IaSession {
             summary: 0,
             history: 0
         };
-        const c = new Catalog(this);
-        return c.iterTasks(getTasksParams);
+        return new Catalog(this).iterTasks(getTasksParams);
     };
 
     /**
      * Get the total counts of catalog tasks meeting all criteria,
      * @param identifier Item identifier.
      * @param params Query parameters, refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API} for available parameters.
-     * @param requestKwargs Keyword arguments to be used in :meth:`requests.sessions.Session.get` request.
      * @returns Counts of catalog tasks meeting all criteria.
      */
     public getTasksSummary(identifier: string = "", params?: IaGetTasksParams): any {
@@ -446,7 +451,7 @@ export class IaSession {
         const params = { output: 'json', identifier: identifier };
         const response = await this.get(url, { params });
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         const json = await response.json() as IaCheckIdentifierResponse;
         if (json.type === "error") {

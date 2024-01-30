@@ -15,13 +15,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { IaGetTasksBasicParams, IaGetTasksParams, IaSubmitTaskParams } from "../types";
+import { IaApiGetRateLimitResult, IaApiGetTasksResult, IaApiJsonResult, IaGetTasksBasicParams, IaGetTasksParams, IaSubmitTaskParams } from "../types";
 import IaSession from "../session/IaSession";
 import { IaTaskSummary, IaTaskType } from "../types/IaTask";
 import CatalogTask from "./CatalogTask";
 import {
-    IaApiError} from "../error";
+    IaApiError, IaApiUnauthorizedError
+} from "../error";
 import { handleIaApiError } from "../util/handleIaApiError";
+import log from "../logging/log";
 
 export function getSortByDate(task: CatalogTask): Date {
     if (task.category === 'summary') {
@@ -57,7 +59,8 @@ export class Catalog {
     public constructor(
         public readonly session: IaSession,
     ) {
-        this.url = `${this.session.protocol}//${this.session.host}/services/tasks.php`;
+        this.url = `${this.session.url}/services/tasks.php`;
+        log.verbose(`New Catalog object created`);
     }
 
     /**
@@ -101,7 +104,7 @@ export class Catalog {
         if (response.ok) {
             return response;
         } else {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
     }
 
@@ -111,27 +114,41 @@ export class Catalog {
      * @returns An AsyncGenerator that yields {@link CatalogTask} objects
      */
     public async *iterTasks(params: IaGetTasksParams = {}): AsyncGenerator<CatalogTask> {
-        while (true) {
+         let cursor: string | undefined = params.cursor;
+
+        do {
             const response = await this.makeTasksRequest(params);
-            const json = await response.json();
+            const json = await response.json() as IaApiJsonResult<IaApiGetTasksResult>;
             for (const row of json.value?.catalog ?? []) {
                 yield new CatalogTask(row, this);
             }
             for (const row of json.value?.history ?? []) {
                 yield new CatalogTask(row, this);
             }
-            if (!json.value?.cursor) {
-                break;
-            }
-            params.cursor = json.value.cursor;
-        }
+            cursor = json.value?.cursor;
+        } while (cursor);
     }
 
-    // TODO ?!?!??!
-    public async getRateLimit(cmd: IaTaskType = 'derive.php'): Promise<any> {
+    /**
+     * Returns rate limit for specified task type
+     * @param cmd Task type
+     * @returns Rate limit object
+     * @throws {IaApiError}
+     * @throws {IaApiUnauthorizedError}
+     */
+    public async getRateLimit<T extends IaTaskType>(cmd: IaTaskType = 'derive.php'): Promise<IaApiGetRateLimitResult<T>> {
         const params = { rate_limits: 1, cmd };
-        const r = await this.makeTasksRequest(params);
-        console.log(await r.text());
+        const result = await this.makeTasksRequest(params);
+        const json = await result.json() as IaApiJsonResult<IaApiGetRateLimitResult<T>>;
+        if (!result.ok) {
+            throw await handleIaApiError(result);
+        }
+        if (json.success) {
+            return json.value;
+        } else {
+            log.error(JSON.stringify(json));
+            throw new IaApiError(json.error);
+        }
         /*
         let line = '';
         tasks = [];
@@ -145,7 +162,6 @@ export class Catalog {
             line += c;
         j = json.loads(line);
         return j;*/
-        return {};
     }
 
     /**
@@ -235,7 +251,5 @@ export class Catalog {
         });
     }
 }
-
-
 
 export default Catalog;

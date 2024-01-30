@@ -1,7 +1,7 @@
 
 
 
-import { IaTaskPriority } from "./IaTask";
+import { IaTaskPriority, IaTaskType } from "./IaTask";
 
 // Utility types
 
@@ -286,7 +286,7 @@ export const IA_QUERY_FIELDS = [
   "year"
 ] as const;
 
-export type IaQueryField = typeof IA_QUERY_FIELDS[number];
+export type IaQueryField = typeof IA_QUERY_FIELDS[number]; // TODO
 
 export const IA_DATE_RANGES = [
   "addeddate",
@@ -593,3 +593,108 @@ export type IaMultiMetadata = {
 export type IaItemUrls = { [urlKey in IaItemUrlType]: string; };
 
 //export type IaCollectionUrls = { [urlKey in (IaItemUrlType | IaItemTabUrlType)]: urlKey extends IaItemUrlType ? string : string | undefined; };
+
+
+export type IaApiJsonResult<T = any> = {
+  success: true,
+  value: T;
+  error?: undefined;
+} | {
+  success: false;
+  error: string;
+  value?: undefined;
+};
+
+export type IaApiGetRateLimitResult<T extends IaTaskType> = Prettify<{
+  cmd: T,
+  tasks_limit: number,
+  tasks_inflight: number,
+  tasks_blocked_by_offline: number;
+}>;
+
+/** See {@link https://archive.org/developers/tasks.html#wait-admin-and-run-states} */
+export const IA_TASK_COLORS = [
+  /** 0: Queued (green) */
+  "green",
+  /** 1: Running (blue) */
+  "blue",
+  /** 2: Error (red) */
+  "red",
+  /** 9: Paused (brown) */
+  "brown",
+  /** Done */
+  "done"
+] as const;
+
+export type IaTaskColor = typeof IA_TASK_COLORS[number];
+
+export type IaTaskMeta = {
+  color?: IaTaskColor,
+  identifier: string,
+  task_id: number,
+  server: string,
+  cmd: string,
+  submitter: string,
+  submittime: string,
+  category?: string,
+  priority: IaTaskPriority,
+  finished: number,
+  args: {
+    "-target"?: string,
+    "-patch"?: string,
+    uploader?: string,
+    key?: string,
+    prevtask?: string,
+    comment?: string,
+    from_url?: string,
+    shuffle?: string,
+    verify?: string,
+    delete_from_source?: string,
+    item_size?: string,
+    delete_single_file?: string,
+    tester?: string,
+    server_primary?: string,
+    delete_single_file_cascade?: string,
+    s3_keep_old_version?: string,
+    update_mode?: string,
+    filesize?: string,
+    next_cmd?: string,
+    done?: string,
+    public?: string,
+    num_recent_reviews?: string,
+    num_top_dl?: string,
+    show_browse_title_link?: string,
+    show_browse_author_link?: string,
+    show_browse_by_creator?: string,
+    show_browse_collection_link?: string,
+    show_language_link?: string,
+    show_browse_by_date?: string,
+    hide_recent_and_rss?: string,
+    noop?: string,
+    id?: string,
+    show_search_by_year?: string,
+    review?: string,
+    rush?: string,
+    filename?: string,
+    rsync_by_file?: string,
+    foo?: string,
+    from_SEC_allowed?: string,
+    extra_backup?: string,
+    matures?: string,
+    adminuser?: string,
+    admincmd?: string,
+    description?: string,
+    stub_files?: string,
+    rights?: string,
+    dir?: string,
+    [key: string]: string | undefined;
+  };
+};
+
+
+export type IaApiGetTasksResult = {
+  history?: IaTaskMeta[],
+  catalog?: IaTaskMeta[],
+  cursor?: string;
+}
+

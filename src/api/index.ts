@@ -26,18 +26,18 @@ import { createS3AuthHeader } from "../util/createS3AuthHeader";
 import { handleIaApiError } from "../util/handleIaApiError";
 
 /**
- * Return a new {@link IaSession} object. The {@link IaSession}
+ * Returns a new {@link IaSession} object. The {@link IaSession}
  * object is the main interface to the internetarchive library. It allows you to
  * persist certain parameters across tasks.
  * 
  * @example
- * import { getSession}  from 'internetarchive';
+ * import { getSession }  from 'internetarchive';
  * config = {'s3': {'access': 'foo', 'secret': 'bar'}};
  * s = getSession(config);
  * s.accessKey;
  * 'foo'
  * 
- * // From the session object, you can access all of the functionality of the internetarchive lib
+ * // From the session object, you can access all of the functionality of the internetarchive API
  * item = s.getItem('nasa');
  * item.download();
  * // nasa: success
@@ -54,18 +54,16 @@ export function getSession(config?: IaAuthConfig, debug: boolean = false): IaSes
 }
 
 /**
- * Get an {@link IaItem} object.
+ * Fetches an {@link IaItem} object.
  * 
  * @example
  * import getItem from 'internetarchive';
- * item = getItem('nasa');
+ * item = await getItem('nasa');
  * item.itemSize;
- * 121084
  * 
  * @param identifier The globally unique Archive.org item identifier.
  * @param param1 
- * @param param1.config A dictionary used to configure your session.
- * @param param1.configFile A path to a config file used to configure your session.
+ * @param param1.config Session configuration.
  * @param param1.archiveSession An {@link IaSession} object.
  * @param param1.debug To be passed on to getSession(). 
  * @returns The Item that fits the criteria.
@@ -149,10 +147,10 @@ export function modifyMetadata(identifier: string, metadata: IaItemMetadata, par
  * 
  * @returns A list of Requests if debug else a list of Responses.
  */
-export function uploadFiles(identifier: string, files: IaFileObject | IaFileObject[] | string | string[], params: IaUploadParams): Promise<Request[] | Response[]> {
-    return getItem(identifier, params)
-        .then(item => item.upload(files, params));
-}
+//export function uploadFiles(identifier: string, files: IaFileObject | IaFileObject[] | string | string[], params: IaUploadParams): Promise<Request[] | Response[]> {
+//    return getItem(identifier, params)
+//        .then(item => item.upload(files, params));
+//}
 
 
 /**
@@ -305,7 +303,7 @@ export async function getUserInfo(accessKey: string, secretKey: string): Promise
         headers: createS3AuthHeader(accessKey, secretKey)
     });
     if (!response.ok) {
-        throw handleIaApiError(response);
+        throw await handleIaApiError(response);
     }
     const json = await response.json();
     if (json.error) {

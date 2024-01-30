@@ -16,7 +16,6 @@ export class IaInvalidIdentifierError extends IaTypeError { }
 
 export class IaAuthenticationError extends IaError { }
 
-export class IaFileUploadError extends IaError { }
 
 // API Errors
 
@@ -30,7 +29,7 @@ export type IaApiErrorOptionsWithStatus<Status extends number = number> =
 
 /**
  * Base Api Error
- */
+*/
 export class IaApiError<Status extends number = number> extends IaError {
     public readonly status?: Status;
     public readonly request?: Request;
@@ -42,6 +41,8 @@ export class IaApiError<Status extends number = number> extends IaError {
         this.status = (this.response?.status as Status) ?? options.status;
     }
 }
+
+export class IaApiFileUploadError<Status extends number = number> extends IaApiError<Status> { }
 
 export class IaApiaAuthenticationError<Status extends number = number> extends IaApiError<Status> { }
 

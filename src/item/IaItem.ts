@@ -1,18 +1,26 @@
 import CatalogTask from "../catalog/CatalogTask";
 import log from "../logging/log";
-import { IaFileBaseMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReview, IaItemUrls } from "../types";
+import { IaBaseMetadataType, IaFileBaseMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReview, IaItemUrls } from "../types";
 import { IaItemMetadata } from "../types/IaItemMetadata";
 import path from "path";
 import IaSession from "../session/IaSession";
 import { HttpHeaders, HttpParams, IA_ITEM_URL_TYPES, IaFixerOp, IaItemDeleteReviewParams, IaItemUrlType } from "../types";
 import { IaTaskPriority } from "../types/IaTask";
-import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams } from "../types/IaParams";
+import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams, IaItemUploadFileParams } from "../types/IaParams";
 import { IaBaseItem } from "./IaBaseItem";
 import { handleIaApiError } from "../util/handleIaApiError";
 import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
-import { makeArray, patternsMatch } from "../util";
+import { getMd5, makeArray, patternsMatch } from "../util";
 import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import { IaFile } from "../files";
+import sleepMs from "../util/sleepMs";
+import { IaApiError, IaApiFileUploadError, IaApiServiceUnavailableError, IaTypeError } from "../error";
+import S3Request from "../request/S3Request";
+import { getFileSize } from "../util/getFileSize";
+import { createReadStream } from "fs";
+import lstrip from "../util/lstrip";
+import { normFilepath } from "../util/normFilePath";
+import { readStreamToReadableStream } from "../util/readStreamToReadableStream";
 
 /** 
  * This class represents an archive.org item. Generally this class
@@ -38,6 +46,8 @@ import { IaFile } from "../files";
  * await item.upload('myfile.tar', access_key='Y6oUrAcCEs4sK8ey', secret_key='youRSECRETKEYzZzZ') // true
  */
 export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extends IaBaseItem<ItemMetaType> {
+    public static getMd5:((body:Blob|string|Buffer) => Promise<string>) = getMd5;
+
     /** A copyable link to the item, in MediaWiki format */
     public readonly wikilink?: string;
     static readonly DEFAULT_URL_FORMAT = (itm: IaItem, path: string) => `${itm.session.protocol}//${itm.session.host}/${path}/${itm.identifier}`;
@@ -46,6 +56,8 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
     public readonly urls: IaItemUrls;
     /** Session that this Instance uses to access the API */
     public readonly session: IaSession;
+
+    private getMd5:((body:Blob|string|Buffer) => Promise<string>) = IaItem.getMd5;
 
     // TODO tasks
     tasks: any;
@@ -187,7 +199,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             headers,
             reducedPriority);
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         return response;
     }
@@ -223,7 +235,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
 
         const response = await this.session.submitTask(this.identifier, 'fixer.php', '', priority, data, headers, reducedPriority);
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         return response;
     }
@@ -240,7 +252,6 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      *        ``priority`` in that it will allow you to possibly
      *        avoid rate-limiting.
      * @param data Additional parameters to submit with the task.
-     * @param requestKwargs 
      * @returns 
      */
     public async undark(comment: string, priority: IaTaskPriority = 0, reducedPriority: boolean = false, data?: Record<string, any>): Promise<Response> {
@@ -253,7 +264,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             undefined,
             reducedPriority);
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         return response;
     }
@@ -284,7 +295,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             undefined,
             reducedPriority);
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         return response;
     }
@@ -298,7 +309,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         const params = { identifier: this.identifier };
         const response = await this.session.get(url, { params });
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         return response;
     }
@@ -315,7 +326,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         const params = { identifier: this.identifier };
         const response = await this.session.delete(url, { params, json: data });
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         return response;
     }
@@ -332,7 +343,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         const params: HttpParams = { identifier: this.identifier };
         const response = await this.session.post(url, { params, json: review });
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         return response;
     }
@@ -591,7 +602,6 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param param1.priority Set task priority.
      * @param param1.debug 
      * @param param1.headers 
-     * @param param1.requestKwargs 
      * @param param1.timeout 
      * @returns A Request if debug else a Response.
      */
@@ -628,7 +638,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         const response = await this.session.send(request);
         // Re-initialize the Item object with the updated metadata.
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         this.refresh();
         return response;
@@ -652,7 +662,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         };
         const response = await this.session.post(this.urls.metadata, { json });
         if (!response.ok) {
-            throw handleIaApiError(response);
+            throw await handleIaApiError(response);
         }
         return response;
     }
@@ -685,7 +695,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param options.validateIdentifier Set to true to validate the identifier before uploading the file.
      * @returns 
      */
-    /*public async uploadFile<M extends IaBaseMetadataType = IaBaseMetadataType, F extends IaFileBaseMetadata = IaFileBaseMetadata>(
+    public async uploadFile<M extends IaBaseMetadataType = IaBaseMetadataType, F extends IaFileBaseMetadata = IaFileBaseMetadata>(
         body: string | Buffer | Blob,
         {
             key,
@@ -696,19 +706,15 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             verbose = false,
             verify = false,
             checksum = false,
-            deleteLocalFile = false,
             retries = 0,
             retriesSleep = 30,
             debug = false,
-        }: IaItemUploadFileParams<M, F>): Promise<Response> {
-
-        // Set checksum after delete.
-        const _checksum = deleteLocalFile ?? checksum;
+        }: IaItemUploadFileParams<M, F>): Promise<any> {
 
         let md5Sum = undefined;
 
         const _headers: HttpHeaders = { ...headers };
-        const _body: ReadStream = typeof (body) === "string" ? createReadStream(body, { encoding: 'binary' }) : body;
+        const _body = typeof (body) === "string" ? readStreamToReadableStream(createReadStream(body, { encoding: 'binary' })) : body;
 
         const filename = typeof (body) === "string" ? body : undefined;
 
@@ -736,35 +742,25 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         const url = `${baseUrl}/${encodeURIComponent(lstrip(normFilepath(key), "/"))}`;
 
         // Skip based on checksum.
-        if (_checksum) {
-            md5Sum = await getMd5(_body);
+        if (checksum) {
+            md5Sum = await this.getMd5(body);
             const iaFile = this.getFile(key);
             if (!this.tasks && iaFile && iaFile.md5 == md5Sum) {
-                log.info(`${key} already exists: ${url}`);
-                if (verbose)
-                    console.error(`${key} already exists, skipping.`);
-                if (deleteLocalFile && filename) {
-                    log.info(`${key} successfully uploaded to https://archive.org/download/${this.identifier}/${key} and verified, deleting local copy`);
-                    _body.close();
-                    unlinkSync(filename);
-                }
+                log.info(`${key} already exists: ${url}, skipping`);
                 // Return an empty response object if checksums match.
                 // TODO: Is there a better way to handle this?
-                _body.close();
                 return new Response();
             }
         }
 
-        // require the Content-MD5 header when delete is true.
-        if (verify || deleteLocalFile) {
+        if (verify) {
             if (!md5Sum) {
-                md5Sum = await getMd5(_body);
+                md5Sum = await getMd5(body);
             }
             _headers['Content-MD5'] = md5Sum;
         }
 
         const buildRequest = () => {
-            _body.read();
             const data = _body;
             return new S3Request(url, {
                 method: 'PUT',
@@ -786,20 +782,17 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
 
 
         while (true) {
+            let request: Request | undefined;
             try {
-                const errorMsg = (`s3 is overloaded, sleeping for ${retriesSleep} seconds and retrying. ${retries} retries left.`);
                 if (retries > 0) {
                     if (await this.session.s3IsOverloaded()) {
+                        log.warning(`s3 is overloaded, sleeping for ${retriesSleep} seconds and retrying. ${retries} retries left.`);
                         await sleepMs(retriesSleep);
-                        log.info(errorMsg);
-                        if (verbose) {
-                            console.error(` warning: {errorMsg}`);
-                        }
-                        retries -= 1;
+                        retries --;
                         continue;
                     }
                 }
-                const request = buildRequest();
+                request = buildRequest();
 
                 // chunked transfer-encoding is NOT supported by IA-S3.
                 // It should NEVER be set. Requests adds it in certain
@@ -812,13 +805,22 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
                     const text = await response.text();
                     if (text.includes('appears to be spam')) {
                         // TODO 503 error obj
-                        log.info('detected as spam, upload failed');
+                        log.error('detected as spam, upload failed');
                         break;
                     }
-                    log.info(errorMsg);
+                    log.info(`s3 is overloaded, sleeping for ${retriesSleep} seconds and retrying. ${retries} retries left.`);
                     await sleepMs(retriesSleep);
-                    retries -= 1;
+                    retries --;
                     continue;
+                }
+                if (response.ok) {
+                    log.info(`uploaded ${key} to ${url}`);
+                    return response;
+                } else {
+                    if (response.status == 503) {
+                        throw new IaApiServiceUnavailableError(`Could not upload file, service unavailable`, { request, response });
+                    }
+                    throw await handleIaApiError(response, request);
                 }
             } catch (err) {
                 let msg: string;
@@ -827,38 +829,21 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
                         `IA S3 returned invalid XML (HTTP status code ${err.status}).` +
                         `This is a server side error which is either temporary, or requires the intervention of IA admins.`;
                 }
-                try {
-                } catch (err) {  // probably HTTP 500 error and response is invalid XML;
-                    msg = ('IA S3 returned invalid XML (HTTP status code {exc.response.statusCode}). This is a server side error which is either temporary, or requires the intervention of IA admins.');
 
-                    errorMsg = ` error uploading {key} to {this.identifier}, {msg}`;
-                    log.error(errorMsg);
-                    if (verbose)
-                        console.error(` error uploading {key}: {msg}`);
-                    // Raise HTTPError with error message.
-                    //throw type(exc)(errorMsg, response=exc.response, request=exc.request)
-                    throw new IaFileUploadError(errorMsg);
-                } finally {
-                    _body.close();
-                }
-            }
+                msg = ('IA S3 returned invalid XML (HTTP status code {exc.response.statusCode}). This is a server side error which is either temporary, or requires the intervention of IA admins.');
 
-            if (response.ok) {
-                log.info(`uploaded ${key} to ${url}`);
-                if (deleteLocalFile && response.status == 200) {
-                    log.info(`${key} successfully uploaded to https://archive.org/download/${this.identifier}/${key} and verified, deleting local copy`);
-                    _body.close();
-                    os.remove(filename);
-                }
-                return response;
-            } else {
-                if (response.status == 503) {
-                    throw new IaApiServiceUnavailableError(`Could not upload file, service unavailable`, { request, response });
-                }
-                throw handleIaApiError(response, request);
+                const errorMsg = ` error uploading ${key} to ${this.identifier}, ${msg}`;
+                log.error(errorMsg);
+                if (verbose)
+                    console.error(` error uploading ${key}: ${msg}`);
+                // Raise HTTPError with error message.
+                //throw type(exc)(errorMsg, response=exc.response, request=exc.request)
+                throw new IaApiFileUploadError(errorMsg, { request });
+            } finally {
+                //_body.close();
             }
         }
-    }*/
+    }
 
     // TODO fix examples
     /**
@@ -903,7 +888,6 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param param1.retriesSleep
      * @param param1.debug
      * @param param1.validateIdentifier
-     * @param param1.requestKwargs
      * @returns 
      */
     /*public async upload(files: IaFileObject | IaFileObject[] | string | string[], {
@@ -1027,5 +1011,9 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         }
         return responses;
     }*/
+}
+
+function getS3XmlText(arg0: string | undefined): string {
+    throw new Error("Function not implemented.");
 }
 

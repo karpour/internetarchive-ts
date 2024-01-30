@@ -7,6 +7,7 @@ import {
     IaApiUnauthorizedError,
     IaApiBadRequestError
 } from "../error";
+import { IaApiJsonResult } from "../types";
 
 /**
  * Creates an {@link IaApiError} object based on a non-200 status Response.
@@ -22,12 +23,14 @@ import {
  * @throws {IaApiError}
  */
 
-export async function handleIaApiError(response: Response, request?:Request, defaultMessage?: string): Promise<IaApiError> {
-    let json;
-    try {
-        json = await response.json() as { error?: string; };
-    } catch (err) { }
-    const error = json?.error ?? defaultMessage;
+export async function handleIaApiError(response: Response, request?: Request, defaultMessage?: string): Promise<IaApiError> {
+    let error = defaultMessage;
+    if (response.headers.get("Content-Type") === "application/json") {
+        try {
+            const json = await response.json() as IaApiJsonResult;
+            error = json?.error ?? defaultMessage;
+        } catch (err) { }
+    }
     switch (response.status) {
         case 400:
             return new IaApiBadRequestError(error, { response, request });
