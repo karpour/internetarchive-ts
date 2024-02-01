@@ -70,6 +70,10 @@ export class CatalogTask implements IaTaskMeta {
             ` color=${this.color})`;
     }
 
+    public inspect() {
+        return this.taskMetadata;
+    }
+
     public json(): string {
         return JSON.stringify(this.taskMetadata);
     }
@@ -92,7 +96,7 @@ export class CatalogTask implements IaTaskMeta {
      * @returns 
      */
     public static async getTaskLog(
-        taskId: number | string,
+        taskId: number,
         session: IaSession
     ): Promise<string> {
         const host = (session.host === 'archive.org') ? 'catalogd.archive.org' : session.host;
@@ -100,7 +104,7 @@ export class CatalogTask implements IaTaskMeta {
         const params = { task_log: taskId };
         const response = await session.get(url, { params });
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
         if (response.body) {
             return response.text();

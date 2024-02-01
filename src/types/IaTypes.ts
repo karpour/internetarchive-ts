@@ -1,7 +1,7 @@
 
 
 
-import { IaTaskPriority, IaTaskType } from "./IaTask";
+import { IaTaskPriority, IaTaskSummary, IaTaskType } from "./IaTask";
 
 // Utility types
 
@@ -507,7 +507,7 @@ export type StringOrStringArray<T extends IaMetadataValidFieldType | IaMetadataV
   );
 
 
-
+// TODO What fixer ops are there?
 export type IaFixerOp = string;
 
 export type IaFixerData = Prettify<{
@@ -696,5 +696,6 @@ export type IaApiGetTasksResult = {
   history?: IaTaskMeta[],
   catalog?: IaTaskMeta[],
   cursor?: string;
+  summary?: IaTaskSummary,
 }
 

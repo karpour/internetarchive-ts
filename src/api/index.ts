@@ -303,7 +303,7 @@ export async function getUserInfo(accessKey: string, secretKey: string): Promise
         headers: createS3AuthHeader(accessKey, secretKey)
     });
     if (!response.ok) {
-        throw await handleIaApiError(response);
+        throw await handleIaApiError({response});
     }
     const json = await response.json();
     if (json.error) {

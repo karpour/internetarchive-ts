@@ -22,6 +22,7 @@ export class IaAuthenticationError extends IaError { }
 export type IaApiErrorOptions = Prettify<ErrorOptions & {
     request?: Request,
     response?: Response;
+    responseBody?: any;
 }>;
 
 export type IaApiErrorOptionsWithStatus<Status extends number = number> =
@@ -34,10 +35,12 @@ export class IaApiError<Status extends number = number> extends IaError {
     public readonly status?: Status;
     public readonly request?: Request;
     public readonly response?: Response;
+    public readonly responseBody?: any;
     public constructor(message: string, options: IaApiErrorOptionsWithStatus<Status> = {}) {
         super(message, options);
         this.request = options.request;
         this.response = options.response;
+        this.responseBody = options.responseBody;
         this.status = (this.response?.status as Status) ?? options.status;
     }
 }
@@ -86,6 +89,11 @@ export class IaApiNotFoundError extends IaApiError<404> {
         super(message, { ...options, status: 404 });
     }
 }
+
+/**
+ * Indicates that an Item does not exist on the Internet Archve
+ */
+export class IaApiItemNotFoundError<Status extends number = number> extends IaApiError<Status>  { }
 
 /**
  * Returned if the client invoked the microservice with a method the service does not support.

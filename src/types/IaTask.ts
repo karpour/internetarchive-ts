@@ -15,5 +15,9 @@ export const IA_TASK_PRIORITIES = [-10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1
 
 export type IaTaskPriority = typeof IA_TASK_PRIORITIES[number];
 
-// TODO
-export type IaTaskSummary = any;
+export type IaTaskSummary = {
+    queued: number,
+    running: number,
+    error: number,
+    paused: number;
+};

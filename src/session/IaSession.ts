@@ -1,6 +1,6 @@
 import Catalog from "../catalog/Catalog";
 import CatalogTask from "../catalog/CatalogTask";
-import { IaApiError, IaApiInvalidIdentifierError } from "../error";
+import { IaApiError, IaApiInvalidIdentifierError, IaApiItemNotFoundError, IaApiNotFoundError } from "../error";
 import IaCollection from "../item/IaCollection";
 import { IaItem } from "../item/IaItem";
 import log from "../logging/log";
@@ -135,26 +135,27 @@ export class IaSession {
     }
 
     /**
-     * Get an item's metadata from the {@link http://blog.archive.org/2013/07/04/metadata-api/ | Metadata API}
+     * Get an Item's metadata from the {@link http://blog.archive.org/2013/07/04/metadata-api/ | Metadata API}
      * @param identifier Globally unique Archive.org identifier.
+     * @throws {IaApiError}
+     * @throws {IaApiItemNotFoundError} If the item does not exist
      */
     public async getMetadata
         <ItemMetaType extends IaItemBaseMetadata = IaItemMetadata,
             ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata>
         (identifier: string): Promise<IaItemData<ItemMetaType, ItemFileMetaType>> {
-        const url = `${this.url}/metadata/${identifier}`;
-        try {
-            const response = await this.get(url);
-            if (response.ok) {
-                return response.json() as Promise<IaItemData<ItemMetaType, ItemFileMetaType>>;
-            } else {
-                throw await handleIaApiError(response);
-            }
-        } catch (err: any) {
-            const errorMsg = `Error retrieving metadata from ${url}, ${err.message}`;
-            log.error(errorMsg);
-            log.error(err);
-            throw new IaApiError(errorMsg, { cause: err });
+        const response = await this.get(`${this.url}/metadata/${identifier}`);
+        if (response.ok) {
+            return response.json().then(json => {
+                // The metadata endpoint returns status of 200 with a bodu of "{}" if the item does not exist.
+                // We convert this into an error here
+                if (Object.keys(json).length === 0) {
+                    throw new IaApiItemNotFoundError(`Item "${identifier}" does not exist`, { response });
+                }
+                return json;
+            }) as Promise<IaItemData<ItemMetaType, ItemFileMetaType>>;
+        } else {
+            throw await handleIaApiError({ response });
         }
     }
 
@@ -408,7 +409,7 @@ export class IaSession {
      * @param getTaskParams params for the {@link Catalog.getTasks} method.
      * @returns A set of all tasks meeting all criteria.
      */
-    public getTasks(getTaskParams: IaGetTasksParams): Promise<CatalogTask[]> {
+    public getTasks(getTaskParams: Omit<IaGetTasksParams, 'limit' | 'summary'>): Promise<CatalogTask[]> {
         return new Catalog(this).getTasks(getTaskParams);
     }
 
@@ -418,27 +419,22 @@ export class IaSession {
      * @returns An array of all queued or running tasks.
      */
     public getMyCatalog(params: Exclude<IaGetTasksParams, 'catalog' | 'summary' | 'history' | 'submitter'> = {}): Promise<CatalogTask[]> {
-        params = Object.assign(params, {
+        return this.getTasks({
+            ...params,
             submitter: this.userEmail,
             catalog: 1,
-            summary: 0,
             history: 0
         });
-        return this.getTasks(params);
     }
 
     /**
-     * Get a task this.log.
+     * Get a task log.
      * @param taskId The task id for the task log you'd like to fetch.
      * @returns The task log as a string.
      */
-    public async getTaskLog(taskId: string | number): Promise<string> {
+    public async getTaskLog(taskId: number): Promise<string> {
         return CatalogTask.getTaskLog(taskId, this);
     }
-
-    //public send(request: Request): Promise<Response> {
-    //    return fetch(request);
-    //}
 
     /**
     * Check if the item identifier is available for creating a new item.
@@ -451,7 +447,7 @@ export class IaSession {
         const params = { output: 'json', identifier: identifier };
         const response = await this.get(url, { params });
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
         const json = await response.json() as IaCheckIdentifierResponse;
         if (json.type === "error") {

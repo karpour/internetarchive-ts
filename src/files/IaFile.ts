@@ -172,7 +172,7 @@ export class IaFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetadata> 
                         params
                     });
                 if (!response.ok) {
-                    throw await handleIaApiError(response);
+                    throw await handleIaApiError({response});
                 }
                 if (returnResponses) {
                     return response;
@@ -264,7 +264,7 @@ export class IaFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetadata> 
             try {
                 const response = await this.item.session.send(request);
                 if (!response.ok) {
-                    throw await handleIaApiError(response);
+                    throw await handleIaApiError({response});
                 }
                 return response;
             } catch (err: any) {

@@ -128,7 +128,7 @@ export class IaSearch {
             params: this.params,
         });
         if(!response.ok) {
-            throw await handleIaApiError(response)
+            throw await handleIaApiError({response})
         }
         const json = await response.json();
 

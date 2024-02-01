@@ -1,6 +1,6 @@
 import CatalogTask from "../catalog/CatalogTask";
 import log from "../logging/log";
-import { IaBaseMetadataType, IaFileBaseMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReview, IaItemUrls } from "../types";
+import { IaApiJsonResult, IaBaseMetadataType, IaFileBaseMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReviewBody, IaItemReview, IaItemUrls } from "../types";
 import { IaItemMetadata } from "../types/IaItemMetadata";
 import path from "path";
 import IaSession from "../session/IaSession";
@@ -21,6 +21,7 @@ import { createReadStream } from "fs";
 import lstrip from "../util/lstrip";
 import { normFilepath } from "../util/normFilePath";
 import { readStreamToReadableStream } from "../util/readStreamToReadableStream";
+import { getApiResultValue } from "../util/getApiResultValue";
 
 /** 
  * This class represents an archive.org item. Generally this class
@@ -46,7 +47,7 @@ import { readStreamToReadableStream } from "../util/readStreamToReadableStream";
  * await item.upload('myfile.tar', access_key='Y6oUrAcCEs4sK8ey', secret_key='youRSECRETKEYzZzZ') // true
  */
 export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extends IaBaseItem<ItemMetaType> {
-    public static getMd5:((body:Blob|string|Buffer) => Promise<string>) = getMd5;
+    public static getMd5: ((body: Blob | string | Buffer) => Promise<string>) = getMd5;
 
     /** A copyable link to the item, in MediaWiki format */
     public readonly wikilink?: string;
@@ -57,7 +58,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
     /** Session that this Instance uses to access the API */
     public readonly session: IaSession;
 
-    private getMd5:((body:Blob|string|Buffer) => Promise<string>) = IaItem.getMd5;
+    private getMd5: ((body: Blob | string | Buffer) => Promise<string>) = IaItem.getMd5;
 
     // TODO tasks
     tasks: any;
@@ -199,7 +200,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             headers,
             reducedPriority);
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
         return response;
     }
@@ -233,9 +234,16 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             data.args[op] = '1';
         }
 
-        const response = await this.session.submitTask(this.identifier, 'fixer.php', '', priority, data, headers, reducedPriority);
+        const response = await this.session.submitTask(
+            this.identifier,
+            'fixer.php',
+            '',
+            priority,
+            data,
+            headers,
+            reducedPriority);
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
         return response;
     }
@@ -264,7 +272,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             undefined,
             reducedPriority);
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
         return response;
     }
@@ -295,23 +303,32 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             undefined,
             reducedPriority);
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
         return response;
     }
 
     /**
-     * 
-     * @returns 
+     * Retrieves the currently authenticated user's review (if existing) for the this item.
+     * An item can only have one review for each user. If there is no review, this method returns undefined.
+     * @returns The review, or undefined if there is no review
+     * @throws {IaApiError} If unexpected HTTP response is returned
+     * @throws {IaApiUnauthorizedError} If the user does not have permissions for this call or is not authenticated
+     * @throws {IaApiNotFoundError} If there are no reviews by the user that is making this request
      */
-    public async getReview(): Promise<Response> {
+    public async getReview(): Promise<IaItemReview | undefined> {
         const url = `${this.session.url}/services/reviews.php`;
         const params = { identifier: this.identifier };
         const response = await this.session.get(url, { params });
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            // If there exists no review for this item for authenticated user, return undefined
+            if (response.status === 404 && response.headers.get("content-type") === "application/json") {
+                return undefined;
+            }
+            throw await handleIaApiError({ response });
         }
-        return response;
+        const json = await response.json() as IaApiJsonResult<IaItemReview>;
+        return json.value;
     }
 
     /**
@@ -321,14 +338,14 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param itemname 
      * @returns 
      */
-    public async deleteReview(data: IaItemDeleteReviewParams): Promise<Response> {
+    public async deleteReview(data: IaItemDeleteReviewParams): Promise<any> {
         const url = `${this.session.url}/services/reviews.php`;
         const params = { identifier: this.identifier };
         const response = await this.session.delete(url, { params, json: data });
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
-        return response;
+        return getApiResultValue<any>(response);
     }
 
     /**
@@ -338,12 +355,12 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param stars 
      * @returns 
      */
-    public async review(review: IaItemPostReview): Promise<Response> {
+    public async review(review: IaItemPostReviewBody): Promise<Response> {
         const url = `${this.session.url}/services/reviews.php`;
         const params: HttpParams = { identifier: this.identifier };
         const response = await this.session.post(url, { params, json: review });
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
         return response;
     }
@@ -351,13 +368,12 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
     /**
      * Get a {@link IaFile} object for the named file.
      * @param fileName 
-     * @param fileMetadata a dict of metadata for the given file.
+     * @param fileMetadata metadata for the given file.
      * @returns 
      */
     public getFile<IaFileMeta extends IaFileBaseMetadata>(fileName: string, fileMetadata?: IaFileMeta): IaFile<IaFileMeta> {
         return new IaFile<IaFileMeta>(this, fileName, fileMetadata);
     }
-
 
     /**
      * 
@@ -638,7 +654,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         const response = await this.session.send(request);
         // Re-initialize the Item object with the updated metadata.
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
         this.refresh();
         return response;
@@ -662,7 +678,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         };
         const response = await this.session.post(this.urls.metadata, { json });
         if (!response.ok) {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
         return response;
     }
@@ -714,7 +730,11 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         let md5Sum = undefined;
 
         const _headers: HttpHeaders = { ...headers };
-        const _body = typeof (body) === "string" ? readStreamToReadableStream(createReadStream(body, { encoding: 'binary' })) : body;
+
+        function getReadable(body: string | Buffer | Blob): ReadableStream | Buffer | Blob {
+            return typeof (body) === "string" ? readStreamToReadableStream(createReadStream(body, { encoding: 'binary' })) : body;
+        }
+        const _body = getReadable(body);
 
         const filename = typeof (body) === "string" ? body : undefined;
 
@@ -760,25 +780,23 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
             _headers['Content-MD5'] = md5Sum;
         }
 
-        const buildRequest = () => {
-            const data = _body;
-            return new S3Request(url, {
-                method: 'PUT',
-                headers,
-                auth: this.session.auth,
-                body: _body,
-                metadata,
-                fileMetadata,
-                queueDerive
-            });
-        };
+        const buildRequest = () => new S3Request(url, {
+            method: 'PUT',
+            headers,
+            auth: this.session.auth,
+            body: _body,
+            metadata,
+            fileMetadata,
+            queueDerive
+        });
 
 
-        //if (debug) {
-        //    const request = buildRequest();
-        //    _body.close();
-        //    return request;
-        //}
+
+        if (debug) {
+            const request = buildRequest();
+            //_body.close();
+            return request;
+        }
 
 
         while (true) {
@@ -788,7 +806,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
                     if (await this.session.s3IsOverloaded()) {
                         log.warning(`s3 is overloaded, sleeping for ${retriesSleep} seconds and retrying. ${retries} retries left.`);
                         await sleepMs(retriesSleep);
-                        retries --;
+                        retries--;
                         continue;
                     }
                 }
@@ -810,7 +828,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
                     }
                     log.info(`s3 is overloaded, sleeping for ${retriesSleep} seconds and retrying. ${retries} retries left.`);
                     await sleepMs(retriesSleep);
-                    retries --;
+                    retries--;
                     continue;
                 }
                 if (response.ok) {
@@ -820,7 +838,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
                     if (response.status == 503) {
                         throw new IaApiServiceUnavailableError(`Could not upload file, service unavailable`, { request, response });
                     }
-                    throw await handleIaApiError(response, request);
+                    throw await handleIaApiError({ response, request });
                 }
             } catch (err) {
                 let msg: string;
@@ -1016,4 +1034,5 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
 function getS3XmlText(arg0: string | undefined): string {
     throw new Error("Function not implemented.");
 }
+
 

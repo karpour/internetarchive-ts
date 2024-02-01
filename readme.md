@@ -21,6 +21,10 @@ The code is partially based on the Internet Archive Python API client and contai
 - 100% unit tested (WIP)
 - Integration tests (WIP)
 
+## Credentials
+
+This API uses S3 API credentials for authentication. You can obtain them [here](https://archive.org/account/s3.php)
+
 ## Examples
 
 

@@ -8,7 +8,7 @@ import { createHash } from "crypto";
 
 const EXCLUDED_ITEM_METADATA_KEYS: ItemDataKey[] = ['workable_servers', 'server'] as const;
 
-export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata>
+export abstract class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata>
     implements IaItemData<ItemMetaType, ItemFileMetaType> {
 
     protected exists: boolean = false;
@@ -107,9 +107,13 @@ export class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, It
     }
 
 
-    // TODO change return type to -1, 0, 1
-    public lessOrEqual(other: IaBaseItem): boolean {
-        return this.identifier.localeCompare(other.identifier) != 1;
+    /**
+     * 
+     * @param other Item to compare this item with
+     * @returns 
+     */
+    public lessOrEqual(other: IaBaseItem): ReturnType<String['localeCompare']> {
+        return this.identifier.localeCompare(other.identifier);
     }
 
     public hash(): string {

@@ -5,7 +5,7 @@ export type IaItemReviewRaw = {
 
 export type IaItemReviewRating = 0 | 1 | 2 | 3 | 4 | 5;
 
-export type IaItemPostReview = {
+export type IaItemPostReviewBody = {
     title: string,
     body: string,
     stars: IaItemReviewRating;
@@ -28,5 +28,5 @@ export type IaItemReview = {
     /** Date and time (UTC) of when the review was first submitted */
     createdate: Date;
     /** From 0 (zero) to 5 (five) */
-    stars: IaItemReviewRating;
+    stars: `${IaItemReviewRating}`;
 };

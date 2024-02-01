@@ -15,15 +15,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { IaApiGetRateLimitResult, IaApiGetTasksResult, IaApiJsonResult, IaGetTasksBasicParams, IaGetTasksParams, IaSubmitTaskParams } from "../types";
+import { IaApiGetRateLimitResult, IaApiGetTasksResult, IaGetTasksBasicParams, IaGetTasksParams, IaSubmitTaskParams } from "../types";
 import IaSession from "../session/IaSession";
 import { IaTaskSummary, IaTaskType } from "../types/IaTask";
 import CatalogTask from "./CatalogTask";
-import {
-    IaApiError, IaApiUnauthorizedError
-} from "../error";
 import { handleIaApiError } from "../util/handleIaApiError";
-import log from "../logging/log";
+import { getApiResultValue } from "../util/getApiResultValue";
+import { Readable } from "stream";
+import readline from "readline";
+import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
 
 export function getSortByDate(task: CatalogTask): Date {
     if (task.category === 'summary') {
@@ -50,7 +50,7 @@ export function getSortByDate(task: CatalogTask): Date {
  * tasks = c.getTasks('nasa');
  */
 export class Catalog {
-    protected url: string;
+    protected readonly url: string;
 
     /**
      * Initialize Catalog object.
@@ -60,32 +60,7 @@ export class Catalog {
         public readonly session: IaSession,
     ) {
         this.url = `${this.session.url}/services/tasks.php`;
-        log.verbose(`New Catalog object created`);
-    }
-
-    /**
-     * Get the total counts of catalog tasks meeting all criteria, organized by run status (queued, running, error, and paused).
-     * @param identifier Item identifier. Both * (asterisk) and % (percentage sign) may be used as wildcard characters within criteria that accept them.
-     * @param params Query parameters
-     * @returns the total counts of catalog tasks meeting all criteria
-     * @throws {IaApiError}
-     * 
-     */
-    public async getSummary(identifier: string | undefined = undefined, params: IaGetTasksBasicParams = {}): Promise<IaTaskSummary> {
-        const getTaskParams: IaGetTasksParams = {
-            ...params,
-            summary: 1,
-            history: 0,
-            catalog: 0,
-            identifier
-        };
-        const response = await this.makeTasksRequest(getTaskParams);
-        const json = await response.json();
-        if (json.success === true) {
-            return json.value?.summary;
-        } else {
-            return new IaApiError(json.error ?? "getSummary request failed", { response });
-        }
+        //log.verbose(`New Catalog object created`);
     }
 
     /**
@@ -99,14 +74,36 @@ export class Catalog {
      * @throws {IaApiTooManyRequestsError}
      * @throws {IaApiError}
      */
-    public async makeTasksRequest(params: IaGetTasksParams = {}): Promise<Response> {
+    protected async makeTasksRequest<T extends IaApiGetTasksResult | IaApiGetRateLimitResult<any>>(params: IaGetTasksParams = {}): Promise<T> {
         const response = await this.session.get(this.url, { params });
         if (response.ok) {
-            return response;
+            return getApiResultValue<T>(response);
         } else {
-            throw await handleIaApiError(response);
+            throw await handleIaApiError({ response });
         }
     }
+
+    /**
+     * Get the total counts of catalog tasks meeting all criteria, organized by run status (queued, running, error, and paused).
+     * Important: If the supplied identifier does not exist, this method does not fail!
+     * @param identifier Item identifier. Both * (asterisk) and % (percentage sign) may be used as wildcard characters within criteria that accept them.
+     * @param params Query parameters
+     * @returns the total counts of catalog tasks meeting all criteria
+     * @throws {IaApiError}
+     */
+    public async getSummary(identifier?: string, params: IaGetTasksBasicParams = {}): Promise<IaTaskSummary> {
+        const getTaskParams: IaGetTasksParams = {
+            ...params,
+            summary: 1,
+            history: 0,
+            catalog: 0,
+            identifier
+        };
+        const result = await this.makeTasksRequest<IaApiGetTasksResult>(getTaskParams);
+        return result.summary!;
+    }
+
+
 
     /**
      * A generator that can make arbitrary requests to the Tasks API. It handles paging (via cursor) automatically.
@@ -114,18 +111,17 @@ export class Catalog {
      * @returns An AsyncGenerator that yields {@link CatalogTask} objects
      */
     public async *iterTasks(params: IaGetTasksParams = {}): AsyncGenerator<CatalogTask> {
-         let cursor: string | undefined = params.cursor;
+        let cursor: string | undefined = params.cursor;
 
         do {
-            const response = await this.makeTasksRequest(params);
-            const json = await response.json() as IaApiJsonResult<IaApiGetTasksResult>;
-            for (const row of json.value?.catalog ?? []) {
+            const result = await this.makeTasksRequest<IaApiGetTasksResult>(params);
+            for (const row of result.catalog ?? []) {
                 yield new CatalogTask(row, this);
             }
-            for (const row of json.value?.history ?? []) {
+            for (const row of result.history ?? []) {
                 yield new CatalogTask(row, this);
             }
-            cursor = json.value?.cursor;
+            cursor = result.cursor;
         } while (cursor);
     }
 
@@ -138,30 +134,8 @@ export class Catalog {
      */
     public async getRateLimit<T extends IaTaskType>(cmd: IaTaskType = 'derive.php'): Promise<IaApiGetRateLimitResult<T>> {
         const params = { rate_limits: 1, cmd };
-        const result = await this.makeTasksRequest(params);
-        const json = await result.json() as IaApiJsonResult<IaApiGetRateLimitResult<T>>;
-        if (!result.ok) {
-            throw await handleIaApiError(result);
-        }
-        if (json.success) {
-            return json.value;
-        } else {
-            log.error(JSON.stringify(json));
-            throw new IaApiError(json.error);
-        }
-        /*
-        let line = '';
-        tasks = [];
-        for c in r.iterContent():
-            c = c.decode('utf-8');
-            if c == '\n':
-                j = json.loads(line);
-            task = CatalogTask(j, self);
-            tasks.append(task);
-            line = '';
-            line += c;
-        j = json.loads(line);
-        return j;*/
+        const result = await this.makeTasksRequest<IaApiGetRateLimitResult<T>>(params);
+        return result;
     }
 
     /**
@@ -179,41 +153,34 @@ export class Catalog {
      * @param params'submittime<'
      * @param params'submittime>='
      * @param params'submittime<='
-     * @param params.limit
      * @param params.cursor
-     * @param params.summary
      * @param params.catalog
      * @param params.history
      * @param params.identifier The item identifier, if provided will return tasks for only this item filtered by other criteria provided in params.
      * @returns A list of all tasks meeting all criteria.
      */
-    public async getTasks(params: IaGetTasksParams = {}): Promise<CatalogTask[]> {
-        params.limit = 0;
-        params.summary ??= 0;
-        params.catalog ??= 1;
-        params.history ??= 1;
-        const response = await this.makeTasksRequest(params);
-        let line = '';
-        let tasks: CatalogTask[] = [];
-        console.log(`getTasks response body`);
-        console.log(response.body);
-        // TODO implement
-        /*
-        for await(const c of r.iterContent():
-            c = c.decode('utf-8');
-            if c == '\n':
-                j = json.loads(line);
-                task = CatalogTask(j, self);
-                tasks.append(task);
-                line = '';
-                line += c;
-                if line.strip():
-                    j = json.loads(line);
-                task = CatalogTask(j, self);
-                tasks.append(task);
+    public async getTasks(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): Promise<CatalogTask[]> {
+        return arrayFromAsyncGenerator(this.iterTasksNoLimit(params));
+    }
 
-        allTasks = sorted(tasks, key = sortByDate, reverse = True);*/
-        return tasks;
+    public async *iterTasksNoLimit(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): AsyncGenerator<CatalogTask> {
+        const getTasksParams: IaGetTasksParams = {
+            catalog: 1,
+            history: 1,
+            ...params,
+            summary: 0,
+            limit: 0
+        };
+        const response = await this.session.get(this.url, { params: getTasksParams });
+
+        const rl = readline.createInterface({
+            input: Readable.fromWeb(response.body as any),
+            crlfDelay: Infinity
+        });
+
+        for await (const line of rl) {
+            yield new CatalogTask({ ...JSON.parse(line) }, this);
+        }
     }
 
     /**
