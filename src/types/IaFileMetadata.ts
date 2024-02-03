@@ -1,4 +1,4 @@
-import { IaBaseMetadataType, IaFileRotation, IaFileSource, IaRawMetadata, Optional } from ".";
+import { IaBaseMetadataType, IaFileFormat, IaFileRotation, IaFileSource, IaRawMetadata, Optional, Prettify, IA_FILE_FORMATS } from ".";
 
 
 export type IaFileMetadataRaw<T extends IaFileBaseMetadata = IaFileBaseMetadata> = IaRawMetadata<T>;
@@ -6,19 +6,35 @@ export type IaFileMetadataRaw<T extends IaFileBaseMetadata = IaFileBaseMetadata>
 export type IaFilesXmlMetadata = Omit<Optional<IaFileExtendedMetadata, 'mtime' | 'size'>, 'name'> & { name: `${string}_files.xml`; };
 
 
-export type IaFileBaseMetadata = {
+export type IaFileBasicMetadata = {
     /** Path to file name */
-    name: string;
-    /**  Indicates the type (format) of file. See tab "File Formats" for examples */
-    format: string;
-    /** Cryptographic hash used to verify contents of file. 32-length hex digest */
-    md5: string;
-    /** Unix timestamp indicating when file was last modified. */
-    mtime: number;
-    /** Cryptographic hash used to verify contents of file. 40-length hex digest */
-    sha1?: string;
-    /** Error-detecting code used to verify contents of file. 8-length hex digest */
-    crc32?: string;
+    readonly name: string;
+    /** 
+     * Indicates the type (format) of file. See tab "File Formats" for examples
+     * 
+     * @see {@link IA_FILE_FORMATS}
+     *  */
+    readonly format: IaFileFormat;
+    /** 
+     * Cryptographic hash used to verify contents of file. 32-length hex digest
+     * Defined by: IA software
+     * @example "4ade910556be8a15f079ac8d26a2b2e4"
+     */
+    readonly md5: string;
+    /** 
+     * Unix timestamp indicating when file was last modified. 
+     * @example "1706721491"
+     */
+    readonly mtime: `${number}`;
+    /**
+     * File Size
+     * 
+     * File size in bytes as integer
+     * Defined by: IA software
+     * 
+     * @example 1024
+     */
+    readonly size: `${number}`;
     /**
      * Source
      * 
@@ -30,24 +46,47 @@ export type IaFileBaseMetadata = {
      * See {@link http://web.archive.org/web/20230111080233/https://archive.org/developers/metadata-schema/index.html#id5}
      * @example "metadata"
      */
-    source: IaFileSource;
+    readonly source: IaFileSource;
+};
+
+export type IaFileBaseMetadata = Prettify<IaFileBasicMetadata & IaBaseMetadataType>;
+
+/**
+ * This type represents raw metadata as it is returned by the Internet Archive API
+ * 
+ * @template IaFileUserMetadata 
+ */
+export type IaFileSourceMetadata<IaFileUserMetadata extends IaBaseMetadataType = IaFileExtendedMetadata> = Prettify<IaFileBasicMetadata & Partial<IaRawMetadata<IaFileUserMetadata>>>;
+
+type IaUserMetaaaa = {
+    blablub: string;
+    blorb: true;
+    bleb?: string | boolean;
+    source: string;
+    size: number;
+};
+
+type b = Prettify<IaFileSourceMetadata<IaUserMetaaaa>>;
+
+export type IaFileDefinedByIaMetadata = {
+    /** 
+     * Cryptographic hash used to verify contents of file. 40-length hex digest
+     * @example "7e88cccbe7b42dcb3286e1ea5827c5e55e879451"
+     */
+    readonly sha1?: string;
+    /** 
+     * Error-detecting code used to verify contents of file. 8-length hex digest 
+     * @example "4679b176"
+     */
+    readonly crc32?: string;
     /**
      * Specifies if the file is an on-the-fly generated file
      * @example true
      */
-    otf?: boolean;
-    /**
-     * File Size
-     * 
-     * File size in bytes as integer
-     * Defined by: IA software
-     * 
-     * @example 1024
-     */
-    size: number;
+    readonly otf?: boolean;
+};
 
-    // Optional, very common fields
-
+export type IaFileExtendedMetadata = IaFileBaseMetadata & IaFileDefinedByIaMetadata & {
     /** For derivative files, this indicates the original file the derive was performed upon. */
     original?: string;
     /** private */
@@ -64,9 +103,6 @@ export type IaFileBaseMetadata = {
      * @example "90"
      */
     rotation?: IaFileRotation;
-} & IaBaseMetadataType;
-
-export type IaFileExtendedMetadata = IaFileBaseMetadata & {
     /** Track number of album. Usually an number, but occasionally has values like "2/14" (track 2 of 14) */
     track?: string;
     /** Album Name */
@@ -125,14 +161,16 @@ export type IaFileExtendedMetadata = IaFileBaseMetadata & {
 
     /**
      * Adaptive OCR
-     * 
+     * @
      * Allows deriver to skip a page that would otherwise disrupt OCR
+     * 
      * Defined by: uploader
+     * 
      * Edit access: uploader
      * 
      * See {@link https://archive.org/developers/metadata-schema/index.html#adaptive_ocr}
      */
-    adaptive_ocr?: boolean;
+    adaptive_ocr?: true;
 
     /**
      * Date Added to Public Search
@@ -524,10 +562,19 @@ export type IaFileExtendedMetadata = IaFileBaseMetadata & {
     /**
      * Force Update
      * 
-     * For partner-funded scanned books (no boxid), this allows a MARC record in the item to overwrite metadata fields in meta.xml
-     * When this field is NOT present for partner scanned books (no boxid), metadata from a MARC record will only be used to automatically fill in EMPTY metadata fields in meta.xml, and fields that already have metadata in them will be left as-is. Adding force-update to the item causes MARC to overwrite all fields that can be extracted, regardless of whether they already contain information or not.
+     * For partner-funded scanned books (no boxid), this allows a MARC record in
+     * the item to overwrite metadata fields in meta.xml
+     * When this field is NOT present for partner scanned books (no boxid), 
+     * metadata from a MARC record will only be used to automatically fill in 
+     * EMPTY metadata fields in meta.xml, and fields that already have metadata 
+     * in them will be left as-is. Adding force-update to the item causes MARC 
+     * to overwrite all fields that can be extracted, regardless of whether they 
+     * already contain information or not.
+     * 
      * Defined by: uploader
+     * 
      * Edit access: uploader
+     * 
      * INTERNAL USE ONLY
      * 
      * See {@link https://archive.org/developers/metadata-schema/index.html#force-update}
@@ -578,7 +625,8 @@ export type IaFileExtendedMetadata = IaFileBaseMetadata & {
      * ARK
      * 
      * Archival Resource Key identifier
-     * ARKs are URLs designed to support long-term access to information objects. We store the ark:/NAAN/Name portion of the URL in meta.xml. This can be tacked on to any ARK resolver's domain to resolve the ARK, i.e. http://n2t.net/. Read about ARKs: http://n2t.net/e/ark_ids.html ARK specification: http://n2t.net/e/arkspec.txt
+     * 
+     * [ARK](https://arks.org/)s are URLs designed to support long-term access to information objects. We store the ark:/NAAN/Name portion of the URL in meta.xml. This can be tacked on to any ARK resolver's domain to resolve the ARK, i.e. http://n2t.net/. Read about ARKs: http://n2t.net/e/ark_ids.html ARK specification: http://n2t.net/e/arkspec.txt
      * Defined by: uploader
      * Edit access: uploader
      * 
@@ -954,7 +1002,9 @@ export type IaFileExtendedMetadata = IaFileBaseMetadata & {
      * 
      * Publisher of the media
      * - Books use publisher - Movies often use production company - Music often uses record label
+     * 
      * Defined by: uploader
+     * 
      * Edit access: uploader
      * 
      * See {@link https://archive.org/developers/metadata-schema/index.html#publisher}
@@ -1002,9 +1052,11 @@ export type IaFileExtendedMetadata = IaFileBaseMetadata & {
     /**
      * Republisher Date
      * 
-     * Date and time in UTC that the item was created archive.org
+     * Date and time in UTC that the item was created archive.org.
      * Set by Scribe3 software.
+     * 
      * Defined by: IA software
+     * 
      * Edit access: IA admin
      * INTERNAL USE ONLY
      * 

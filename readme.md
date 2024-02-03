@@ -32,6 +32,7 @@ This API uses S3 API credentials for authentication. You can obtain them [here](
 
 - Does the curation field in item metadata always contain only one item of curation?
   It is marked as non repeatable, so if there are multiple items, how are they formatted?
+- Is `<identifier>_files.xml` the only file in an item without the `mtime` and `size` fields?
 
 ## Unit tests
 

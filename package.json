@@ -18,6 +18,7 @@
   "author": "Thomas Novotny",
   "license": "ISC",
   "dependencies": {
+    "minimatch": "^9.0.3",
     "rfc6902": "^5.1.1"
   },
   "devDependencies": {

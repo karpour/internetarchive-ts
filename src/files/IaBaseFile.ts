@@ -1,5 +1,7 @@
-import { IaFileRotation, IaFileSource } from "../types";
-import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFileMetadataRaw } from "../types/IaFileMetadata";
+import { IaTypeError } from "../error";
+import { IaItem } from "../item/IaItem";
+import { IaBaseMetadataType, IaFileRotation, IaFileSource } from "../types";
+import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFileMetadataRaw, IaFileSourceMetadata } from "../types/IaFileMetadata";
 import { strip } from "../util/strip";
 function convertBooleanString(boolString?: string | boolean): boolean | undefined {
     if (typeof (boolString) === 'boolean') return boolString;
@@ -26,42 +28,53 @@ function convertFileMetadata<IaFileMeta extends IaFileBaseMetadata>(sourceMetada
     } as IaFileMeta;
 }
 
-// @ts-ignore
-export class IaBaseFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetadata> implements IaFileMeta {
+export class IaBaseFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetadata> {
     public readonly name: string;
 
-    public readonly metadata: IaFileMeta;
+    public get size(): number {
+        return parseInt(this.metadata.size as string),
+    }
+    public get mtime(): number {
+        return parseInt(this.metadata.mtime as string);
+    }
+    public get source(): IaFileSource {
 
-    // Fields from IaFileMetadata
-    public readonly size: number;
-    public readonly source: IaFileSource;
-    public readonly format: string;
-    public readonly md5: string;
-    public readonly sha1?: string;
-    public readonly mtime: number;
-    public readonly crc32?: string;
-    public readonly otf?: boolean;
-    public readonly original?: string;
-    public readonly private?: boolean;
-    public readonly length?: number;
-    public readonly width?: number;
-    public readonly height?: number;
-    public readonly rotation?: IaFileRotation;
+        return this.metadata.source as IaFileSource;
+    }
+
+    public get otf(): boolean {
+        return convertBooleanString(this.metadata.otf) ?? false;
+    }
+    public get private(): boolean {
+        return convertBooleanString(this.metadata.private) ?? false;
+    }
+    public get length(): number | undefined {
+        return convertInt(this.metadata.length);
+    }
+    public get width(): number | undefined {
+        return convertInt(this.metadata.width);
+    }
+    public get height(): number | undefined {
+        return convertInt(this.metadata.height);
+    }
+    public get rotation(): IaFileRotation {
+        return this.metadata.rotation as IaFileRotation;
+    }
 
     public get identifier(): string {
         return this.item.identifier;
     }
 
-    public constructor(protected item: any, name: string, fileMetadata?: IaFileMetadataRaw<IaFileMeta> | IaFileMeta) {
+    public constructor(protected item: IaItem, name: string, public readonly metadata: IaFileSourceMetadata<IaFileMeta>) {
         this.name = strip(name, '/');
 
         //fileMetadata ??= item.files?.find(f => { f.name == name; }) as IaFileMetadataRaw<IaFileMeta>;
 
-        if (!fileMetadata) {
-            throw new Error(`No File metadata found`);
+        if (!metadata) {
+            throw new IaTypeError(`IaBaseFile was instantiated with missing metadata.`);
         }
 
-        this.metadata = convertFileMetadata(fileMetadata);
+        this.metadata = convertFileMetadata<IaFileMeta>(fileMetadata);
         this.size = this.metadata.size;
         this.source = this.metadata.source;
         this.format = this.metadata.format;
@@ -70,6 +83,7 @@ export class IaBaseFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetada
         this.mtime = this.metadata.mtime;
         this.crc32 = this.metadata.crc32;
 
+        /*
         return new Proxy(this, {
             get: function (target: IaBaseFile<IaFileMeta>, propertyKey: string, receiver?: unknown) {
                 const metadata = target.metadata as IaFileMeta;
@@ -78,10 +92,10 @@ export class IaBaseFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetada
                     console.log(`Found "${propertyKey}=${metadata[propertyKey]}"`);
                     return metadata[propertyKey];
                 }
-
+    
                 return Reflect.get(target, propertyKey, receiver);
             }
-        });
+        });*/
     }
 
     public exists(): boolean {

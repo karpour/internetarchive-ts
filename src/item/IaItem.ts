@@ -1,6 +1,6 @@
 import CatalogTask from "../catalog/CatalogTask";
 import log from "../logging/log";
-import { IaApiJsonResult, IaBaseMetadataType, IaFileBaseMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReviewBody, IaItemReview, IaItemUrls } from "../types";
+import { IaApiJsonResult, IaBaseMetadataType, IaFileBaseMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReviewBody, IaItemReview, IaItemUrls, IaRawMetadata } from "../types";
 import { IaItemMetadata } from "../types/IaItemMetadata";
 import path from "path";
 import IaSession from "../session/IaSession";
@@ -10,7 +10,8 @@ import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams,
 import { IaBaseItem } from "./IaBaseItem";
 import { handleIaApiError } from "../util/handleIaApiError";
 import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
-import { getMd5, makeArray, patternsMatch } from "../util";
+import { getMd5, makeArray } from "../util";
+import { patternsMatch } from "../util/patternsMatch";
 import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import { IaFile } from "../files";
 import sleepMs from "../util/sleepMs";
@@ -46,12 +47,12 @@ import { getApiResultValue } from "../util/getApiResultValue";
  * @example // Upload
  * await item.upload('myfile.tar', access_key='Y6oUrAcCEs4sK8ey', secret_key='youRSECRETKEYzZzZ') // true
  */
-export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extends IaBaseItem<ItemMetaType> {
+export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata> extends IaBaseItem<ItemMetaType, ItemFileMetaType> {
     public static getMd5: ((body: Blob | string | Buffer) => Promise<string>) = getMd5;
 
     /** A copyable link to the item, in MediaWiki format */
     public readonly wikilink?: string;
-    static readonly DEFAULT_URL_FORMAT = (itm: IaItem, path: string) => `${itm.session.protocol}//${itm.session.host}/${path}/${itm.identifier}`;
+    static readonly DEFAULT_URL_FORMAT = (itm: IaItem, path: string) => `${itm.session.url}/${path}/${itm.identifier}`;
 
     /** Item URL types */
     public readonly urls: IaItemUrls;
@@ -83,7 +84,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      */
     public constructor(
         archiveSession: IaSession,
-        itemData: IaItemData<ItemMetaType>,
+        itemData: IaItemData<ItemMetaType, ItemFileMetaType>,
     ) {
         super(itemData);
         this.session = archiveSession;
@@ -98,7 +99,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         return Object.fromEntries(IA_ITEM_URL_TYPES.map(urlType => [urlType, this.makeURL(urlType)])) as IaItemUrls;
     }
 
-    protected makeURL<Path extends IaItemUrlType>(path: Path, urlFormat: ((itm: IaItem, path: string) => string) = IaItem.DEFAULT_URL_FORMAT): string {
+    protected makeURL<Path extends IaItemUrlType>(path: Path, urlFormat: ((itm: IaItem<any, any>, path: string) => string) = IaItem.DEFAULT_URL_FORMAT): string {
         return urlFormat(this, path);
     }
 
@@ -106,8 +107,8 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         return IA_ITEM_URL_TYPES;
     }
 
-    public async refresh(itemMetadata?: IaItemData<ItemMetaType>): Promise<void> {
-        this.load(itemMetadata ?? await this.session.getMetadata(this.identifier) as IaItemData<ItemMetaType>);
+    public async refresh(itemMetadata?: IaItemData<ItemMetaType, ItemFileMetaType>): Promise<void> {
+        this.load(itemMetadata ?? await this.session.getMetadata(this.identifier) as IaItemData<ItemMetaType, ItemFileMetaType>);
     }
 
     /**
@@ -371,28 +372,30 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * @param fileMetadata metadata for the given file.
      * @returns 
      */
-    public getFile<IaFileMeta extends IaFileBaseMetadata>(fileName: string, fileMetadata?: IaFileMeta): IaFile<IaFileMeta> {
-        return new IaFile<IaFileMeta>(this, fileName, fileMetadata);
+    public getFile(fileName: string, fileMetadata?: ItemFileMetaType): IaFile<ItemFileMetaType> {
+        return new IaFile<ItemFileMetaType>(this, fileName, fileMetadata);
     }
 
     /**
      * 
-     * @param getFilesParams 
-     * @param getFilesParams.formats 
-     * @param getFilesParams.globPattern 
-     * @param getFilesParams.excludePattern 
-     * @param getFilesParams.onTheFly 
+     * @param param0 
+     * @param param0.formats 
+     * @param param0.globPattern 
+     * @param param0.excludePattern 
+     * @param param0.onTheFly 
      */
-    public *getFiles<IaFileMeta extends IaFileBaseMetadata>(
+    public *getFiles(
         {
             files = [],
             formats = [],
-            globPattern,
-            excludePattern,
-            // onTheFly = false
-        }: IaItemGetFilesParams): Generator<IaFile<IaFileMeta>> {
+            globPattern = [],
+            excludePattern = [],
+            onTheFly = false
+        }: IaItemGetFilesParams): Generator<IaFile<ItemFileMetaType>> {
         files = makeArray(files);
         formats = makeArray(formats);
+        globPattern = makeArray(globPattern);
+        excludePattern = makeArray(excludePattern);
 
         const itemFiles = [...this.files];
         // Add support for on-the-fly files (e.g. EPUB).
@@ -408,21 +411,24 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
                 itemFiles.push({ name: fileName, format, otf: true });
             }
         }*/
-        if (!files?.length && !formats?.length && !globPattern?.length) {
+
+        // If no filters are defined, simply return all files
+        if (!files?.length && !formats.length && !globPattern.length) {
             for (let f of itemFiles) {
-                yield this.getFile<IaFileMeta>(f.name, f as IaFileMeta);
+                yield this.getFile<ItemFileMetaType>(f.name, f as IaFileMeta);
             }
         } else {
             for (let f of itemFiles) {
                 const format = typeof f.format === "string" && f.format;
                 if (files.includes(f.name)) {
+                    yield new IaFile<ItemFileMetaType>(this, f.name, f);
+                } else if (format && formats.includes(format)) {
                     yield this.getFile(f.name);
-                } else if (format && formats?.includes(format)) {
-                    yield this.getFile(f.name);
-                } else if (globPattern) {
-                    const globPatterns = Array.isArray(globPattern) ? globPattern : globPattern.split('|');
-                    const exclPatterns = Array.isArray(excludePattern) ? excludePattern : excludePattern?.split('|') ?? [];
-                    if (patternsMatch(f.name, globPatterns) && !patternsMatch(f.name, exclPatterns)) {
+                } else if (globPattern.length || excludePattern.length) {
+                    if (patternsMatch(f.name, globPattern)) { // Will return true if globPattern is empty
+                        if (excludePattern.length && patternsMatch(f.name, excludePattern)) {
+                            continue;
+                        }
                         yield this.getFile(f.name);
                     }
                 }
@@ -487,8 +493,8 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         }: IaItemDownloadParams = {}
     ): Promise<Response[] | string[]> {
 
-        if (source && !Array.isArray(source)) source = [source];
-        if (excludeSource && !Array.isArray(excludeSource)) excludeSource = [excludeSource];
+        const _sources = makeArray(source);
+        const _excludeSources = makeArray(excludeSource);
 
         let fileobj: any;
         if (stdout) {
@@ -508,16 +514,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         }
 
         if (this.is_dark) {
-            let msg = `skipping ${this.identifier}, item is dark`;
-            log.warning(msg);
-            if (verbose)
-                console.error(` ${msg}`);
-            return [];
-        } else if (Object.keys(this.metadata).length === 0) {
-            let msg = `skipping ${this.identifier}, item does not exist.`;
-            log.warning(msg);
-            if (verbose)
-                console.error(` ${msg}`);
+            log.warning(`Skipping ${this.identifier}, item is dark`);
             return [];
         }
 
@@ -532,7 +529,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
         }
         let numFiles: number = 0;
         if (stdout) {
-            gFiles = Array.from(gFiles); // # type: ignore
+            gFiles = Array.from(gFiles);
             numFiles = gFiles.length;
         }
 
@@ -602,7 +599,7 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata> extend
      * 
      * Note: The Metadata Write API does not yet comply with the
      * latest Json-Patch standard. It currently complies with 
-     * {@link https://tools.ietf.org/html/draft-ietf-appsawg-json-patch-02 | version 02}
+     * {@link https://tools.ietf.org/html/draft-ietf-appsawg-json-patch-02 | JSON Patch version 02}
      * 
      * @example
      * import {IaItem} from 'internetarchive-ts';

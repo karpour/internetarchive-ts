@@ -1,4 +1,143 @@
-import { IaRawItemData } from "../types";
+import { IaItemData, IaRawItemData } from "../types";
+
+export const f:IaRawItemData = {
+  "created": 1706796146,
+  "d1": "ia601300.us.archive.org",
+  "d2": "ia801300.us.archive.org",
+  "dir": "/29/items/casio-cassiopeia-em-500-magazine-ad",
+  "files": [
+    {
+      "name": "__ia_thumb.jpg",
+      "source": "original",
+      "mtime": "1706721491",
+      "size": "19878",
+      "md5": "4ade910556be8a15f079ac8d26a2b2e4",
+      "crc32": "0c895ce1",
+      "sha1": "724e8517c86d88a6f86dad7ed0800efa3097aefe",
+      "format": "Item Tile",
+      "rotation": "0"
+    },
+    {
+      "name": "casio-cassiopeia-em-500-magazine-ad.jpg",
+      "source": "original",
+      "mtime": "1706721311",
+      "size": "247168",
+      "md5": "2a18fd901c9cc662a59f6cfba728d515",
+      "crc32": "a12253c2",
+      "sha1": "eb2666a8b3a93c36f91a389d0dc5d157c129dfa2",
+      "format": "JPEG",
+      "rotation": "0"
+    },
+    {
+      "name": "casio-cassiopeia-em-500-magazine-ad_archive.torrent",
+      "source": "metadata",
+      "btih": "4db4e0bfda0ad0db439e0d7501b9f70fe5bb600d",
+      "mtime": "1706721931",
+      "size": "2247",
+      "md5": "1bb9de1118d64879f71444d7f9436f65",
+      "crc32": "05708ea1",
+      "sha1": "042675b201dca38f15ff27ee9baebac71553b11c",
+      "format": "Archive BitTorrent"
+    },
+    {
+      "name": "casio-cassiopeia-em-500-magazine-ad_files.xml",
+      "source": "original",
+      "format": "Metadata",
+      "md5": "f742bc4d53be4af0f3126e5a35cdf6b1",
+      "summation": "md5"
+    },
+    {
+      "name": "casio-cassiopeia-em-500-magazine-ad_meta.sqlite",
+      "source": "original",
+      "mtime": "1706721486",
+      "size": "20480",
+      "md5": "67bb2cf5494e15a6fe85eea3bb5746b0",
+      "crc32": "b7271680",
+      "sha1": "d6f90bd7819249f9ccb3f4999a7f63d62e9ba03d",
+      "format": "Metadata"
+    },
+    {
+      "name": "casio-cassiopeia-em-500-magazine-ad_meta.xml",
+      "source": "original",
+      "mtime": "1706721513",
+      "size": "966",
+      "md5": "5edd7be373f127150d0afadf685b0789",
+      "crc32": "9f48bee9",
+      "sha1": "030bd341e4945d7cee9bf3c722741b3c30193766",
+      "format": "Metadata"
+    },
+    {
+      "name": "casio-cassiopeia-em-500-magazine-ad_reviews.xml",
+      "source": "original",
+      "mtime": "1706721929",
+      "size": "576",
+      "md5": "a1c48d1746726dc58610e6b1427d1d7b",
+      "crc32": "296c9ef6",
+      "sha1": "b9b26b6c4d018f397b9eeeebaa29b25745c19faf",
+      "format": "Metadata"
+    },
+    {
+      "name": "casio-cassiopeia-em-500-magazine-ad_thumb.jpg",
+      "source": "derivative",
+      "format": "JPEG Thumb",
+      "original": "casio-cassiopeia-em-500-magazine-ad.jpg",
+      "mtime": "1706721776",
+      "size": "10748",
+      "md5": "d781a5aa7fdf6fc19dbb9ff6d570be21",
+      "crc32": "4d14bee2",
+      "sha1": "3038871f6d6955fe919200c66612d778ed232f97"
+    }
+  ],
+  "files_count": 8,
+  "item_last_updated": 1706721931,
+  "item_size": 302063,
+  "metadata": {
+    "identifier": "casio-cassiopeia-em-500-magazine-ad",
+    "mediatype": "image",
+    "collection": [
+      "opensource_image",
+      "test_collection",
+      "community"
+    ],
+    "creator": "Casio",
+    "date": "1999-01-01",
+    "description": "Test item desc<br />",
+    "language": "eng",
+    "scanner": "Internet Archive HTML5 Uploader 1.7.0",
+    "subject": [
+      "test",
+      "casio",
+      "item"
+    ],
+    "testkey": [
+      "testvalue",
+      "testvalue2"
+    ],
+    "title": "casio-cassiopeia-em-500-magazine-ad-testitem20240131",
+    "uploader": "wastefulness+iatestsuite@gmail.com",
+    "publicdate": "2024-01-31 17:16:20",
+    "addeddate": "2024-01-31 17:16:20",
+    "curation": "[curator]validator@archive.org[/curator][date]20240131171833[/date][comment]checked for malware[/comment]"
+  },
+  "reviews": [
+    {
+      "reviewtitle": "Review",
+      "reviewbody": "What a great item!",
+      "stars": "3",
+      "reviewer": "internetarchive-ts-api-integration-test",
+      "reviewdate": "2024-01-31 17:20:23",
+      "createdate": "2024-01-31 17:20:23",
+      "reviewer_itemname": "@internetarchive-ts-api-integration-test"
+    }
+  ],
+  "server": "ia801300.us.archive.org",
+  "uniq": 1831326830,
+  "workable_servers": [
+    "ia801300.us.archive.org",
+    "ia601300.us.archive.org"
+  ]
+}
+
 
 export const test: IaRawItemData = {
     "alternate_locations": {

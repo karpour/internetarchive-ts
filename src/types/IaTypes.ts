@@ -187,9 +187,6 @@ export function isIaFileObject(item: unknown): item is IaFileObject {
 /** File source, indicates whether the file is an original file, a derivative from an original file or metadata */
 export type IaFileSource = "original" | "derivative" | "metadata";
 
-/** Common file formats */
-export type IaFileFormat = 'JPEG' | 'JPEG Thumb' | 'Archive BitTorrent' | 'MPEG2' | string;
-
 /** Image rotation, usually one of "0", "90", "180", "270" */
 export type IaFileRotation = "0" | "90" | "180" | "270";
 

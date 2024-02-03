@@ -1,12 +1,11 @@
-import { IaItemReview, IaItemReviewRaw } from "./IaItemReview";
+import { IaItemReview } from "./IaItemReview";
 import { IaItemBaseMetadata, IaItemMetadata } from "./IaItemMetadata";
 import { IaFilesXmlMetadata, IaFileBaseMetadata } from "./IaFileMetadata";
 import { IaSimplelistEntry } from "./IaSimplelistEntry";
 import { IaRawMetadata } from "./IaTypes";
+import { IaPageNumbersInfo } from "./IaPages";
 
-export type IaRawItemData = Omit<IaItemData<IaRawMetadata<IaItemBaseMetadata>, IaRawMetadata<IaFileBaseMetadata>>, 'reviews'> & {
-    reviews?: IaItemReviewRaw[];
-};
+export type IaRawItemData = IaItemData<IaRawMetadata<IaItemBaseMetadata>, IaRawMetadata<IaFileBaseMetadata>>;
 
 export type IaAlternateItemLocationEntry = {
     server: string,
@@ -57,8 +56,8 @@ export type IaItemData<ItemMetaType extends IaItemBaseMetadata = IaItemMetadata,
 
     /** A list of data nodes currently available for accessing the item's contents */
     workable_servers: string[];
-    // TODO
 
+    // TODO
     /**  */
     simplelists?: {
         /** Simple list name */
@@ -87,7 +86,11 @@ export type IaItemData<ItemMetaType extends IaItemBaseMetadata = IaItemMetadata,
     is_collection?: boolean;
 
     /** Item Reviews */
-    reviews?: IaItemReview[]; // TODO
+    reviews?: IaItemReview[];
+
+    /** Page numbers */
+    page_numbers?: IaPageNumbersInfo;
 };
 
 export type ItemDataKey = keyof IaItemData;
+

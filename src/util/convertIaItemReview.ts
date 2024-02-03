@@ -1,12 +1,12 @@
 import { parseIaUtcDate } from "./parseIaUtcDate";
-import { IaItemReviewRaw, IaItemReview, IaItemReviewRating } from "../types/IaItemReview";
+import { IaItemReview, IaItemReviewRating, IaParsedItemReview } from "../types/IaItemReview";
 
 
-export function convertIaItemReview(review: IaItemReviewRaw): IaItemReview {
+export function convertIaItemReview(review: IaItemReview): IaParsedItemReview {
     return {
         ...review,
         stars: parseInt(review.stars) as IaItemReviewRating,
         reviewdate: parseIaUtcDate(review.reviewdate),
         createdate: parseIaUtcDate(review.createdate)
-    } as IaItemReview;
+    };
 }

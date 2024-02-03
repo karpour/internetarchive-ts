@@ -5,8 +5,10 @@ export type IaItemBaseMetadata = {
     identifier: string;
     /** Mediatype tells us about the main content of the item. It is used to determine how the item is displayed on the web site and may trigger special processing depending on the types of files contained in the item. */
     mediatype: IaMediaType;
-    /** 2019-12 and later dates: represents time item was added to public search engine. 
-     * Earlier dates: Date and time in UTC that the item was created */
+    /** 
+     * 2019-12 and later dates: represents time item was added to public search engine. 
+     * Earlier dates: Date and time in UTC that the item was created 
+     */
     addeddate?: string;
     /** The date and time in UTC that the item was created on archive.org. */
     publicdate?: string;

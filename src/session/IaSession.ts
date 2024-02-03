@@ -60,6 +60,7 @@ export class IaSession {
     public readonly auth?: HttpHeaders;
     protected readonly secure: boolean;
     protected readonly config: IaAuthConfig;
+    protected readonly catalog: Catalog;
 
     /** HTTP Headers */
     public headers: HttpHeaders;
@@ -79,6 +80,7 @@ export class IaSession {
         protected debug: boolean = false,
     ) {
         this.cookies = new ArchiveSessionCookies();
+        this.catalog = new Catalog(this);
 
         this.config = config;
 
@@ -313,7 +315,7 @@ export class IaSession {
      * @throws {IaApiError}
      */
     public getTasksApiRateLimit<T extends IaTaskType>(cmd: IaTaskType = 'derive.php'): Promise<IaApiGetRateLimitResult<T>> {
-        return new Catalog(this).getRateLimit(cmd);
+        return this.catalog.getRateLimit(cmd);
     }
 
     /**
@@ -340,7 +342,7 @@ export class IaSession {
         data?: Record<string, any>,
         headers: HttpHeaders = {},
         reducedPriority: boolean = false): Promise<Response> {
-        return new Catalog(this).submitTask({
+        return this.catalog.submitTask({
             identifier,
             cmd,
             comment,
@@ -370,7 +372,7 @@ export class IaSession {
             summary: 0,
             history: 1
         };
-        return new Catalog(this).iterTasks(getTasksParams);
+        return this.catalog.iterTasks(getTasksParams);
     };
 
     /**
@@ -390,7 +392,7 @@ export class IaSession {
             summary: 0,
             history: 0
         };
-        return new Catalog(this).iterTasks(getTasksParams);
+        return this.catalog.iterTasks(getTasksParams);
     };
 
     /**
@@ -400,7 +402,7 @@ export class IaSession {
      * @returns Counts of catalog tasks meeting all criteria.
      */
     public getTasksSummary(identifier: string = "", params?: IaGetTasksParams): any {
-        return new Catalog(this).getSummary(identifier, params);
+        return this.catalog.getSummary(identifier, params);
     }
 
     /**
@@ -410,7 +412,7 @@ export class IaSession {
      * @returns A set of all tasks meeting all criteria.
      */
     public getTasks(getTaskParams: Omit<IaGetTasksParams, 'limit' | 'summary'>): Promise<CatalogTask[]> {
-        return new Catalog(this).getTasks(getTaskParams);
+        return this.catalog.getTasks(getTaskParams);
     }
 
     /**

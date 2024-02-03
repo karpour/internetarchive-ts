@@ -178,7 +178,7 @@ export function modifyMetadata(identifier: string, metadata: IaItemMetadata, par
  * @param param1.debug To be passed on to getSession(). 
  * @returns A list Requests if debug else a list of Responses.
  */
-export function downloadFiles(identifier: string, params: IaItemDownloadParams & IaGetItemParams): Promise<Response[] | string[]> {
+export function downloadFiles(identifier: string, params: IaItemDownloadParams & IaGetItemParams = {}): Promise<Response[] | string[]> {
     return getItem(identifier, params)
         .then(item => item.download(params));
 }

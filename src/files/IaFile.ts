@@ -42,7 +42,7 @@ import { getMd5 } from "../util";
  * You can retrieve S3 keys here: https://archive.org/account/s3.php
  * 
  */
-export class IaFile<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetadata> extends IaBaseFile<IaFileMeta> {
+export class IaFile<IaFileMeta extends IaFileBaseMetadata | IaFileMetadataRaw = IaFileBaseMetadata> extends IaBaseFile<IaFileMeta> {
     public readonly url: string;
 
     /**
