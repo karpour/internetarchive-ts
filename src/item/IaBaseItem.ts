@@ -80,11 +80,11 @@ export abstract class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMet
     }
 
 
-    public constructor(public readonly itemData: IaItemData<ItemMetaType, ItemFileMetaType>) {
+    public constructor(public itemData: IaItemData<ItemMetaType, ItemFileMetaType>) {
         this.load();
     }
 
-    public get identifier(): string {
+    public get identifier(): ItemMetaType['identifier'] {
         return this.metadata.identifier;
     }
 

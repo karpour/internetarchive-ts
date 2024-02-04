@@ -10,7 +10,9 @@ The code is partially based on the Internet Archive Python API client and contai
 ## To do
 
 - [x] `IaSession.getItem`
-- [ ] 
+- [ ] Provide native function for handling MARC
+- [ ] Downloading files
+- [ ] Wayback machine code
 
 ## Features
 

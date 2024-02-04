@@ -1,6 +1,6 @@
 import Catalog from "../catalog/Catalog";
 import CatalogTask from "../catalog/CatalogTask";
-import { IaApiError, IaApiInvalidIdentifierError, IaApiItemNotFoundError, IaApiNotFoundError } from "../error";
+import { IaApiError, IaApiInvalidIdentifierError, IaApiItemNotFoundError, IaApiNotFoundError, IaApiUnauthorizedError } from "../error";
 import IaCollection from "../item/IaCollection";
 import { IaItem } from "../item/IaItem";
 import log from "../logging/log";
@@ -28,6 +28,7 @@ import getUserAgent from "../util/getUserAgent";
 import { handleIaApiError } from "../util/handleIaApiError";
 import { createS3AuthHeader } from "../util/createS3AuthHeader";
 import { IaSearch } from "../search/IaSearch";
+import { IaLongViewcounts, IaShortViewcounts } from "../types/IaViewCount";
 
 class ArchiveSessionCookies {
     setCookie(cookie: any) {
@@ -461,6 +462,30 @@ export class IaSession {
             return json.code === "available";
         }
     }
+
+    /**
+     * Get list of short view counts for the supplied list of identifiers
+     * If an identifier does not exist, this function will not fail, but the
+     * `have_data` attribute of the corresponding item will be set to `false`.
+     * 
+     * This method requires TODO privileges
+     * 
+     * @see {@link TODO}
+     * 
+     * 
+     * 
+     * @param identifiers Identifiers to get view counts for
+     * @returns 
+     * @throws {IaApiUnauthorizedError}
+     * @throws {IaApiError}
+     */
+    public getShortViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaShortViewcounts<T[number]>> {
+        throw new Error("Not implemented");
+    };
+
+    public getLongViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaLongViewcounts<T[number]>> {
+        throw new Error("Not implemented");
+    };
 }
 
 export default IaSession;

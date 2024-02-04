@@ -23,11 +23,12 @@ import lstrip from "../util/lstrip";
 import { normFilepath } from "../util/normFilePath";
 import { readStreamToReadableStream } from "../util/readStreamToReadableStream";
 import { getApiResultValue } from "../util/getApiResultValue";
+import { IaLongViewCountItem, IaShortViewCountItem } from "../types/IaViewCount";
 
 /** 
  * This class represents an archive.org item. Generally this class
  * should not be used directly, but rather via the
- * {@link getItem} function.
+ * {@link IaSession.getItem} function.
  * 
  * This class also uses IA's S3-like interface to upload files to an
  * item. You need to supply your IAS3 credentials in order to upload
@@ -680,6 +681,15 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFi
         return response;
     }
 
+    public getLongViewCounts(): Promise<IaLongViewCountItem> {
+        return this.session.getLongViewcounts([this.identifier])
+            .then(result => result.ids[this.identifier]);
+    }
+
+    public getShortViewCounts(): Promise<IaShortViewCountItem> {
+        return this.session.getShortViewcounts([this.identifier])
+            .then(result => result[this.identifier]);
+    }
 
     /**
      * Upload a single file to an item. The item will be created if it does not exist.
