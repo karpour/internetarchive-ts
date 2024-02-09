@@ -596,9 +596,12 @@ export type IaApiJsonResult<T = any> = {
   success: true,
   value: T;
   error?: undefined;
-} | {
-  success: false;
+} | IaApiJsonErrorResult;
+
+export type IaApiJsonErrorResult = {
+  success?: false;
   error: string;
+  errorType?: string;
   value?: undefined;
 };
 

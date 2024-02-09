@@ -1,15 +1,17 @@
-import { IaItemMetadata } from "../types/IaItemMetadata";
+import { IaItemExtendedMetadata } from "../types/IaItemMetadata";
 import { IaItemData, ItemDataKey } from "../types/IaItemData";
 import { IaSimplelistEntry } from "../types/IaSimplelistEntry";
 import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFilesXmlMetadata } from "../types/IaFileMetadata";
-import { IaItemReview, IaRawMetadata } from "../types";
+import { IaBaseMetadataType, IaItemReview, IaRawMetadata } from "../types";
 import { createHash } from "crypto";
 
 
 const EXCLUDED_ITEM_METADATA_KEYS: ItemDataKey[] = ['workable_servers', 'server'] as const;
 
-export abstract class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata>
-    implements IaItemData<ItemMetaType, ItemFileMetaType> {
+export abstract class IaBaseItem<
+    ItemMetaType extends IaBaseMetadataType = IaBaseMetadataType,
+    ItemFileMetaType extends IaBaseMetadataType = IaBaseMetadataType
+> implements IaItemData<ItemMetaType, ItemFileMetaType> {
 
     protected exists: boolean = false;
     //protected readonly _collection:IaCollection[] = []
@@ -27,7 +29,7 @@ export abstract class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMet
     public get dir(): string {
         return this.itemData.dir;
     }
-    public get files(): (ItemFileMetaType | IaFilesXmlMetadata)[] {
+    public get files(): IaItemData<ItemMetaType, ItemFileMetaType>['files'] {
         return this.itemData.files;
     }
     public get files_count(): number {
@@ -39,7 +41,7 @@ export abstract class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMet
     public get item_size(): number {
         return this.itemData.item_size;
     }
-    public get metadata(): ItemMetaType {
+    public get metadata(): IaItemData<ItemMetaType, ItemFileMetaType>['metadata'] {
         return this.itemData.metadata;
     }
     public get server(): string {
@@ -84,7 +86,7 @@ export abstract class IaBaseItem<ItemMetaType extends IaItemMetadata = IaItemMet
         this.load();
     }
 
-    public get identifier(): ItemMetaType['identifier'] {
+    public get identifier(): IaItemData<ItemMetaType, ItemFileMetaType>['metadata']['identifier'] {
         return this.metadata.identifier;
     }
 

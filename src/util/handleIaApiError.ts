@@ -5,7 +5,9 @@ import {
     IaApiNotFoundError,
     IaApiTooManyRequestsError,
     IaApiUnauthorizedError,
-    IaApiBadRequestError
+    IaApiBadRequestError,
+    IaApiRangeError,
+    IaApiScopeUnavailableError
 } from "../error";
 import { IaApiJsonResult } from "../types";
 
@@ -36,8 +38,21 @@ export async function handleIaApiError({
     } else {
         if (response.headers.get("Content-Type") === "application/json") {
             try {
-                responseBody = await response.json() as IaApiJsonResult;
-                error = responseBody?.error ?? defaultMessage;
+                const json = (await response.json()) as IaApiJsonResult;
+                responseBody = json;
+                if (json?.error) {
+                    error = json.error;
+                    if (responseBody.errorType) {
+                        const errorType = responseBody.errorType;
+                        switch (errorType) {
+                            case "RangeError":
+                                throw new IaApiRangeError(error, { response, request, responseBody });
+                            default:
+                        }
+                    } else if(error.startsWith("[SCOPE_UNAVAILABLE]")) {
+                        throw new IaApiScopeUnavailableError(error, { response, request, responseBody })
+                    }
+                }
             } catch (err) { }
         }
     }
@@ -56,6 +71,6 @@ export async function handleIaApiError({
         case 429:
             return new IaApiTooManyRequestsError(error, { response, request, responseBody });
         default:
-            return new IaApiError(error ?? "Unexpected HTTP Response status", { response, request, responseBody });
+            return new IaApiError(error ?? `Unexpected HTTP Response: ${response.status}`, { response, request, responseBody });
     }
 }

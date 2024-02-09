@@ -1,7 +1,7 @@
 import CatalogTask from "../catalog/CatalogTask";
 import log from "../logging/log";
-import { IaApiJsonResult, IaBaseMetadataType, IaFileBaseMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReviewBody, IaItemReview, IaItemUrls, IaRawMetadata } from "../types";
-import { IaItemMetadata } from "../types/IaItemMetadata";
+import { IaApiJsonResult, IaBaseMetadataType, IaFileBaseMetadata, IaFileSourceMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReviewBody, IaItemReview, IaItemUrls, IaRawMetadata } from "../types";
+import { IaItemExtendedMetadata } from "../types/IaItemMetadata";
 import path from "path";
 import IaSession from "../session/IaSession";
 import { HttpHeaders, HttpParams, IA_ITEM_URL_TYPES, IaFixerOp, IaItemDeleteReviewParams, IaItemUrlType } from "../types";
@@ -48,7 +48,10 @@ import { IaLongViewCountItem, IaShortViewCountItem } from "../types/IaViewCount"
  * @example // Upload
  * await item.upload('myfile.tar', access_key='Y6oUrAcCEs4sK8ey', secret_key='youRSECRETKEYzZzZ') // true
  */
-export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata> extends IaBaseItem<ItemMetaType, ItemFileMetaType> {
+export class IaItem<
+    ItemMetaType extends IaBaseMetadataType = IaBaseMetadataType,
+    ItemFileMetaType extends IaBaseMetadataType = IaBaseMetadataType
+> extends IaBaseItem<ItemMetaType, ItemFileMetaType> {
     public static getMd5: ((body: Blob | string | Buffer) => Promise<string>) = getMd5;
 
     /** A copyable link to the item, in MediaWiki format */
@@ -373,8 +376,8 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFi
      * @param fileMetadata metadata for the given file.
      * @returns 
      */
-    public getFile(fileName: string, fileMetadata?: ItemFileMetaType): IaFile<ItemFileMetaType> {
-        return new IaFile<ItemFileMetaType>(this, fileName, fileMetadata);
+    public getFile(fileName: string, fileMetadata: IaFileSourceMetadata<ItemFileMetaType>): IaFile<ItemFileMetaType> {
+        return new IaFile<ItemFileMetaType>(this, fileMetadata);
     }
 
     /**
@@ -416,21 +419,21 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFi
         // If no filters are defined, simply return all files
         if (!files?.length && !formats.length && !globPattern.length) {
             for (let f of itemFiles) {
-                yield this.getFile<ItemFileMetaType>(f.name, f as IaFileMeta);
+                yield new IaFile<ItemFileMetaType>(this, f);
             }
         } else {
             for (let f of itemFiles) {
                 const format = typeof f.format === "string" && f.format;
                 if (files.includes(f.name)) {
-                    yield new IaFile<ItemFileMetaType>(this, f.name, f);
+                    yield new IaFile<ItemFileMetaType>(this, f);
                 } else if (format && formats.includes(format)) {
-                    yield this.getFile(f.name);
+                    yield  new IaFile<ItemFileMetaType>(this, f);
                 } else if (globPattern.length || excludePattern.length) {
                     if (patternsMatch(f.name, globPattern)) { // Will return true if globPattern is empty
                         if (excludePattern.length && patternsMatch(f.name, excludePattern)) {
                             continue;
                         }
-                        yield this.getFile(f.name);
+                        yield new IaFile<ItemFileMetaType>(this, f);
                     }
                 }
             }
@@ -771,13 +774,13 @@ export class IaItem<ItemMetaType extends IaItemMetadata = IaItemMetadata, ItemFi
         // Skip based on checksum.
         if (checksum) {
             md5Sum = await this.getMd5(body);
-            const iaFile = this.getFile(key);
-            if (!this.tasks && iaFile && iaFile.md5 == md5Sum) {
-                log.info(`${key} already exists: ${url}, skipping`);
-                // Return an empty response object if checksums match.
-                // TODO: Is there a better way to handle this?
-                return new Response();
-            }
+            //const iaFile = this.getFile(key);
+            //if (!this.tasks && iaFile && iaFile.md5 == md5Sum) {
+            //    log.info(`${key} already exists: ${url}, skipping`);
+            //    // Return an empty response object if checksums match.
+            //    // TODO: Is there a better way to handle this?
+            //    return new Response();
+            //}
         }
 
         if (verify) {

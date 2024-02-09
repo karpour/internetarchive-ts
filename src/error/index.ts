@@ -45,7 +45,11 @@ export class IaApiError<Status extends number = number> extends IaError {
     }
 }
 
+export class IaApiRangeError<Status extends number = number> extends IaApiError<Status> { }
+
 export class IaApiFileUploadError<Status extends number = number> extends IaApiError<Status> { }
+
+export class IaApiScopeUnavailableError<Status extends number = number> extends IaApiError<Status> { }
 
 export class IaApiaAuthenticationError<Status extends number = number> extends IaApiError<Status> { }
 

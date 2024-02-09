@@ -1,7 +1,7 @@
 import { Prettify } from "./IaTypes";
 
 /**
- * This type represents the return value of the TODO api endpoint
+* This type represents the return value of the TODO api endpoint
  */
 export type IaShortViewcounts<T extends string> = {
     [key in T]: IaShortViewCountItem

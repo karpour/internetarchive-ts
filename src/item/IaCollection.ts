@@ -1,11 +1,14 @@
 import { IaValueError } from "../error";
 import { IaSession } from "../session/IaSession";
-import { IaItemData, IaItemMetadata } from "../types";
+import { IaBaseMetadataType, IaItemData, IaItemExtendedMetadata } from "../types";
 import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
 import { IaItem } from "./IaItem";
 
 /** This class represents an archive.org collection. */
-export class IaCollection<ItemMetaType extends IaItemMetadata = IaItemMetadata> extends IaItem<ItemMetaType> {
+export class IaCollection<
+    ItemMetaType extends IaBaseMetadataType = IaBaseMetadataType,
+    ItemFileMetaType extends IaBaseMetadataType = IaBaseMetadataType
+> extends IaItem<ItemMetaType, ItemFileMetaType> {
     protected searches: any;
 
     /**
@@ -16,18 +19,19 @@ export class IaCollection<ItemMetaType extends IaItemMetadata = IaItemMetadata> 
     itemsCount?: number;
     subCollectionsCount?: number;
 
-    public constructor(archiveSession: IaSession, itemData: IaItemData<ItemMetaType>) {
+    public constructor(archiveSession: IaSession, itemData: IaItemData<ItemMetaType, ItemFileMetaType>) {
         super(archiveSession, itemData);
         this.searches = {};
         this.rssUrl = `${this.session.url}/services/collection-rss.php?collection=${this.identifier}`;
 
-        if ((this.metadata.mediatype ??= 'collection') !== 'collection') {
+        if (this.metadata.mediatype !== 'collection') {
             throw new IaValueError('mediatype is not "collection"!');
         }
     }
 
     public async getContents() {
-        return this.doSearch('contents', this.metadata.search_collection ?? `collection:${this.identifier}`);
+        // TODO can search_collection be string[]?
+        return this.doSearch('contents', this.metadata.search_collection as string ?? `collection:${this.identifier}`);
     }
 
     public async getSubcollections() {
@@ -35,14 +39,15 @@ export class IaCollection<ItemMetaType extends IaItemMetadata = IaItemMetadata> 
     }
 
     protected async doSearch(name: string, query: string) {
-        const searchResult = await this.session.searchItems(query, { fields: ['identifier'] });
+        const searchResult = await this.session.searchAdvanced(query, { fields: ['identifier'] });
         this.searches[name] = searchResult;
+        const results = await arrayFromAsyncGenerator(searchResult.getResultsGenerator());
         if (name === "contents") {
-            this.itemsCount = searchResult.numFound;
+            this.itemsCount = results.length;
         } else if (name === 'subcollections') {
-            this.subCollectionsCount = searchResult.numFound
+            this.subCollectionsCount = results.length;
         }
-        return arrayFromAsyncGenerator(searchResult.getResultsGenerator());
+        return results;
     }
 }
 

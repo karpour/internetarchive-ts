@@ -1,5 +1,5 @@
 
-import { IaFileBaseMetadata, IaFileMetadataRaw } from "../types/IaFileMetadata";
+import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFileMetadataRaw, IaFileSourceMetadata } from "../types/IaFileMetadata";
 import { IaItem } from "../item/IaItem";
 import fs, { mkdirSync, existsSync, statSync, unlinkSync, utimesSync } from "fs";
 import path from "path";
@@ -10,6 +10,7 @@ import { handleIaApiError } from "../util/handleIaApiError";
 import { Writable } from 'stream';
 import S3Request from "../request/S3Request";
 import { getMd5 } from "../util";
+import { IaBaseMetadataType } from "../types";
 
 
 /**
@@ -42,7 +43,7 @@ import { getMd5 } from "../util";
  * You can retrieve S3 keys here: https://archive.org/account/s3.php
  * 
  */
-export class IaFile<IaFileMeta extends IaFileBaseMetadata | IaFileMetadataRaw = IaFileBaseMetadata> extends IaBaseFile<IaFileMeta> {
+export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetadata> extends IaBaseFile<IaFileMeta> {
     public readonly url: string;
 
     /**
@@ -51,9 +52,9 @@ export class IaFile<IaFileMeta extends IaFileBaseMetadata | IaFileMetadataRaw = 
      * @param name The file name of the file.
      * @param fileMetadata Metadata for the given file.
      */
-    public constructor(protected item: IaItem, name: string, fileMetadata?: IaFileMetadataRaw<IaFileMeta> | IaFileMeta) {
-        super(item, name, fileMetadata);
-        this.url = `${item.session.url}/download/${this.identifier}/${encodeURIComponent(name)}`;
+    public constructor(protected item: IaItem, fileMetadata: IaFileSourceMetadata<IaFileMeta>) {
+        super(item, fileMetadata);
+        this.url = `${item.session.url}/download/${this.identifier}/${encodeURIComponent(this.name)}`;
     }
 
     public toString() {
@@ -172,7 +173,7 @@ export class IaFile<IaFileMeta extends IaFileBaseMetadata | IaFileMetadataRaw = 
                         params
                     });
                 if (!response.ok) {
-                    throw await handleIaApiError({response});
+                    throw await handleIaApiError({ response });
                 }
                 if (returnResponses) {
                     return response;
@@ -243,7 +244,7 @@ export class IaFile<IaFileMeta extends IaFileBaseMetadata | IaFileMetadataRaw = 
             statusForcelist: [503],
             host: 's3.us.archive.org'
         });*/
-        const request = new S3Request(url,{
+        const request = new S3Request(url, {
             method: 'DELETE',
             headers: {
                 'x-archive-cascade-delete': cascadeDelete ? '1' : '0',
@@ -264,7 +265,7 @@ export class IaFile<IaFileMeta extends IaFileBaseMetadata | IaFileMetadataRaw = 
             try {
                 const response = await this.item.session.send(request);
                 if (!response.ok) {
-                    throw await handleIaApiError({response});
+                    throw await handleIaApiError({ response });
                 }
                 return response;
             } catch (err: any) {

@@ -1,15 +1,16 @@
 import CatalogTask from "../catalog/CatalogTask";
 import { IaApiaAuthenticationError } from "../error";
 import { IaFile } from "../files";
+import IaCollection from "../item/IaCollection";
 import { IaItem } from "../item/IaItem";
-import { IaSearch } from "../search/IaSearch";
+import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
 import IaSession from "../session/IaSession";
 import {
     IaAuthConfig,
     IaGetItemParams,
     IaFileBaseMetadata,
     IaGetFilesParams,
-    IaItemMetadata,
+    IaItemExtendedMetadata,
     DebugDisabled,
     IaModifyMetadataParams,
     DebugEnabled,
@@ -21,6 +22,7 @@ import {
     IaUserInfo,
     IaFileObject,
     IaUploadParams,
+    IaBaseMetadataType,
 } from "../types";
 import { createS3AuthHeader } from "../util/createS3AuthHeader";
 import { handleIaApiError } from "../util/handleIaApiError";
@@ -68,13 +70,16 @@ export function getSession(config?: IaAuthConfig, debug: boolean = false): IaSes
  * @param param1.debug To be passed on to getSession(). 
  * @returns The Item that fits the criteria.
  */
-export function getItem(
+export function getItem<
+    ItemMetaType extends IaBaseMetadataType = IaBaseMetadataType,
+    ItemFileMetaType extends IaBaseMetadataType = IaBaseMetadataType
+>(
     identifier: string,
     {
         config,
         archiveSession,
         debug = false
-    }: IaGetItemParams = {}): Promise<IaItem> {
+    }: IaGetItemParams = {}): Promise<IaItem<ItemMetaType, ItemFileMetaType> | IaCollection<ItemMetaType, ItemFileMetaType>> {
     archiveSession = archiveSession ?? getSession(config, debug);
     return archiveSession.getItem(identifier);
 }
@@ -96,11 +101,11 @@ export function getItem(
  * @param params.onTheFly Include on-the-fly files (i.e. derivative EPUB)
  * @returns Files from an item.
  */
-export async function getFiles<IaFileMeta extends IaFileBaseMetadata = IaFileBaseMetadata>(
+export async function getFiles<ItemFileMetaType extends IaBaseMetadataType = IaBaseMetadataType>(
     identifier: string,
     params: IaGetFilesParams
-): Promise<Generator<IaFile<IaFileMeta>>> {
-    const item = await getItem(identifier, params);
+): Promise<Generator<IaFile<ItemFileMetaType>>> {
+    const item = await getItem<IaBaseMetadataType, ItemFileMetaType>(identifier, params);
     return item.getFiles(params);
 }
 
@@ -118,9 +123,9 @@ export async function getFiles<IaFileMeta extends IaFileBaseMetadata = IaFileBas
  * @param params.debug set to `true` to return a Request
  * @returns A Request if debug else a Response.
  */
-export function modifyMetadata(identifier: string, metadata: IaItemMetadata, params: DebugDisabled<IaModifyMetadataParams>): Promise<Request>;
-export function modifyMetadata(identifier: string, metadata: IaItemMetadata, params: DebugEnabled<IaModifyMetadataParams>): Promise<Response>;
-export function modifyMetadata(identifier: string, metadata: IaItemMetadata, params: IaModifyMetadataParams): Promise<Request | Response> {
+export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetadata, params: DebugDisabled<IaModifyMetadataParams>): Promise<Request>;
+export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetadata, params: DebugEnabled<IaModifyMetadataParams>): Promise<Response>;
+export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetadata, params: IaModifyMetadataParams): Promise<Request | Response> {
     return getItem(identifier, params)
         .then(item => item.modifyMetadata(metadata, params));
 }
@@ -242,9 +247,9 @@ export async function getTasks(params: IaGetSessionParams & IaGetTasksParams): P
  * @param params.maxRetries The number of times to retry a failed request.
  * @returns 
  */
-export async function searchItems(query: string, params: IaSearchItemsParams): Promise<IaSearch> {
+export async function searchItems(query: string, params: IaSearchItemsParams): Promise<IaAdvancedSearch> {
     const archiveSession = params.archiveSession ?? await getSession(params.config, false);
-    return archiveSession.searchItems(query, params);
+    return archiveSession.searchAdvanced(query, params);
 }
 
 /**
@@ -303,7 +308,7 @@ export async function getUserInfo(accessKey: string, secretKey: string): Promise
         headers: createS3AuthHeader(accessKey, secretKey)
     });
     if (!response.ok) {
-        throw await handleIaApiError({response});
+        throw await handleIaApiError({ response });
     }
     const json = await response.json();
     if (json.error) {

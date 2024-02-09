@@ -40,13 +40,6 @@ export const f:IaRawItemData = {
       "format": "Archive BitTorrent"
     },
     {
-      "name": "casio-cassiopeia-em-500-magazine-ad_files.xml",
-      "source": "original",
-      "format": "Metadata",
-      "md5": "f742bc4d53be4af0f3126e5a35cdf6b1",
-      "summation": "md5"
-    },
-    {
       "name": "casio-cassiopeia-em-500-magazine-ad_meta.sqlite",
       "source": "original",
       "mtime": "1706721486",
@@ -203,13 +196,6 @@ export const test: IaRawItemData = {
         "crc32": "1e84db7d",
         "sha1": "25346544993b43912bd76c28a4f95d9dd8177a58",
         "format": "Archive BitTorrent"
-      },
-      {
-        "name": "nasa_files.xml",
-        "source": "metadata",
-        "format": "Metadata",
-        "md5": "fa9a8d6305e32d33c1c8ae873161be74",
-        "summation": "md5"
       },
       {
         "name": "nasa_itemimage.jpg",

@@ -1,4 +1,4 @@
-import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaTaskPriority, IaTaskType, Prettify } from ".";
+import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaSortOption, IaTaskPriority, IaTaskType, Prettify } from ".";
 import IaSession from "../session/IaSession";
 
 
@@ -187,30 +187,49 @@ export type IaFileDownloadParams = {
     timeout: number;
 };
 
+/**
+ * Represents a response by the `/services/search/v1/fields`
+ * endpoint
+ * @see {@link https://archive.org/services/swagger/?url=%2Fservices%2Fsearch%2Fv1%2Fswagger.yaml#!/meta/get_fields}
+ */
+export type IaGetFieldsResult = {
+    fields: string[];
+};
+
 // TODO fields optional
-export type IaSessionSearchItemsParams = {
-    fields: string[],
-    sorts?: string[],
-    params?: Omit<IaSearchParams, 'q'>,
+export type IaAdvancedSearchConstructorParams = {
+    fields?: string[],
+    sorts?: [] | [IaSortOption] | [IaSortOption, IaSortOption] | [IaSortOption, IaSortOption, IaSortOption],
+    params?: Pick<IaAdvancedSearchParams, 'scope' | 'from' | 'page' | 'rows'>,
     fullTextSearch?: boolean,
     dslFts?: boolean,
     maxRetries?: number;
+    limit?: number;
+};
+
+export type IaFullTextSearchConstructorParams = {
+    params?: Omit<IaFullTextSearchParams, 'q'>,
+    dslFts?: boolean,
+    maxRetries?: number;
+    limit?: number;
 };
 
 
-export type IaSearchItemsParams = Prettify<IaSessionSearchItemsParams & IaGetSessionParams>;
+export type IaSearchItemsParams = Prettify<IaAdvancedSearchConstructorParams & IaGetSessionParams>;
 
 
-export type IaSearchParams = {
+export type IaBasicSearchParams = {
     q: string,
     scope?: string,
+    /**
+     * Specifies how many results to return per page, positive integer
+     * @min 100
+     * @max 10000
+     */
     count?: number,
-    size?: number,
     from?: number,
     scroll_id?: string,
     total_only?: boolean,
-    // TODO
-    user_aggs?: any;
     cursor?: string,
     scroll?: boolean,
     page?: number,
@@ -218,9 +237,58 @@ export type IaSearchParams = {
     output?: IaQueryOutput,
     fields?: string,
     sorts?: string,
+};
+
+export type IaScope = "all" | "standard";
+
+export type IaAdvancedSearchParams = {
+    q: string,
+    /**
+     * The scope of the query. 
+     * Possible values are `'standard'` or `'all'`.
+     * The `'all'` scope requires authorization
+     */
+    scope?: IaScope,
+    /**
+     * Specifies how many results to return per page, positive integer
+     * @min 100
+     * @max 10000
+     */
+    size?: number,
+    from?: number,
+    scroll_id?: string,
+    total_only?: boolean,
+    cursor?: string,
+    scroll?: boolean,
+    page?: number,
+    rows?: number,
+    output?: IaQueryOutput,
     [key: `sort[${number | string}]`]: string,
     [key: `fl[${number | string}]`]: string,
 };
+
+export type IaFullTextSearchParams = {
+    q: string,
+    /**
+     * The scope of the query. 
+     * Possible values are `'standard'` or `'all'`.
+     * The `'all'` scope requires authorization
+     */
+    scope?: IaScope,
+    /**
+     * Specifies how many results to return per page, positive integer
+     * @min 100
+     * @max 10000
+     */
+    size?: number,
+    from?: number,
+    total_only?: boolean,
+};
+
+export type IaUserAggsSearchParams = Pick<IaAdvancedSearchParams, 'q' | 'page' | 'rows'> & {
+    user_aggs: string;
+};
+
 
 
 

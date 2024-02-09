@@ -8,9 +8,12 @@ import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import {
     HttpHeaders,
     IaApiGetRateLimitResult,
+    IaApiJsonErrorResult,
     IaAuthConfig,
+    IaBaseMetadataType,
     IaCheckIdentifierResponse,
     IaFileBaseMetadata,
+    IaGetFieldsResult,
     IaGetTasksBasicParams,
     IaGetTasksParams,
     IaHttpRequestDeleteParams,
@@ -18,17 +21,18 @@ import {
     IaHttpRequestPostParams,
     IaItemBaseMetadata,
     IaItemData,
-    IaItemMetadata,
+    IaItemExtendedMetadata,
     IaRawMetadata,
-    IaSessionSearchItemsParams,
+    IaAdvancedSearchConstructorParams,
     IaTaskPriority,
     IaTaskType
 } from "../types";
 import getUserAgent from "../util/getUserAgent";
 import { handleIaApiError } from "../util/handleIaApiError";
 import { createS3AuthHeader } from "../util/createS3AuthHeader";
-import { IaSearch } from "../search/IaSearch";
+import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
 import { IaLongViewcounts, IaShortViewcounts } from "../types/IaViewCount";
+import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult";
 
 class ArchiveSessionCookies {
     setCookie(cookie: any) {
@@ -130,11 +134,17 @@ export class IaSession {
      *      Metadata will automatically be retrieved from Archive.org if nothing is provided.
      * @returns 
      */
-    public async getItem(identifier: string): Promise<IaItem | IaCollection> {
-        const itemData = await this.getMetadata(identifier);
+    public async getItem<
+        ItemMetaType extends IaBaseMetadataType = IaBaseMetadataType,
+        ItemFileMetaType extends IaBaseMetadataType = IaBaseMetadataType
+    >(identifier: string): Promise<IaItem<ItemMetaType, ItemFileMetaType> | IaCollection<ItemMetaType, ItemFileMetaType>> {
+        const itemData = await this.getMetadata(identifier) as IaItemData<ItemMetaType, ItemFileMetaType>;
         const mediatype = itemData.metadata.mediatype;
-        const itemClass: typeof IaItem = mediatype === "collection" ? IaCollection : IaItem;
-        return new itemClass(this, itemData);
+        if (mediatype === "collection") {
+            return new IaCollection(this, itemData);
+        } else {
+            return new IaItem(this, itemData);
+        }
     }
 
     /**
@@ -144,7 +154,7 @@ export class IaSession {
      * @throws {IaApiItemNotFoundError} If the item does not exist
      */
     public async getMetadata
-        <ItemMetaType extends IaItemBaseMetadata = IaItemMetadata,
+        <ItemMetaType extends IaItemBaseMetadata = IaItemExtendedMetadata,
             ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata>
         (identifier: string): Promise<IaItemData<ItemMetaType, ItemFileMetaType>> {
         const response = await this.get(`${this.url}/metadata/${identifier}`);
@@ -223,10 +233,12 @@ export class IaSession {
             contentTypeHeader = { 'Content-Type': 'application/json' };
         }
 
-        log.verbose(`GET ${urlObj.href}`);
+        console.log(`POST ${urlObj.href}`);
+        console.log(body);
+        console.log({ ...this.headers, ...headers, ...contentTypeHeader, ...(auth ?? this.auth) });
         return fetch(urlObj.href, {
             method: "POST",
-            headers: { ...this.headers, ...headers, ...contentTypeHeader, ...auth },
+            headers: { ...this.headers, ...headers, ...contentTypeHeader, ...(auth ?? this.auth) },
             body
         });
     }
@@ -266,7 +278,7 @@ export class IaSession {
     }
 
     /**
-    * Search for items on Archive.org.
+    * Search for items on Archive.org using the {@link https://archive.org/advancedsearch.php | advanced search API }
     * @param query The Archive.org search query to yield results for. Refer to {@link https://archive.org/advancedsearch.php#raw} for help formatting your query.
     * @param params
     * @param params.fields The metadata fields to return in the search results.
@@ -277,8 +289,8 @@ export class IaSession {
     * @param params.maxRetries 
     * @returns A Search object, yielding search results.
     */
-    public searchItems(query: string, params: IaSessionSearchItemsParams): IaSearch {
-        return new IaSearch(this, query, params);
+    public searchAdvanced(query: string, params: IaAdvancedSearchConstructorParams): IaAdvancedSearch {
+        return new IaAdvancedSearch(this, query, params);
     }
 
     /**
@@ -461,6 +473,27 @@ export class IaSession {
             }
             return json.code === "available";
         }
+    }
+
+    // TODO is this endpoint still maintained?
+    /**
+     * Returns requestable fields from the endpoint `/services/search/v1/fields`.
+     * 
+     * This endpoint requires no authorization.
+     * 
+     * @see {@link https://archive.org/services/swagger/?url=%2Fservices%2Fsearch%2Fv1%2Fswagger.yaml#!/meta/get_fields}
+     * @returns list of fields that can be requested
+     * @throws {IaApiScopeUnavailableError} If scope is now available to the current user
+     * @throws {IaApiError}
+     */
+    public async getRequestableFields(): Promise<string[]> {
+        const url = `${this.url}/services/search/v1/fields`;
+        const response = await this.get(url);
+        const json = await response.json() as IaGetFieldsResult| IaApiJsonErrorResult;
+        if (!response.ok || isApiJsonErrorResult(json)) {
+            throw await handleIaApiError({ response, responseBody: json });
+        }
+        return json.fields;
     }
 
     /**

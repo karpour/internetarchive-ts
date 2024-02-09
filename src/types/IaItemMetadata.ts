@@ -1,4 +1,13 @@
-import { IaMediaType, IaCollectionId, IaBaseMetadataType } from ".";
+import { IaMediaType, IaCollectionId, IaBaseMetadataType, Prettify, IaRawMetadata } from ".";
+
+
+/**
+ * This type represents raw metadata as it is returned by the Internet Archive API
+ * 
+ * @template IaItemUserMetadata 
+ */
+export type IaItemSourceMetadata<IaItemUserMetadata extends IaBaseMetadataType = IaItemExtendedMetadata> = Prettify<IaItemBaseMetadata & Partial<IaRawMetadata<IaItemUserMetadata>>>;
+
 
 export type IaItemBaseMetadata = {
     /** Unique identifier for an item on the archive.org web site. Used in the URL for the item, ie archive.org/details/[identifier]. */
@@ -16,7 +25,7 @@ export type IaItemBaseMetadata = {
     collection: IaCollectionId | IaCollectionId[];
 } & IaBaseMetadataType;
 
-export type IaItemMetadata = IaItemBaseMetadata & {
+export type IaItemExtendedMetadata = IaItemBaseMetadata & {
     // Optional fields
     /** Date of publication */
     date?: string;

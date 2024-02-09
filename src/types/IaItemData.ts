@@ -1,8 +1,8 @@
 import { IaItemReview } from "./IaItemReview";
-import { IaItemBaseMetadata, IaItemMetadata } from "./IaItemMetadata";
-import { IaFilesXmlMetadata, IaFileBaseMetadata } from "./IaFileMetadata";
+import { IaItemBaseMetadata, IaItemExtendedMetadata, IaItemSourceMetadata } from "./IaItemMetadata";
+import { IaFilesXmlMetadata, IaFileBaseMetadata, IaFileSourceMetadata } from "./IaFileMetadata";
 import { IaSimplelistEntry } from "./IaSimplelistEntry";
-import { IaRawMetadata } from "./IaTypes";
+import { IaBaseMetadataType, IaRawMetadata } from "./IaTypes";
 import { IaPageNumbersInfo } from "./IaPages";
 
 export type IaRawItemData = IaItemData<IaRawMetadata<IaItemBaseMetadata>, IaRawMetadata<IaFileBaseMetadata>>;
@@ -17,10 +17,15 @@ export type IaAlternateItemLocations = {
     workable?: IaAlternateItemLocationEntry[];
 };
 
-
-export type IaItemData<ItemMetaType extends IaItemBaseMetadata = IaItemMetadata, ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata> = {
+/**
+ * This type represents raw metadata as returned by the metadata API endpoint
+ */
+export type IaItemData<
+    ItemMetaType extends IaBaseMetadataType = IaItemExtendedMetadata,
+    ItemFileMetaType extends IaBaseMetadataType = IaFileBaseMetadata
+> = {
     /** Date the item was created on */
-    created: number; // conv
+    created: number;
 
     /** The primary data node the item is stored on */
     d1?: string;
@@ -34,7 +39,7 @@ export type IaItemData<ItemMetaType extends IaItemBaseMetadata = IaItemMetadata,
     alternate_locations?: IaAlternateItemLocations;
 
     /** File metadata for this item */
-    files: (ItemFileMetaType | IaFilesXmlMetadata)[];
+    files: IaFileSourceMetadata<ItemFileMetaType>[];
 
     /** Total number of files in the item */
     files_count: number; // conv
@@ -46,7 +51,7 @@ export type IaItemData<ItemMetaType extends IaItemBaseMetadata = IaItemMetadata,
     item_size: number; // conv
 
     /** Item Metadata */
-    metadata: ItemMetaType;
+    metadata: IaItemSourceMetadata<ItemMetaType>;
 
     /** The preferred server for reading the item's contents. Callers should use this node when constructing a URL */
     server: string;
