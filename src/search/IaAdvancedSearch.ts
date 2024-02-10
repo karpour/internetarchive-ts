@@ -16,28 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { error } from "console";
 import { IaApiError, IaApiRangeError, IaTypeError } from "../error";
 import { IaItem } from "../item/IaItem";
 import IaSession from "../session/IaSession";
 import { TODO } from "../todotype";
 import { IaApiJsonErrorResult, IaSortOption } from "../types";
-import { IaAdvancedSearchParams, IaAdvancedSearchConstructorParams, IaUserAggsSearchParams } from "../types/IaParams";
 import { handleIaApiError } from "../util/handleIaApiError";
 import { IA_MAX_SEARCH_RESULT_COUNT, IaBaseSearch } from "./IaBaseSearch";
 import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult";
+import { IaAdvancedSearchConstructorParams, IaAdvancedSearchParams, IaUserAggsSearchParams } from "../types/IaSearch";
 
 
-/**
- * internetarchive.search
- * ~~~~~~~~~~~~~~~~~~~~~~
- * 
- * This module provides objects for interacting with the Archive.org
- * search engine.
- * 
- * :copyright: (C) 2012-2019 by Internet Archive.
- * :license: AGPL 3, see LICENSE for more details.
- */
 
 
 
@@ -56,10 +45,10 @@ const RegExp_User_Aggs_Key = /^user_aggs__terms__field:(?<field>.*)__size:\d+$/;
  * for result in search:
  *     ...     print(result['identifier'])
 */
-export class IaAdvancedSearch extends IaBaseSearch<IaAdvancedSearchParams, TODO> {
+export class IaAdvancedSearch extends IaBaseSearch {
     protected readonly session: IaSession;
-    protected readonly scrapeUrl: string;
-    protected readonly searchUrl: string;
+    protected readonly url: string;
+    protected readonly basicParams: IaAdvancedSearchParams;
     protected readonly params: IaAdvancedSearchParams;
     protected readonly fields: string[];
     protected readonly sorts: IaSortOption[];
@@ -70,7 +59,8 @@ export class IaAdvancedSearch extends IaBaseSearch<IaAdvancedSearchParams, TODO>
         {
             fields = [],
             sorts = [],
-            params = {},
+            scope,
+            rows,
             maxRetries = 5
         }: IaAdvancedSearchConstructorParams = {}) {
         super(session, query);
@@ -78,15 +68,17 @@ export class IaAdvancedSearch extends IaBaseSearch<IaAdvancedSearchParams, TODO>
         this.fields = fields.length === 0 ? ['identifier'] : fields;
         this.sorts = sorts.length === 0 ? ['addeddate desc'] : sorts;
         this.session = session;
-        this.scrapeUrl = `${this.session.url}/services/search/v1/scrape`;
-        this.searchUrl = `${this.session.url}/advancedsearch.php`;
+        this.url = `${this.session.url}/advancedsearch.php`;
 
-        // Initialize params.
-        this.params = { 
-            q: this.query, 
+        this.basicParams = {
+            q: this.query,
             output: 'json',
-            rows: 100,
-            ...params 
+            rows: rows ?? 100,
+            scope
+        };
+        // Initialize params.
+        this.params = {
+            ...this.basicParams
         };
         // Always return identifier.
         if (!this.fields.includes('identifier')) {
@@ -106,7 +98,7 @@ export class IaAdvancedSearch extends IaBaseSearch<IaAdvancedSearchParams, TODO>
 
 
     public async getResults(page?: number): Promise<IaAdvancedSearchResult> {
-        const response = await this.session.get(this.searchUrl, {
+        const response = await this.session.get(this.url, {
             params: {
                 ...this.params,
                 page
@@ -131,7 +123,7 @@ export class IaAdvancedSearch extends IaBaseSearch<IaAdvancedSearchParams, TODO>
      * @throws {IaApiRangeError}
      */
     public async *getResultsGenerator(): AsyncGenerator<TODO> {
-
+        // TODO make this work
         /** Counter for results */
         let resultsYielded = 0;
         const resultsPage = await this.getResults(1);
@@ -141,7 +133,6 @@ export class IaAdvancedSearch extends IaBaseSearch<IaAdvancedSearchParams, TODO>
         }
     }
 
-    // TODO is this still experimental?
     /**
      * Return aggregations for the specified fields
      * For each supplied field, up to 25 buckets will be returned.
@@ -149,33 +140,40 @@ export class IaAdvancedSearch extends IaBaseSearch<IaAdvancedSearchParams, TODO>
      * @param aggFields fields to return aggregations for
      * @returns Record where the keys are the requested fields and 
      *          the values are object containing the corresponging aggregations
+     * @template AggFields Array of fields to aggregate
      * @throws {IaApiError}
      */
-    public async aggregations<const T extends IaUserAggField[]>(aggFields: T): Promise<IaUserAggs<T>> {
-        if (!aggFields || aggFields.length === 0) throw new IaTypeError(`Aggregation fields must be a non-empty string array`);
+    public async aggregations<const AggFields extends IaUserAggField[]>(aggFields: AggFields): Promise<IaUserAggs<AggFields>> {
+        if (!aggFields || aggFields.length === 0) {
+            throw new IaTypeError(`Aggregation fields must be a non-empty string array`);
+        }
 
         // For getting user aggs, we can omit params like fields, sorts, etc.
         // as these only influence the returned docs.
-        // We set rows to 0 so no docs will be returned, only aggregations
+        // Rows is set to 0 so no docs will be returned
         const params: IaUserAggsSearchParams = {
-            ...this.params,
+            ...this.basicParams,
             page: 1,
             rows: 0,
             user_aggs: aggFields.join(',')
         };
 
-        const response = await this.session.get(this.searchUrl, { params });
-        if (!response.ok) {
-            throw await handleIaApiError({ response });
+        const response = await this.session.getJson<IaAdvancedSearchResult<AggFields>>(this.url, { params });
+        const aggs: IaUserAggs<any> = {};
+
+        for (const entry of Object.entries(response.response.aggregations)) {
+            const [key, aggItem] = entry;
+            const r = RegExp_User_Aggs_Key.exec(key);
+            if (!r) {
+                throw new IaTypeError(`Aggregation key "${key}" does not match Regexp /^user_aggs__terms__field:(?<field>.*)__size:\d+$/`);
+            }
+            const field = r.groups!.field!;
+            if (!aggFields.includes(field as IaUserAggField)) {
+                throw new IaTypeError(`Response included field "${field}", which is not included in requested fields "${aggFields.join(',')}"`);
+            }
+            aggs[r.groups!.field!] = aggItem;
         }
-        const json = await response.json() as IaAdvancedSearchResult<T> | TODO;
-        console.log(JSON.stringify(json));
-        //console.log(json.response.docs);
-        //console.log(json.response?.aggregations['user_aggs__terms__field:addeddate__size:25'].buckets);
-        if (json.error) {
-            throw new IaApiError(json.error, { response, responseBody: json });
-        }
-        return json as any;
+        return aggs as IaUserAggs<AggFields>;
     }
 
     /**
@@ -183,17 +181,18 @@ export class IaAdvancedSearch extends IaBaseSearch<IaAdvancedSearchParams, TODO>
      * @returns Number of results for query
      */
     protected async fetchNumFound(): Promise<number> {
-        const params = { ...this.params };
-        params.total_only = true;
-        const response = await this.session.post(this.scrapeUrl, { params });
-        if (!response.ok) {
-            throw await handleIaApiError({ response });
-        }
-        const json = await response.json() as TODO;
-        if (json.error) {
-            throw new IaApiError(json.error);
-        }
-        return json.total;
+        const params: IaAdvancedSearchParams = {
+            ...this.params,
+            rows: 0,
+            page: undefined,
+        };
+        const response = await this.session.getJson<IaAdvancedSearchResult>(this.url, {
+            params: {
+                ...this.params,
+
+            }
+        });
+        return response.response.numFound;
     }
 
     public iterAsResults(): AsyncGenerator {
@@ -215,7 +214,7 @@ export class IaAdvancedSearch extends IaBaseSearch<IaAdvancedSearchParams, TODO>
 export type IaUserAggField = "addeddate" | "subject";
 
 export type IaUserAggs<T extends IaUserAggField[]> = {
-    [key in T[number]]: IaUserAggsItem[];
+    [key in T[number]]: IaUserAggsItem;
 };
 
 export type IaUserAggsItem = {

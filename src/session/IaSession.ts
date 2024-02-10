@@ -173,6 +173,26 @@ export class IaSession {
     }
 
     /**
+     * Sends a GET request to the URL and expects a JSON response in return.
+     * If the response has a non-200 status OR the response has an "error" field, an error gets thrown
+     * @param url 
+     * @param params 
+     * @returns The JSON body
+     * @throws {IaApiError}
+     */
+    public async getJson<T extends {}>(url: string, params: IaHttpRequestGetParams = {}): Promise<T> {
+        const response = await this.get(url, params);
+        if (!response.headers.get('content-type')?.startsWith('application/json')) {
+            throw new IaApiError(`Content type of response is expected to be application/json, actual type is "${response.headers.get('content-type')}"`, { response });
+        }
+        const json = await response.json() as T | IaApiJsonErrorResult;
+        if (!response.ok || isApiJsonErrorResult(json)) {
+            throw await handleIaApiError({ response, responseBody: json });
+        }
+        return json as T;
+    }
+
+    /**
      * Sends a GET Request
      * @param url URL to get
      * @param param1.params Search params
@@ -489,7 +509,7 @@ export class IaSession {
     public async getRequestableFields(): Promise<string[]> {
         const url = `${this.url}/services/search/v1/fields`;
         const response = await this.get(url);
-        const json = await response.json() as IaGetFieldsResult| IaApiJsonErrorResult;
+        const json = await response.json() as IaGetFieldsResult | IaApiJsonErrorResult;
         if (!response.ok || isApiJsonErrorResult(json)) {
             throw await handleIaApiError({ response, responseBody: json });
         }

@@ -25,6 +25,11 @@ export type IaItemBaseMetadata = {
     collection: IaCollectionId | IaCollectionId[];
 } & IaBaseMetadataType;
 
+export type IaSearchResultMetaItem<F extends string> = {
+    [key in F]: key extends keyof IaItemBaseMetadata ? IaItemBaseMetadata[key] : string | string[]
+};
+
+
 export type IaItemExtendedMetadata = IaItemBaseMetadata & {
     // Optional fields
     /** Date of publication */

@@ -237,6 +237,8 @@ export type IaSortOption = `${IaSortableField} asc` | `${IaSortableField} desc`;
 
 export type IaQueryOutput = "json" | "xml" | "csv" | "tables" | "rss";
 
+export type IaScope = "all" | "standard";
+
 export const IA_QUERY_FIELDS = [
   "avg_rating",
   "backup_location",

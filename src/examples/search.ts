@@ -1,8 +1,7 @@
 import { getSession } from "../api";
 import { IaAuthConfig } from "../types";
-import { IaApiItemNotFoundError, IaApiUnauthorizedError } from "../error";
 import { getCredentials } from "./getCredentials";
-import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
+import { IaSearch } from "../search/IaSearch";
 
 async function main() {
     /** Credentials read from "./.env.json" */
@@ -11,14 +10,26 @@ async function main() {
     const config: IaAuthConfig = { 's3': { 'access': credentials.accessKey, 'secret': credentials.secretKey } };
     const session = getSession(config);
 
-    const query = process.argv[2] ?? '(uploader:jake@archive.org)';
+    const query = process.argv[2] ?? 'computer chronicles';
+    // Create a new IaSearch object, this uses the basic scrape API
+    const search = new IaSearch(session,
+        query,
+        {
+            // The fields to be returned for each result item.
+            // Only some fields are guaranteed to be included, most will be typed as optional
+            fields: ['collection', 'mediatype', 'date'],
+            // We can supply up to 3 sort options
+            sorts: ["year desc"],
+            // Limit results to 33
+            limit: 33
+        });
 
-    //const search = new IaSearch(session, query, { fullTextSearch: true, params: { user_aggs: "addeddate,mediatype", fields: 'identifier,addeddate,mediatype', rows: 10 } });
-    const search = new IaAdvancedSearch(session, query);
+    // Print number of reaults for this search
+    console.log(`Total Results: ${await search.getNumFound()}`);
 
-    console.log(`Results: ${await search.getNumFound()}`)
+    // Iterate over the AsyncIterator that yields results
     for await (const result of search.getResultsGenerator()) {
-        console.log(result);
+        console.log(`${result.date} ${result.identifier} (${result.mediatype})`);
     }
 }
 

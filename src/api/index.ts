@@ -8,7 +8,6 @@ import IaSession from "../session/IaSession";
 import {
     IaAuthConfig,
     IaGetItemParams,
-    IaFileBaseMetadata,
     IaGetFilesParams,
     IaItemExtendedMetadata,
     DebugDisabled,
@@ -18,12 +17,10 @@ import {
     IaDeleteItemParams,
     IaGetSessionParams,
     IaGetTasksParams,
-    IaSearchItemsParams,
     IaUserInfo,
-    IaFileObject,
-    IaUploadParams,
     IaBaseMetadataType,
 } from "../types";
+import { IaSearchItemsParams } from "../types/IaSearch";
 import { createS3AuthHeader } from "../util/createS3AuthHeader";
 import { handleIaApiError } from "../util/handleIaApiError";
 

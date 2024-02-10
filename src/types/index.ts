@@ -6,3 +6,4 @@ export * from "./IaItemReview";
 export * from "./IaParams";
 export * from "./IaTask";
 export * from "./IaFileFormat"; 
+export * from "./IaSearch"; 
