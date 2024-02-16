@@ -3,7 +3,7 @@ import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFileMetadataRaw, IaFileSo
 import { IaItem } from "../item/IaItem";
 import fs, { mkdirSync, existsSync, statSync, unlinkSync, utimesSync } from "fs";
 import path from "path";
-import log from "../logging/log";
+import log from "../log";
 import { IaBaseFile } from "./IaBaseFile";
 import { IaFileDeleteParams, IaFileDownloadParams } from "../types/IaParams";
 import { handleIaApiError } from "../util/handleIaApiError";
@@ -234,10 +234,9 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
         accessKey,
         secretKey,
         verbose,
-        debug = false,
         maxRetries = 2,
         headers = {},
-    }: IaFileDeleteParams): Promise<S3Request | Response> {
+    }: IaFileDeleteParams): Promise<Response> {
         const url = `${this.item.session.protocol}//s3.us.archive.org/${this.identifier}/${encodeURIComponent(this.name)}`;
         /*this.item.session.mountHttpAdapter({
             maxRetries,
@@ -252,36 +251,34 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
             },
             auth: this.item.session.auth
         });
-        if (debug) {
-            return request;
-        } else {
-            if (verbose) {
-                let msg = ` deleting: {this.name}`;
-                if (cascadeDelete) {
-                    msg += ` and all derivative files.`;
-                }
-                //log.verbose(msg);
+
+        if (verbose) {
+            let msg = ` deleting: {this.name}`;
+            if (cascadeDelete) {
+                msg += ` and all derivative files.`;
             }
-            try {
-                const response = await this.item.session.send(request);
-                if (!response.ok) {
-                    throw await handleIaApiError({ response });
-                }
-                return response;
-            } catch (err: any) {
-                const errorMsg = `Error deleting ${url}`;
-                log.error(errorMsg);
-                throw err;
-            } finally {
-                // The retry adapter is mounted to the session object.
-                // Make sure to remove it after delete, so it isn't
-                // mounted if and when the session object is used for an
-                // upload. This is important because we use custom retry
-                // handling for IA-S3 uploads.
-                //const urlPrefix = `${this.item.session.protocol}//s3.us.archive.org`;
-                //delete this.item.session.adapters[urlPrefix];
-            }
+            //log.verbose(msg);
         }
+        try {
+            const response = await this.item.session.send(request);
+            if (!response.ok) {
+                throw await handleIaApiError({ response });
+            }
+            return response;
+        } catch (err: any) {
+            const errorMsg = `Error deleting ${url}`;
+            log.error(errorMsg);
+            throw err;
+        } finally {
+            // The retry adapter is mounted to the session object.
+            // Make sure to remove it after delete, so it isn't
+            // mounted if and when the session object is used for an
+            // upload. This is important because we use custom retry
+            // handling for IA-S3 uploads.
+            //const urlPrefix = `${this.item.session.protocol}//s3.us.archive.org`;
+            //delete this.item.session.adapters[urlPrefix];
+        }
+
     }
 }
 

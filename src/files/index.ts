@@ -17,13 +17,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
-internetarchive.files
+internetarchive-ts/files
 ~~~~~~~~~~~~~~~~~~~~~
 
 :copyright: (C) 2012-2019 by Internet Archive.
 :license: AGPL 3, see LICENSE for more details.
 */
 
-export * from './IaBaseFile'
 export * from './IaFile'
 export * from './IaOnTheFlyFile'

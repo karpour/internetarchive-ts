@@ -1,3 +1,7 @@
+/**
+ * Types
+ * @category Types
+ */
 
 
 
@@ -324,46 +328,6 @@ export const IA_MEDIA_TYPES = [
 export type IaMediaType = typeof IA_MEDIA_TYPES[number];
 
 
-export interface ItemQueryObject {
-  /** Query */
-  q: string;
-  fl?: IaQueryField[];
-  sort?: [IaSortOption] | [IaSortOption, IaSortOption] | [IaSortOption, IaSortOption, IaSortOption];
-  rows: number;
-  page?: number;
-  save?: "yes" | "no";
-  output: IaQueryOutput;
-  callback?: string;
-}
-
-export interface SearchQueryObject extends ItemQueryObject {
-  fl: IaQueryField[];
-}
-
-export interface IaSearchResponse {
-  responseHeader: {
-    status: number,
-    QTime: number,
-    params: {
-      query: string,
-      qin: string,
-      fields: string,
-      wt: IaQueryOutput,
-      rows: number,
-      start: number;
-    };
-  };
-  response: {
-    numFound: number,
-    start: number,
-    docs: SearchResultDoc[];
-  };
-}
-
-export type SearchResultDoc = {
-  [P in IaQueryField]?: string;
-};
-
 /**
  * Get Tasks Basic Query Parameters
  * @see {@link https://archive.org/services/docs/api/tasks.html | Tasks API}
@@ -452,14 +416,6 @@ export type IaAuthConfig = {
 };
 
 export type IaAuthConfigSectionName = keyof IaAuthConfig;
-
-// TODO cull
-//export const IA_ITEM_TAB_URL_TYPES = [
-//  'about',
-//  'collection'
-//] as const;
-//
-//export type IaItemTabUrlType = typeof IA_ITEM_TAB_URL_TYPES[number];
 
 export const IA_ITEM_URL_TYPES = [
   'details',
@@ -701,3 +657,20 @@ export type IaApiGetTasksResult = {
   summary?: IaTaskSummary,
 }
 
+export type IaCheckLimitApiResult = {
+  accesskey: string,
+  bucket: string,
+  detail: {
+      accesskey_ration: number,
+      accesskey_tasks_queued: number,
+      bucket_limit: number,
+      bucket_ration: number,
+      bucket_tasks_queued: number,
+      limit_reason: string,
+      rationing_engaged: number,
+      rationing_level: number,
+      total_global_limit: number,
+      total_tasks_queued: number;
+  },
+  over_limit: number;
+};

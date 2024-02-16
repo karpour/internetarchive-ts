@@ -7,7 +7,8 @@
     "test": "cross-env NODE_ENV=testing ts-mocha --timeout 10000 --file \"./src/test/postTest.ts\" \"./src/**/*.spec.ts\"",
     "test:coverage": "nyc --reporter=html --reporter=text --reporter=text-summary npm test",
     "clean": "rm -rf ./lib",
-    "build": "npm run clean && tsc"
+    "build": "npm run clean && tsc",
+    "doc": "typedoc && cp ./internet-archive-ts-logo.svg ./doc"
   },
   "keywords": [
     "archive.org",
@@ -29,6 +30,6 @@
     "cross-env": "^7.0.3",
     "nyc": "^15.1.0",
     "ts-mocha": "^10.0.0",
-    "typedoc": "^0.25.7"
+    "typedoc": "^0.25.8"
   }
 }

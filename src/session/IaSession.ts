@@ -1,9 +1,9 @@
-import Catalog from "../catalog/Catalog";
-import CatalogTask from "../catalog/CatalogTask";
-import { IaApiError, IaApiInvalidIdentifierError, IaApiItemNotFoundError, IaApiNotFoundError, IaApiUnauthorizedError } from "../error";
+import IaCatalog from "../catalog/IaCatalog";
+import IaCatalogTask from "../catalog/IaCatalogTask";
+import { IaApiAuthenticationError, IaApiError, IaApiInvalidIdentifierError, IaApiItemNotFoundError, IaApiNotFoundError, IaApiUnauthorizedError, IaAuthenticationError, IaError, IaInvalidIdentifierError, IaTypeError } from "../error";
 import IaCollection from "../item/IaCollection";
 import { IaItem } from "../item/IaItem";
-import log from "../logging/log";
+import log from "../log";
 import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import {
     HttpHeaders,
@@ -25,7 +25,10 @@ import {
     IaRawMetadata,
     IaAdvancedSearchConstructorParams,
     IaTaskPriority,
-    IaTaskType
+    IaTaskType,
+    IaUserInfo,
+    IaSubmitTaskParams,
+    IaCheckLimitApiResult
 } from "../types";
 import getUserAgent from "../util/getUserAgent";
 import { handleIaApiError } from "../util/handleIaApiError";
@@ -33,6 +36,8 @@ import { createS3AuthHeader } from "../util/createS3AuthHeader";
 import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
 import { IaLongViewcounts, IaShortViewcounts } from "../types/IaViewCount";
 import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult";
+import { getUserInfo } from "../api";
+import { TODO } from "../todotype";
 
 class ArchiveSessionCookies {
     setCookie(cookie: any) {
@@ -59,20 +64,18 @@ export class IaSession {
     public readonly host: string;
     public readonly protocol: string;
     public readonly url: string;
-    public readonly userEmail?: string;
     public readonly accessKey?: string;
     public readonly secretKey?: string;
     public readonly auth?: HttpHeaders;
     protected readonly secure: boolean;
     protected readonly config: IaAuthConfig;
-    protected readonly catalog: Catalog;
+    protected readonly catalog: IaCatalog;
+    public userEmail?: string;
 
     /** HTTP Headers */
     public headers: HttpHeaders;
 
     protected cookies: ArchiveSessionCookies;
-
-
 
     /**
      * Initialize {@link IaSession} object with config.
@@ -84,10 +87,14 @@ export class IaSession {
         config: IaAuthConfig = {},
         protected debug: boolean = false,
     ) {
-        this.cookies = new ArchiveSessionCookies();
-        this.catalog = new Catalog(this);
-
         this.config = config;
+        this.secure = this.config.general?.secure ?? true;
+        this.host = this.config.general?.host ?? 'archive.org';
+        this.protocol = this.secure ? 'https:' : 'http:';
+        this.url = `${this.protocol}//${this.host}`;
+        this.cookies = new ArchiveSessionCookies();
+        this.catalog = new IaCatalog(this);
+
 
         /*for (let ck in this.config.cookies ?? {}) {
             const rawCookie = `${ck}=${this.config.cookies[ck]}`;
@@ -101,13 +108,6 @@ export class IaSession {
             });
             this.cookies.setCookie(cookie);
         }*/
-
-        this.secure = this.config.general?.secure ?? true;
-        this.host = this.config.general?.host ?? 'archive.org';
-        this.protocol = this.secure ? 'https:' : 'http:';
-        this.url = `${this.protocol}//${this.host}`;
-
-
 
         let userEmail = this.config.cookies?.['logged-in-user'];
         if (userEmail) {
@@ -160,7 +160,7 @@ export class IaSession {
         const response = await this.get(`${this.url}/metadata/${identifier}`);
         if (response.ok) {
             return response.json().then(json => {
-                // The metadata endpoint returns status of 200 with a bodu of "{}" if the item does not exist.
+                // The metadata endpoint returns status of 200 with a body of "{}" if the item does not exist.
                 // We convert this into an error here
                 if (Object.keys(json).length === 0) {
                     throw new IaApiItemNotFoundError(`Item "${identifier}" does not exist`, { response });
@@ -177,8 +177,9 @@ export class IaSession {
      * If the response has a non-200 status OR the response has an "error" field, an error gets thrown
      * @param url 
      * @param params 
-     * @returns The JSON body
-     * @throws {IaApiError}
+     * @returns Promise that resolved with the JSON body
+     * @typeParam T - Expected return type from a successful response
+     * @throws {IaApiError} - {@link IaApiError} If response has a non-200 status or an `"error"` field.
      */
     public async getJson<T extends {}>(url: string, params: IaHttpRequestGetParams = {}): Promise<T> {
         const response = await this.get(url, params);
@@ -301,15 +302,15 @@ export class IaSession {
     * Search for items on Archive.org using the {@link https://archive.org/advancedsearch.php | advanced search API }
     * @param query The Archive.org search query to yield results for. Refer to {@link https://archive.org/advancedsearch.php#raw} for help formatting your query.
     * @param params
-    * @param params.fields The metadata fields to return in the search results.
-    * @param params.sorts 
-    * @param params.params The URL parameters to send with each request sent to the Archive.org Advancedsearch Api.
-    * @param params.fullTextSearch Beta support for querying the archive.org Full Text Search API
-    * @param params.dslFts Beta support for querying the archive.org Full Text Search API in dsl (i.e. do not prepend `!L` to the `full_text_search` query
-    * @param params.maxRetries 
+    * @param params.fields Fields to include in the results. If not supplied, a standard set of fields will be returned.
+    *        Regardless of which fields are supplied, the `"identifier"` field will always be included.
+    * @param params.sorts Up to 3 sort options
+    * @param params.scope Scope `"standard"` or `"all"` (default: `"standard"`)
+    * @param params.rows Number of items to return per API query (default: `100`)
+    * @param params.limit Maximum number of retries for each API call (default: `5`)
     * @returns A Search object, yielding search results.
     */
-    public searchAdvanced(query: string, params: IaAdvancedSearchConstructorParams): IaAdvancedSearch {
+    public searchAdvanced<F extends string[] | undefined>(query: string, params: IaAdvancedSearchConstructorParams<F>): IaAdvancedSearch<F> {
         return new IaAdvancedSearch(this, query, params);
     }
 
@@ -320,25 +321,30 @@ export class IaSession {
      * @returns 
      */
     public async s3IsOverloaded(identifier?: string, accessKey?: string): Promise<boolean> {
-        const url = `${this.protocol}//s3.us.archive.org`;
+        try {
+            const response = await this.checkLimits(identifier, accessKey);
+            return response.over_limit != 0;
+        } catch (err) {
+            // If API returns an error, assume S3 is overloaded
+            return true;
+        }
+    }
+
+    /**
+     * Check S3 limits
+     * @param identifier Optional identifier 
+     * @param accessKey Optional access key
+     * @returns API Limits response
+     * @throws {IaApiError}
+     */
+    public async checkLimits(identifier?: string, accessKey?: string): Promise<IaCheckLimitApiResult> {
+        const url = `${this.protocol}//s3.us.${this.host}`;
         const params = {
             check_limit: '1',
             bucket: identifier,
             accessKey,
         };
-        try {
-            const response = await this.get(url, { params });
-            try {
-                const json = await response.json();
-                return json.over_limit != 0;
-            } catch (err) {
-                // TODO not a good way of doing this
-                return true;
-            }
-        } catch (err) {
-            // TODO not a good way of doing this
-            return true;
-        }
+        return this.getJson<IaCheckLimitApiResult>(url, { params });
     }
 
     /**
@@ -349,17 +355,17 @@ export class IaSession {
      */
     public getTasksApiRateLimit<T extends IaTaskType>(cmd: IaTaskType = 'derive.php'): Promise<IaApiGetRateLimitResult<T>> {
         return this.catalog.getRateLimit(cmd);
-    }
+    };
 
     /**
      * 
      * @param identifier Item identifier.
      * @param cmd Task command to submit, see {@link https://archive.org/services/docs/api/tasks.html#supported-tasks | supported task commands}
-     * @param comment A reasonable explanation for why the task is being submitted.
-     * @param priority Task priority from 10 to -10 (default: 0).
-     * @param data Extra POST data to submit with the request. Refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API}.
-     * @param headers Add additional headers to request.
-     * @param reducedPriority Submit your derive at a lower priority.
+     * @param param2.comment A reasonable explanation for why the task is being submitted.
+     * @param param2.priority Task priority from 10 to -10 (default: 0).
+     * @param param2.data Extra POST data to submit with the request. Refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API}.
+     * @param param2.headers Add additional headers to request.
+     * @param param2.reducedPriority Submit your derive at a lower priority.
      *        This option is helpful to get around rate-limiting.
      *        Your task will more likely be accepted, but it might
      *        not run for a long time. Note that you still may be
@@ -370,11 +376,13 @@ export class IaSession {
     public submitTask(
         identifier: string,
         cmd: IaTaskType,
-        comment: string = '',
-        priority: IaTaskPriority = 0,
-        data?: Record<string, any>,
-        headers: HttpHeaders = {},
-        reducedPriority: boolean = false): Promise<Response> {
+        {
+            comment,
+            priority,
+            data,
+            headers = {},
+            reducedPriority
+        }: Omit<IaSubmitTaskParams,'identifier'|'cmd'> & { reducedPriority?: boolean; }): Promise<Response> {
         return this.catalog.submitTask({
             identifier,
             cmd,
@@ -386,7 +394,7 @@ export class IaSession {
                 ...(reducedPriority && { 'X-Accept-Reduced-Priority': '1' })
             }
         });
-    }
+    };
 
     /**
      * A generator that returns completed tasks.
@@ -394,10 +402,10 @@ export class IaSession {
      * @param params Query parameters, refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API} for available parameters.
      * @returns An iterable of completed CatalogTasks.
      */
-    public iterHistory(
+    public iterTaskHistory(
         identifier: string,
         params: IaGetTasksBasicParams = {}
-    ): AsyncGenerator<CatalogTask> {
+    ): AsyncGenerator<IaCatalogTask> {
         const getTasksParams: IaGetTasksParams = {
             ...params,
             identifier: identifier,
@@ -414,10 +422,10 @@ export class IaSession {
      * @param params Query parameters, refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API} for available parameters.
      * @returns An iterable of queued or running CatalogTasks.
      */
-    public async *iterCatalogTasks(
+    public async * iterCatalogTasks(
         identifier?: string,
         params: IaGetTasksBasicParams = {}
-    ): AsyncGenerator<CatalogTask> {
+    ): AsyncGenerator<IaCatalogTask> {
         const getTasksParams: IaGetTasksParams = {
             ...params,
             identifier,
@@ -434,32 +442,58 @@ export class IaSession {
      * @param params Query parameters, refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API} for available parameters.
      * @returns Counts of catalog tasks meeting all criteria.
      */
-    public getTasksSummary(identifier: string = "", params?: IaGetTasksParams): any {
+    public getTasksSummary(identifier: string = "", params?: IaGetTasksBasicParams): any {
         return this.catalog.getSummary(identifier, params);
     }
 
     /**
      * Get a list of all tasks meeting all criteria.
      * The list is ordered by submission time.
-     * @param getTaskParams params for the {@link Catalog.getTasks} method.
+     * @param getTaskParams params for the {@link IaCatalog.getTasks} method.
      * @returns A set of all tasks meeting all criteria.
      */
-    public getTasks(getTaskParams: Omit<IaGetTasksParams, 'limit' | 'summary'>): Promise<CatalogTask[]> {
+    public getTasks(getTaskParams: Omit<IaGetTasksParams, 'limit' | 'summary'>): Promise<IaCatalogTask[]> {
         return this.catalog.getTasks(getTaskParams);
-    }
+    };
 
     /**
      * Get all queued or running tasks.
      * @param params Query parameters, refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API} for available parameters.
      * @returns An array of all queued or running tasks.
      */
-    public getMyCatalog(params: Exclude<IaGetTasksParams, 'catalog' | 'summary' | 'history' | 'submitter'> = {}): Promise<CatalogTask[]> {
+    public async getMyCatalogTasks(params: Exclude<IaGetTasksParams, 'catalog' | 'summary' | 'history' | 'submitter'> = {}): Promise<IaCatalogTask[]> {
+        const userEmail = await this.getUserEmail();
         return this.getTasks({
             ...params,
-            submitter: this.userEmail,
+            submitter: userEmail,
             catalog: 1,
             history: 0
         });
+    };
+
+    /**
+     * Get user info
+     * @returns User info for currently logged in user
+     * @throws {IaApiAuthenticationError}
+     */
+    public async getUserInfo(): Promise<IaUserInfo> {
+        if (this.accessKey && this.secretKey) {
+            return this.getJson<IaUserInfo>(`https://s3.us.${this.host}`, { params: { check_auth: '1' } });
+        } else {
+            throw new IaApiAuthenticationError("Need auth for this method");
+        }
+    }
+
+    /**
+     * Get e-mail address of the logged in user of this session
+     * @returns e-mail address
+     * @throws {IaApiAuthenticationError}
+     */
+    public async getUserEmail(): Promise<string> {
+        if (!this.userEmail) {
+            this.userEmail = (await this.getUserInfo()).username;
+        }
+        return this.userEmail;
     }
 
     /**
@@ -468,8 +502,8 @@ export class IaSession {
      * @returns The task log as a string.
      */
     public async getTaskLog(taskId: number): Promise<string> {
-        return CatalogTask.getTaskLog(taskId, this);
-    }
+        return IaCatalogTask.getTaskLog(taskId, this);
+    };
 
     /**
     * Check if the item identifier is available for creating a new item.
@@ -525,22 +559,50 @@ export class IaSession {
      * 
      * @see {@link TODO}
      * 
-     * 
-     * 
      * @param identifiers Identifiers to get view counts for
      * @returns 
      * @throws {IaApiUnauthorizedError}
      * @throws {IaApiError}
-     */
+    */
     public getShortViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaShortViewcounts<T[number]>> {
+        // TODO
         throw new Error("Not implemented");
     };
 
+    // TODO docs
     public getLongViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaLongViewcounts<T[number]>> {
+        // TODO
         throw new Error("Not implemented");
     };
+
+
+    /**
+     * Create a new Item with the supplied metadata and files
+     * @param identifier Unique identifier for this item 
+     * @param metadata 
+     * @param files 
+     */
+    public createItem<MetadataType extends IaBaseMetadataType = IaBaseMetadataType>(identifier: string, metadata: MetadataType, files: TODO): Promise<IaItem<MetadataType>> {
+        if (!isValidIdentifier(identifier)) {
+            throw new IaInvalidIdentifierError(`Not a valid identifier: "${identifier}"`);
+        }
+
+
+
+        throw new Error("Not implemented");
+
+    }
+}
+
+/**
+ * Check whether a string is a valid Internet Archive Identifier
+ * @param identifier String to check
+ * @returns true if passed string is a valid Internet Archive identifier
+ */
+function isValidIdentifier(identifier: string): boolean {
+    // TODO implement
+    return true;
 }
 
 export default IaSession;
-
 

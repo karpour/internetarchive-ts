@@ -18,14 +18,15 @@
 import { IaApiGetRateLimitResult, IaApiGetTasksResult, IaGetTasksBasicParams, IaGetTasksParams, IaSubmitTaskParams } from "../types";
 import IaSession from "../session/IaSession";
 import { IaTaskSummary, IaTaskType } from "../types/IaTask";
-import CatalogTask from "./CatalogTask";
+import IaCatalogTask from "./IaCatalogTask";
 import { handleIaApiError } from "../util/handleIaApiError";
 import { getApiResultValue } from "../util/getApiResultValue";
 import { Readable } from "stream";
 import readline from "readline";
 import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
+import { TODO } from "../todotype";
 
-export function getSortByDate(task: CatalogTask): Date {
+export function getSortByDate(task: IaCatalogTask): Date {
     if (task.category === 'summary') {
         return new Date();
     }
@@ -49,7 +50,7 @@ export function getSortByDate(task: CatalogTask): Date {
  * const c = new Catalog(s);
  * tasks = c.getTasks('nasa');
  */
-export class Catalog {
+export class IaCatalog {
     protected readonly url: string;
 
     /**
@@ -91,7 +92,7 @@ export class Catalog {
      * @returns the total counts of catalog tasks meeting all criteria
      * @throws {IaApiError}
      */
-    public async getSummary(identifier?: string, params: IaGetTasksBasicParams = {}): Promise<IaTaskSummary> {
+    public async getSummary(identifier: string, params: Omit<IaGetTasksBasicParams, 'summary' | 'history' | 'catalog' | 'identifier'> = {}): Promise<IaTaskSummary> {
         const getTaskParams: IaGetTasksParams = {
             ...params,
             summary: 1,
@@ -108,18 +109,18 @@ export class Catalog {
     /**
      * A generator that can make arbitrary requests to the Tasks API. It handles paging (via cursor) automatically.
      * @param params Query parameters, refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API} for available parameters.
-     * @returns An AsyncGenerator that yields {@link CatalogTask} objects
+     * @returns An AsyncGenerator that yields {@link IaCatalogTask} objects
      */
-    public async *iterTasks(params: IaGetTasksParams = {}): AsyncGenerator<CatalogTask> {
+    public async *iterTasks(params: IaGetTasksParams = {}): AsyncGenerator<IaCatalogTask> {
         let cursor: string | undefined = params.cursor;
 
         do {
             const result = await this.makeTasksRequest<IaApiGetTasksResult>(params);
             for (const row of result.catalog ?? []) {
-                yield new CatalogTask(row, this);
+                yield new IaCatalogTask(row, this);
             }
             for (const row of result.history ?? []) {
-                yield new CatalogTask(row, this);
+                yield new IaCatalogTask(row, this);
             }
             cursor = result.cursor;
         } while (cursor);
@@ -159,11 +160,11 @@ export class Catalog {
      * @param params.identifier The item identifier, if provided will return tasks for only this item filtered by other criteria provided in params.
      * @returns A list of all tasks meeting all criteria.
      */
-    public async getTasks(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): Promise<CatalogTask[]> {
+    public async getTasks(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): Promise<IaCatalogTask[]> {
         return arrayFromAsyncGenerator(this.iterTasksNoLimit(params));
     }
 
-    public async *iterTasksNoLimit(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): AsyncGenerator<CatalogTask> {
+    public async *iterTasksNoLimit(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): AsyncGenerator<IaCatalogTask> {
         const getTasksParams: IaGetTasksParams = {
             catalog: 1,
             history: 1,
@@ -179,13 +180,13 @@ export class Catalog {
         });
 
         for await (const line of rl) {
-            yield new CatalogTask({ ...JSON.parse(line) }, this);
+            yield new IaCatalogTask({ ...JSON.parse(line) }, this);
         }
     }
 
     /**
-     * Submit an archive.org task.
-     * @param param0 Options
+     * Submit a task
+     * @param {IaSubmitTaskParams} param0 Options
      * @param param0.identifier Item identifier
      * @param param0.cmd Task command to submit. See {@link https://archive.org/services/docs/api/tasks.html#supported-tasks | Supported task commands}
      * @param param0.comment A reasonable explanation for why the task is being submitted
@@ -202,15 +203,15 @@ export class Catalog {
         data = {},
         headers = {}
     }: IaSubmitTaskParams): Promise<Response> {
-        const _data = {
+        const _data:TODO = {
             ...data,
             cmd,
             identifier,
             priority,
         };
         if (comment) {
-            data.args ??= {};
-            data.args.comment = comment;
+            _data.args ??= {};
+            _data.args.comment = comment;
         }
         return this.session.post(this.url, {
             body: JSON.stringify(_data),
@@ -219,4 +220,4 @@ export class Catalog {
     }
 }
 
-export default Catalog;
+export default IaCatalog;

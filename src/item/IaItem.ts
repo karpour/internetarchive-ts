@@ -1,16 +1,15 @@
-import CatalogTask from "../catalog/CatalogTask";
-import log from "../logging/log";
-import { IaApiJsonResult, IaBaseMetadataType, IaFileBaseMetadata, IaFileSourceMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReviewBody, IaItemReview, IaItemUrls, IaRawMetadata } from "../types";
-import { IaItemExtendedMetadata } from "../types/IaItemMetadata";
+import IaCatalogTask from "../catalog/IaCatalogTask";
+import log from "../log";
+import { IaApiJsonResult, IaBaseMetadataType, IaFileBaseMetadata, IaFileObject, IaFileSourceMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReviewBody, IaItemReview, IaItemUrls, IaRawMetadata, isIaFileObject } from "../types";
 import path from "path";
 import IaSession from "../session/IaSession";
 import { HttpHeaders, HttpParams, IA_ITEM_URL_TYPES, IaFixerOp, IaItemDeleteReviewParams, IaItemUrlType } from "../types";
 import { IaTaskPriority } from "../types/IaTask";
-import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams, IaItemUploadFileParams } from "../types/IaParams";
+import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams, IaItemUploadFileParams, IaItemUploadParams } from "../types/IaParams";
 import { IaBaseItem } from "./IaBaseItem";
 import { handleIaApiError } from "../util/handleIaApiError";
 import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
-import { getMd5, makeArray } from "../util";
+import { getMd5, makeArray, recursiveFileCount, recursiveIterDirectoryWithKeys } from "../util";
 import { patternsMatch } from "../util/patternsMatch";
 import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import { IaFile } from "../files";
@@ -18,7 +17,7 @@ import sleepMs from "../util/sleepMs";
 import { IaApiError, IaApiFileUploadError, IaApiServiceUnavailableError, IaTypeError } from "../error";
 import S3Request from "../request/S3Request";
 import { getFileSize } from "../util/getFileSize";
-import { createReadStream } from "fs";
+import { createReadStream, statSync } from "fs";
 import lstrip from "../util/lstrip";
 import { normFilepath } from "../util/normFilePath";
 import { readStreamToReadableStream } from "../util/readStreamToReadableStream";
@@ -41,12 +40,13 @@ import { IaLongViewCountItem, IaShortViewCountItem } from "../types/IaViewCount"
  * console.log(item.metadata);
  * 
  * @example // Modify the metadata for an item
- * const metadata = {title: 'The Stairs'}
- * await item.modifyMetadata(metadata)
- * console.log(item.metadata['title']) // 'The Stairs'
+ * import getItem from "internetarchive-ts";
+ * const metadata = {title: 'The Stairs'};
+ * await item.modifyMetadata(metadata);
+ * console.log(item.metadata.title) // 'The Stairs'
  * 
  * @example // Upload
- * await item.upload('myfile.tar', access_key='Y6oUrAcCEs4sK8ey', secret_key='youRSECRETKEYzZzZ') // true
+ * await item.upload('myfile.tar') // true
  */
 export class IaItem<
     ItemMetaType extends IaBaseMetadataType = IaBaseMetadataType,
@@ -64,9 +64,6 @@ export class IaItem<
     public readonly session: IaSession;
 
     private getMd5: ((body: Blob | string | Buffer) => Promise<string>) = IaItem.getMd5;
-
-    // TODO tasks
-    tasks: any;
 
     /**
      * 
@@ -107,10 +104,14 @@ export class IaItem<
         return urlFormat(this, path);
     }
 
-    public get paths(): Readonly<string[]> {
+    public get paths(): Readonly<typeof IA_ITEM_URL_TYPES> {
         return IA_ITEM_URL_TYPES;
     }
 
+    /**
+     * 
+     * @param itemMetadata 
+     */
     public async refresh(itemMetadata?: IaItemData<ItemMetaType, ItemFileMetaType>): Promise<void> {
         this.load(itemMetadata ?? await this.session.getMetadata(this.identifier) as IaItemData<ItemMetaType, ItemFileMetaType>);
     }
@@ -120,7 +121,7 @@ export class IaItem<
      * @param params Params to send with your request.
      * @returns A summary of the item's pending tasks.
      */
-    public getTaskSummary(params?: IaGetTasksParams): Record<string, string> {
+    public getTaskSummary(params?: Omit<IaGetTasksParams, 'identifier'>): Record<string, string> {
         return this.session.getTasksSummary(this.identifier, params);
     }
 
@@ -129,7 +130,7 @@ export class IaItem<
      * @param params Params to send with your request.
      * @returns true if no tasks are pending, otherwise false.
      */
-    public async noTasksPending(params?: IaGetTasksParams): Promise<boolean> {
+    public async noTasksPending(params?: Omit<IaGetTasksParams, 'identifier'>): Promise<boolean> {
         const taskSummaries = await this.getTaskSummary(params);
         // TODO not sure about this
         return Object.values(taskSummaries).every(t => t == "0");
@@ -140,7 +141,7 @@ export class IaItem<
      * @param params Query parameters, refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API} for available parameters.
      * @returns A list of all tasks for the item, pending and complete.
      */
-    public getAllItemTasks(params: Omit<IaGetTasksParams, 'identifier' | 'catalog' | 'history'> = {}): Promise<CatalogTask[]> {
+    public getAllItemTasks(params: Omit<IaGetTasksParams, 'identifier' | 'catalog' | 'history'> = {}): Promise<IaCatalogTask[]> {
         return this.session.getTasks({
             identifier: this.identifier,
             ...params,
@@ -154,8 +155,8 @@ export class IaItem<
      * @param params Params to send with your request.
      * @returns A list of completed catalog tasks for the item.
      */
-    public async getHistory(params?: IaGetTasksBasicParams): Promise<CatalogTask[]> {
-        return arrayFromAsyncGenerator(this.session.iterHistory(this.identifier, params));
+    public async getTaskHistory(params?: IaGetTasksBasicParams): Promise<IaCatalogTask[]> {
+        return arrayFromAsyncGenerator(this.session.iterTaskHistory(this.identifier, params));
     }
 
     /**
@@ -163,13 +164,13 @@ export class IaItem<
      * @param params Params to send with your request.
      * @returns A list of pending catalog tasks for the item.
      */
-    public async getCatalog(params?: IaGetTasksBasicParams): Promise<CatalogTask[]> {
+    public async getCatalogTasks(params?: IaGetTasksBasicParams): Promise<IaCatalogTask[]> {
         return arrayFromAsyncGenerator(this.session.iterCatalogTasks(this.identifier, params));
     }
 
     /**
      * Derive an item.
-     * @param priority Task priority from 10 to -10 [default: 0]
+     * @param priority Task priority from `10` to `-10` (default: `0`)
      * @param removeDerived You can use wildcards ("globs")
      *        to only remove *some* prior derivatives.
      *        For example, "*" (typed without the
@@ -188,7 +189,13 @@ export class IaItem<
      * @param headers 
      * @returns 
      */
-    public async derive(priority: IaTaskPriority = 0, removeDerived?: string, reducedPriority: boolean = false, data: Record<string, any> = {}, headers?: HttpHeaders): Promise<Response> {
+    public async derive(
+        priority: IaTaskPriority = 0,
+        removeDerived?: string,
+        reducedPriority: boolean = false,
+        data: Record<string, any> = {},
+        headers?: HttpHeaders
+    ): Promise<Response> {
         if (removeDerived) {
             if (!data.args) {
                 data.args = { removeDerived: removeDerived };
@@ -199,17 +206,18 @@ export class IaItem<
         const response = await this.session.submitTask(
             this.identifier,
             'derive.php',
-            '',
-            priority,
-            data,
-            headers,
-            reducedPriority);
+            {
+                comment: '',
+                priority,
+                data,
+                headers,
+                reducedPriority
+            });
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
         return response;
     }
-
 
     /**
      * Submit a fixer task on an item.
@@ -233,7 +241,7 @@ export class IaItem<
         data: IaFixerData = {},
         headers?: HttpHeaders
     ): Promise<Response> {
-        const operations = makeArray(ops);
+        const operations: IaFixerOp[] = makeArray(ops);
         data.args ??= {};
         for (let op of operations) {
             data.args[op] = '1';
@@ -242,11 +250,13 @@ export class IaItem<
         const response = await this.session.submitTask(
             this.identifier,
             'fixer.php',
-            '',
-            priority,
-            data,
-            headers,
-            reducedPriority);
+            {
+                comment: '',
+                priority,
+                data,
+                headers,
+                reducedPriority
+            });
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
@@ -271,11 +281,12 @@ export class IaItem<
         const response = await this.session.submitTask(
             this.identifier,
             'make_undark.php',
-            comment,
-            priority,
-            data,
-            undefined,
-            reducedPriority);
+            {
+                comment,
+                priority,
+                data,
+                reducedPriority
+            });
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
@@ -302,11 +313,12 @@ export class IaItem<
         const response = await this.session.submitTask(
             this.identifier,
             'make_dark.php',
-            comment,
-            priority,
-            data,
-            undefined,
-            reducedPriority);
+            {
+                comment,
+                priority,
+                data,
+                reducedPriority
+            });
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
@@ -382,11 +394,11 @@ export class IaItem<
 
     /**
      * 
-     * @param param0 
-     * @param param0.formats 
-     * @param param0.globPattern 
-     * @param param0.excludePattern 
-     * @param param0.onTheFly 
+     * @param param0 options
+     * @param param0.formats Formats
+     * @param param0.globPattern GlobPattern
+     * @param param0.excludePattern Exclude PAttern
+     * @param param0.onTheFly on the fly
      */
     public *getFiles(
         {
@@ -427,7 +439,7 @@ export class IaItem<
                 if (files.includes(f.name)) {
                     yield new IaFile<ItemFileMetaType>(this, f);
                 } else if (format && formats.includes(format)) {
-                    yield  new IaFile<ItemFileMetaType>(this, f);
+                    yield new IaFile<ItemFileMetaType>(this, f);
                 } else if (globPattern.length || excludePattern.length) {
                     if (patternsMatch(f.name, globPattern)) { // Will return true if globPattern is empty
                         if (excludePattern.length && patternsMatch(f.name, excludePattern)) {
@@ -628,7 +640,6 @@ export class IaItem<
         appendList = false,
         insert = false,
         priority = 0,
-        debug = false,
         headers = {},
     }: IaItemModifyMetadataParams): Promise<Request | Response> {
         headers = { ...this.session.headers, ...headers };
@@ -648,21 +659,17 @@ export class IaItem<
             appendList,
             insert
         });
-        // Must use Session.prepare_request to make sure session settings
-        // are used on request!
-        if (debug)
-            return request;
         const response = await this.session.send(request);
         // Re-initialize the Item object with the updated metadata.
         if (!response.ok) {
-            throw await handleIaApiError({ response });
+            throw await handleIaApiError({ request, response });
         }
         this.refresh();
         return response;
     }
 
     /**
-     * Remove item from a simplelist.
+     * Remove this item from a simplelist
      * @param parent 
      * @param list 
      * @returns 
@@ -684,11 +691,19 @@ export class IaItem<
         return response;
     }
 
+    /**
+     * Get long view counts
+     * @returns long view counts for this object
+     */
     public getLongViewCounts(): Promise<IaLongViewCountItem> {
         return this.session.getLongViewcounts([this.identifier])
             .then(result => result.ids[this.identifier]);
     }
 
+    /**
+     * Get short view counts
+     * @returns short view counts for this object
+     */
     public getShortViewCounts(): Promise<IaShortViewCountItem> {
         return this.session.getShortViewcounts([this.identifier])
             .then(result => result[this.identifier]);
@@ -918,7 +933,7 @@ export class IaItem<
      * @param param1.validateIdentifier
      * @returns 
      */
-    /*public async upload(files: IaFileObject | IaFileObject[] | string | string[], {
+    public async upload(files: IaFileObject | IaFileObject[] | string | string[], {
         metadata,
         headers,
         accessKey,
@@ -940,6 +955,8 @@ export class IaItem<
 
         }
 
+        const fileNames = _files.map(file => isIaFileObject(file) ? file.name : file);
+
         let responses: Response[] = [];
         let fileIndex = 0;
 
@@ -949,9 +966,9 @@ export class IaItem<
         if (queueDerive && totalFiles == 0) {
             const checksums = this.files.map(f => f.md5);
             if (checksum) {
-                totalFiles = recursiveFileCount(_files, checksums);
+                totalFiles = await recursiveFileCount(fileNames, checksums);
             } else {
-                totalFiles = recursiveFileCount(_files);
+                totalFiles = await recursiveFileCount(fileNames);
             }
         }
 
@@ -971,7 +988,7 @@ export class IaItem<
                     fileIndex += 1;
                     // Set derive header if queueDerive is True,
                     // and this is the last request being made.
-                    let _queueDerive = (queueDerive == true && fileIndex >= totalFiles);
+                    queueDerive = (queueDerive == true && fileIndex >= totalFiles);
 
 
                     if (!f.endsWith('/')) {
@@ -984,14 +1001,14 @@ export class IaItem<
                         key = `${remoteDirName}/${key}`;
                     }
                     key = normFilepath(key);
-                    let resp = this.uploadFile(filePath, {
+                    let resp = await this.uploadFile(filePath, {
                         key,
                         metadata,
                         fileMetadata,
                         headers,
                         accessKey,
                         secretKey,
-                        _queueDerive,
+                        queueDerive,
                         verbose,
                         verify,
                         checksum,
@@ -1017,7 +1034,7 @@ export class IaItem<
                 if (key && !isinstance(key, str)) {
                     key = str(key);
                 }
-                const response = this.uploadFile(body, {
+                const response = await this.uploadFile(body, {
                     key,
                     metadata,
                     fileMetadata,
@@ -1028,7 +1045,7 @@ export class IaItem<
                     verbose,
                     verify,
                     checksum,
-                    deleteLocalFile: deleteLocalFiles,
+                    deleteLocalFiles,
                     retries,
                     retriesSleep,
                     debug,
@@ -1038,7 +1055,7 @@ export class IaItem<
             }
         }
         return responses;
-    }*/
+    } 
 }
 
 function getS3XmlText(arg0: string | undefined): string {

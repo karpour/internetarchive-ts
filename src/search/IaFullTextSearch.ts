@@ -3,19 +3,38 @@ import { handleIaApiError } from "../util/handleIaApiError";
 import { IA_MAX_SEARCH_RESULT_COUNT, IaBaseSearch } from "./IaBaseSearch";
 import { IaItem } from "../item/IaItem";
 import { IaFullTextSearchConstructorParams, IaFullTextSearchParams, IaFullTextSearchResult, IaFullTextSearchResultHitItem } from "../types/IaSearch";
-import log from "../logging/log";
+import log from "../log";
 import { stripSingle } from "../util/stripSingle";
-import { IaApiError, IaValueError } from "../error";
+import { IaValueError } from "../error";
 
+/**
+ * Version of the FTS API that this class is targeting
+ */
 const IA_FTS_API_TARGET = 'v3.11.1';
 
+/**
+ * This class creates a full text search using the Internet Archive FTS API endpoint.
+ * It offers methods for fetching a single page of results, 
+ * creating an AsyncGenerator that continuously yields results, 
+ * and a method that returns pre-defined aggregations.
+ */
 export class IaFullTextSearch extends IaBaseSearch {
-
     protected readonly url: string;
     protected readonly params: IaFullTextSearchParams;
     protected readonly limit?: number;
     protected readonly size: number;
 
+    /**
+     * Create a new Fulltext search
+     * @param session Session to use for requests.
+     * @param query Search query
+     * @param param2 Search params
+     * @param param2.dslFts If false or undefined, use Lucene DSL, otherwise ElasticSearch DSL TODO ??
+     * @param param2.maxRetries Maximum number of retries for each API call (default: `5`)
+     * @param param2.limit Maximum amount of results to return. By default all results will be returned
+     * @param param2.scope Scope `"standard"` or `"all"` (default: `"standard"`)
+     * @param param2.size Number of results to return per API call (default: `10`)
+     */
     public constructor(
         session: IaSession,
         query: string,
@@ -24,7 +43,7 @@ export class IaFullTextSearch extends IaBaseSearch {
             maxRetries = 5,
             limit,
             scope,
-            size
+            size = 10
         }: IaFullTextSearchConstructorParams = {}) {
 
         // If dsl is not enabled, add "!L " to the beginning of the query to indicate that the query is a lucene query
@@ -37,19 +56,21 @@ export class IaFullTextSearch extends IaBaseSearch {
         }
         this.limit = limit;
         this.url = `${this.session.protocol}//be-api.us.archive.org/ia-pub-fts-api`;
-        // Initialize params.
-        this.params = { q: this.query, size, scope};
-        this.params.size = 10;
-        if (limit && this.params.size > limit) {
+        // Initialize params
+        this.params = { q: this.query, size, scope };
+        this.params.size = size;
+        if (limit !== undefined && this.params.size > limit) {
             this.params.size = limit;
         }
         this.size = this.params.size;
-        log.verbose(`Created ${this.toString()}`);
     }
 
     /**
-     * 
-     * @returns 
+     * Create a generator that yields search results.
+     * The maximum amount of results returned can be defined by `limit`.
+     * If `limit` is not set, all results will be returned, which may
+     * require a lot of slow requests to be made to fetch all results.
+     * @returns AsyncGenerator which yields one Full Text Search result at a time. 
      * @throws {IaApiError}
      * @throws {IaApiRangeError}
      */
@@ -59,25 +80,21 @@ export class IaFullTextSearch extends IaBaseSearch {
         let limit = this.limit;
         do {
             log.verbose(`Fetching results ${from}-${from + this.size} of ${limit}`);
-            const response = await this.session.get(this.url, {
+            const response = await this.session.getJson<IaFullTextSearchResult>(this.url, {
                 params: {
                     ...this.params,
                     from
                 }
             });
-            const json = await response.json() as IaFullTextSearchResult;
-            if (!response.ok) {
-                throw await handleIaApiError({ response });
-            }
             // Check if API verison is the same that this client targets
-            if (json['fts-api'].version !== IA_FTS_API_TARGET) {
-                log.warning(`API Version mismatch: FTS API client targets "${IA_FTS_API_TARGET}", server returned "${json['fts-api'].version}"`);
+            if (response['fts-api'].version !== IA_FTS_API_TARGET) {
+                log.warning(`API Version mismatch: FTS API client targets "${IA_FTS_API_TARGET}", server returned "${response['fts-api'].version}"`);
             }
-            const hits: IaFullTextSearchResultHitItem[] = json.hits.hits;
+            const hits: IaFullTextSearchResultHitItem[] = response.hits.hits;
             if (!hits) {
                 break;
             }
-            this.numFound = json.hits.total;
+            this.numFound = response.hits.total;
             limit = this.limit ? Math.min(this.numFound, this.limit) : this.numFound;
             for (const hit of hits) {
                 yield hit;
@@ -125,15 +142,15 @@ export class IaFullTextSearch extends IaBaseSearch {
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
-        const json = await response.json() as IaFullTextSearchResult;
-        return json.aggregations;
+        const result = await response.json() as IaFullTextSearchResult;
+        return result.aggregations;
     }
 
     /**
-     * @returns Generator which yields Items that match the fulltext query
+     * @returns Generator which yields Items that match the full text query
      * @throws {IaApiError}
      */
-    public async *iterAsItems(): AsyncGenerator<IaItem> {
+    public async *getItemsGenerator(): AsyncGenerator<IaItem> {
         const generator = this.getResultsGenerator();
         for await (const result of generator) {
             yield this.session.getItem(stripSingle(result.fields.identifier));

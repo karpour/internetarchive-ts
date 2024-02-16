@@ -15,7 +15,7 @@ async function main() {
 
     const query = process.argv[2] ?? 'computer chronicles';
 
-    const search = new IaFullTextSearch(session, query);
+    const search = new IaFullTextSearch(session, query, { dslFts: true });
 
     console.log(`Results: ${await search.getNumFound()}`);
 

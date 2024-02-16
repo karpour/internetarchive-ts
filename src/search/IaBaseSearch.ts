@@ -12,7 +12,7 @@ export abstract class IaBaseSearch {
         return `${this.constructor.name}(query=${this.query})`;
     }
     public abstract getResultsGenerator(): AsyncGenerator;
-    public abstract iterAsItems(): AsyncGenerator<IaItem>;
+    public abstract getItemsGenerator(): AsyncGenerator<IaItem>;
     protected abstract fetchNumFound(): Promise<number>;
 
     /**

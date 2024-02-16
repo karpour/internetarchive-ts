@@ -91,3 +91,52 @@ Suggestion: remove the callback parameter when users select JSON output
 # Scroll parameter in the FTS api
 
 Looking at the python code, it seems that when adding a `scroll=true` parameter to a request to https://be-api.us.archive.org/ia-pub-fts-api, the result should have a `_scroll_id` field. However, I could not get this to work. Is there any documentation on this?
+
+# Aggregatable fields
+
+When using user_aggs, the advancedSearch endpoint will return an error whenever a supplied field is type `text` in ElasticSearch. If the field does not exist anywhere (in the search results or overall?) the endpoint won't fail and return empty aggregations for that field instead.
+
+Since any arbitrary metadata will also be `text` in ElasticSearch, it would be good to have a definite list of field that *can* be aggregated.
+
+Through trial and error, I arrived at the following list of fields that can be aggregated:
+
+```typescript
+export const IA_AGGREGATABLE_FIELDS = [
+    'mediatype',
+    'addeddate',
+    'publicdate',
+    'collection',
+    'date',
+    'uploader',
+    'subject',
+    'contributor',
+    'imagecount',
+    'public_format',
+    'updatedate',
+    'foldoutcount',
+    'related_external_id',
+    'licenseurl',
+    'bookreader_defaults',
+    'openlibrary_edition',
+    'openlibrary_work',
+    'call_number',
+    'isbn',
+    'condition_visual',
+    'type',
+    'year'
+] as const;
+```
+
+There are likely fields I missed, so a definite list would be useful.
+
+# Fixer ops
+
+What is the complete list of possible fixer ops?
+
+# Valid identifier
+
+What are the rules for a valid identifier? Ideally a regular expression
+
+# Valid metadata keys
+
+What are the exact rules for a valid metadata key? Ideally regular expression

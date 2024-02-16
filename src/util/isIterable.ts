@@ -3,7 +3,7 @@
  *
  * @returns
  */
-function isIterable(input: any): input is Iterable<any> {
+export function isIterable(input: any): input is Iterable<any> {
     if (input === null || input === undefined) {
         return false;
     }

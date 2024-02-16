@@ -1,5 +1,6 @@
+import { IaSearchResultMetaItem } from "./IaItemMetadata";
 import { IaGetSessionParams } from "./IaParams";
-import { IaBaseMetadataType, IaMetadataValidFieldType, IaQueryOutput, IaScope, IaSortOption, Prettify } from "./IaTypes";
+import { IaBaseMetadataType, IaQueryOutput, IaScope, IaSortOption, Prettify } from "./IaTypes";
 
 export type IaFullTextSearchResult = {
     hits: {
@@ -76,9 +77,8 @@ export type IaScrapeSearchConstructorParams<F extends string[] | undefined> = Pr
     sorts?: [] | [IaSortOption] | [IaSortOption, IaSortOption] | [IaSortOption, IaSortOption, IaSortOption],
 } & IaBaseSearchParams & Pick<IaScrapeSearchParams, 'scope' | 'count'>>;
 
-// TODO fields optional
-export type IaAdvancedSearchConstructorParams = Prettify<{
-    fields?: string[],
+export type IaAdvancedSearchConstructorParams<F extends string[] | undefined> = Prettify<{
+    fields?: F,
     sorts?: [] | [IaSortOption] | [IaSortOption, IaSortOption] | [IaSortOption, IaSortOption, IaSortOption],
 } & IaBaseSearchParams & Pick<IaAdvancedSearchParams, 'scope' | 'rows'>>;
 
@@ -90,7 +90,7 @@ export type IaFullTextSearchConstructorParams = Prettify<{
     dslFts?: boolean,
 } & IaBaseSearchParams & Pick<IaFullTextSearchParams, 'scope' | 'size'>>;
 
-export type IaSearchItemsParams = Prettify<IaAdvancedSearchConstructorParams & IaGetSessionParams>;
+export type IaSearchAdvancedParams<F extends string[] | undefined> = Prettify<IaAdvancedSearchConstructorParams<F> & IaGetSessionParams>;
 
 
 export type IaScrapeSearchParams = {
@@ -175,4 +175,204 @@ export type IaFullTextSearchParams = {
 
 export type IaUserAggsSearchParams = Pick<IaAdvancedSearchParams, 'q' | 'page' | 'rows'> & {
     user_aggs: string;
+};
+
+export type IaScrapeSearchResult<Fields extends string> = {
+    items: IaSearchResultMetaItem<Fields>[],
+    count: number,
+    total: number;
+    cursor?: string;
+};
+
+export type SearchFields<Fields extends readonly string[] | undefined> = (Fields extends readonly string[] ? Fields[number] : 'identifer') | 'identifier';
+
+
+// TODO remove this
+/**
+ * These fields can not be aggregated in a call to {@link IaAdvancedSearch.aggregate}
+ */
+export const IA_NON_AGGREGATABLE_FIELDS = [
+    'access_restricted_item',
+    'access_restricted',
+    'aspect_ratio',
+    'audio_codec',
+    'audio_sample_rate',
+    'backup_location',
+    'betterpdf',
+    'boxid',
+    'btih',
+    'camera',
+    'ccnum',
+    'closed_captioning',
+    'collectionid',
+    'color',
+    'condition',
+    'coverleaf',
+    'creator',
+    'curation',
+    'description',
+    'external_identifier',
+    'firstfiledate',
+    'format',
+    'frames_per_second',
+    'hidden',
+    'identifier_ark',
+    'identifier-access',
+    'identifier-ark',
+    'identifier',
+    'issn',
+    'language',
+    'lastfiledate',
+    'lccn',
+    'neverindex',
+    'next_item',
+    'noindex',
+    'notes',
+    'numeric_id',
+    'oclc_id',
+    'ocr_detected_lang_conf',
+    'ocr_detected_lang',
+    'ocr_detected_script_conf',
+    'ocr_detected_script',
+    'ocr_module_version',
+    'ocr_parameters',
+    'ocr',
+    'openlibrary_author',
+    'openlibrary_subject',
+    'openlibrary',
+    'operator',
+    'page_progression',
+    'pick',
+    'possible_copyright_status',
+    'ppi',
+    'previous_item',
+    'proddate',
+    'publisher',
+    'repub_state',
+    'republisher_date',
+    'republisher_operator',
+    'republisher_time',
+    'republisher',
+    'runtime',
+    'scandate',
+    'scanfee',
+    'scanner',
+    'scanningcenter',
+    'search_collection',
+    'segments',
+    'sound',
+    'source_pixel_height',
+    'source_pixel_width',
+    'source',
+    'sponsor',
+    'sponsordate',
+    'start_localtime',
+    'start_time',
+    'stop_time',
+    'title',
+    'tuner',
+    'updated',
+    'updater',
+    'utc_offset',
+    'video_codec',
+    'viruscheck',
+    'volume',
+] as const;
+
+export const IA_AGGREGATABLE_FIELDS = [
+    'mediatype',
+    'addeddate',
+    'publicdate',
+    'collection',
+    'date',
+    'uploader',
+    'subject',
+    'contributor',
+    'imagecount',
+    'public_format',
+    'updatedate',
+    'foldoutcount',
+    'related_external_id',
+    'licenseurl',
+    'bookreader_defaults',
+    'openlibrary_edition',
+    'openlibrary_work',
+    'call_number',
+    'isbn',
+    'condition_visual',
+    'type',
+    'year'
+] as const;
+
+export type IaAggregatableField = typeof IA_AGGREGATABLE_FIELDS[number];
+
+export type IaUserAggs<T extends IaAggregatableField[]> = {
+    [key in T[number]]: IaUserAggsItem;
+};
+
+export type IaUserAggsItem = {
+    doc_count_error_upper_bound: number,
+    sum_other_doc_count: number,
+    buckets: {
+        key: number,
+        key_as_string: string,
+        doc_count: number;
+    };
+};
+
+// TODO Define this type
+export type IaDefaultAdvancedSearchResultItem = {
+    avg_rating?: number,
+    backup_location?: string;
+    btih?: string,
+    collection: string | string[],
+    creator: string | string[],
+    date?: IsoStringDateTime,
+    description: string,
+    downloads: number,
+    format: string | string[],
+    identifier: string,
+    indexflag: string | string[],
+    item_size: number,
+    language?: string | string[],
+    mediatype: string | string[],
+    month: number,
+    num_reviews?: number,
+    oai_updatedate: IsoStringDateTime | IsoStringDateTime[],
+    publicdate: IsoStringDateTime,
+    reviewdate?: IsoStringDateTime,
+    subject: string | string[],
+    title: string,
+    week: number,
+    year?: number;
+};
+
+export type IsoStringDateTime = `${number}-${number}-${number}T${number}:${number}:${number}Z`;
+
+
+export type IaAdvancedSearchResult<F extends readonly string[] | undefined = undefined, U extends readonly string[] | undefined = undefined> = {
+    responseHeader: {
+        status: number,
+        QTime: number,
+        params: {
+            query: string,
+            qin: string,
+            fields: string,
+            wt: string,
+            sort: string,
+            rows: `${number}`,
+            start: number;
+        };
+    },
+    response: {
+        numFound: number,
+        start: number,
+        docs: (F extends readonly string[] ?
+            IaSearchResultMetaItem<F[number]>[] :
+            IaDefaultAdvancedSearchResultItem[]);
+    } & (U extends readonly string[] ? {
+        aggregations: {
+            [key in `user_aggs__terms__field:${U extends readonly string[] ? U[number] : never}__size:${number}`]: IaUserAggsItem
+        };
+    } : {});
 };

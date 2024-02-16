@@ -102,12 +102,10 @@ export abstract class IaBaseItem<
         //this.collection = identifierListAsItems(mc, this.session);
     }
 
-
     // TODO this might fail due to fields not being sorted the same way
     public equals(other: IaBaseItem): boolean {
         return this.hash() == other.hash();
     }
-
 
     /**
      * 

@@ -6,11 +6,11 @@ const credentials = JSON.parse(readFileSync(".env.json") as any) as IaSessionPar
 
 async function main() {
     const config: IaAuthConfig = { 's3': { 'access': credentials.accessKey, 'secret': credentials.secretKey } };
-    const s = getSession(config);
+    const session = getSession(config);
 
     for (const taskType of IA_TASK_TYPES) {
         console.log(`Rate limits for ${taskType}:`);
-        const limits = await s.getTasksApiRateLimit(taskType);
+        const limits = await session.getTasksApiRateLimit(taskType);
         console.log(limits);
     }
 }

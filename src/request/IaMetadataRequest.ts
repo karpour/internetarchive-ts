@@ -1,4 +1,4 @@
-import log from "../logging/log";
+import log from "../log";
 import { IaBaseMetadataType, IaFileRequestTarget, IaMetadataRequestConstructorParams, IaMetadataRequestPrepareBodyParams, IaPatchData } from "../types";
 import IaRequest from "./IaRequest";
 import { prepareFilesPatch } from "./prepareFilesPatch";

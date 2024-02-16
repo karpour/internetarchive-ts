@@ -1,6 +1,9 @@
 import { PACKAGE_VERSION } from "../PACKAGE_VERSION";
 
-
+/**
+ * Get runtime and version for creating a useragent string
+ * @returns Tuple of runtime and optional version
+ */
 export function getRuntime(): [runTime: string, version?: string] {
     if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
         return ['Browser'];
@@ -13,9 +16,11 @@ export function getRuntime(): [runTime: string, version?: string] {
     }
 }
 
-
-
-
+/**
+ * Creates a user agent string for this library
+ * @param accessKey Optional access key
+ * @returns Generated user agent string. If the library runs in the browser, the browser user agent is returned
+ */
 export default function getUserAgentString(accessKey?: string): string {
     const [runTime, version] = getRuntime();
     if (runTime !== 'Browser') {

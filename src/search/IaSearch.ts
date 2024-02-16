@@ -1,12 +1,8 @@
-import { IaApiError } from "../error";
 import { IaItem } from "../item/IaItem";
-import log from "../logging/log";
+import log from "../log";
 import IaSession from "../session/IaSession";
-import { TODO } from "../todotype";
 import { IaSearchResultMetaItem, IaSortOption } from "../types";
-import { IaScrapeSearchParams, IaScrapeSearchConstructorParams } from "../types/IaSearch";
-import { handleIaApiError } from "../util/handleIaApiError";
-import { IaAdvancedSearchResult, IaUserAggField, IaUserAggs } from "./IaAdvancedSearch";
+import { IaScrapeSearchParams, IaScrapeSearchConstructorParams, IaScrapeSearchResult, SearchFields } from "../types/IaSearch";
 import { IaBaseSearch, IA_MAX_SEARCH_RESULT_COUNT, IA_MIN_SEARCH_RESULT_COUNT } from "./IaBaseSearch";
 
 /**
@@ -15,26 +11,19 @@ import { IaBaseSearch, IA_MAX_SEARCH_RESULT_COUNT, IA_MIN_SEARCH_RESULT_COUNT } 
  * use the IaAdvancedSearch class.
  * 
  * @example
- * 
- * import {IaSearch} from "internetarchive-ts";
- * const s = getSession();
- * const search = new IaSearch(s, '(uploader:jake@archive.org)')
- * for result in search:
- *     ...     print(result['identifier'])
-*/
-
-
-
-export type IaScrapeSearchResult<F extends string> = {
-    items: IaSearchResultMetaItem<F>[],
-    count: number,
-    total: number;
-    cursor?: string;
-};
-
-export type SearchFields<F extends readonly string[] | undefined> = (F extends readonly string[] ? F[number] : 'identifer') | 'identifier';
-
-export class IaSearch<const F extends string[] | undefined> extends IaBaseSearch {
+ * import { IaSearch } from "internetarchive-ts";
+ * const search = new IaSearch(session,"computer chronicles",
+ *     {
+ *         fields: ['collection', 'mediatype', 'date'],
+ *         sorts: ["year desc"],
+ *         limit: 30
+ *     });
+ * console.log(`Total Results: ${await search.getNumFound()}`);
+ * for await (const result of search.getResultsGenerator()) {
+ *     console.log(result);
+ * }
+ */
+export class IaSearch<const Fields extends string[] | undefined> extends IaBaseSearch {
     protected readonly url: string;
     protected readonly basicParams: IaScrapeSearchParams;
     protected readonly params: IaScrapeSearchParams;
@@ -64,7 +53,7 @@ export class IaSearch<const F extends string[] | undefined> extends IaBaseSearch
             count,
             scope,
             maxRetries = 5
-        }: IaScrapeSearchConstructorParams<F> = {}) {
+        }: IaScrapeSearchConstructorParams<Fields> = {}) {
         super(session, query);
 
         this.fields = fields ?? [];
@@ -96,11 +85,11 @@ export class IaSearch<const F extends string[] | undefined> extends IaBaseSearch
         };
     }
 
-    public async getResults(cursor?: string): Promise<IaScrapeSearchResult<SearchFields<F>>> {
-        return this.session.getJson<IaScrapeSearchResult<SearchFields<F>>>(this.url, { params: { ...this.params, cursor } });
+    public async getResults(cursor?: string): Promise<IaScrapeSearchResult<SearchFields<Fields>>> {
+        return this.session.getJson<IaScrapeSearchResult<SearchFields<Fields>>>(this.url, { params: { ...this.params, cursor } });
     }
 
-    public async *getResultsGenerator(): AsyncGenerator<IaSearchResultMetaItem<SearchFields<F>>> {
+    public async *getResultsGenerator(): AsyncGenerator<IaSearchResultMetaItem<SearchFields<Fields>>> {
         let resultsYielded = 0;
         let cursor: string | undefined;
         let limit: number;
@@ -136,7 +125,7 @@ export class IaSearch<const F extends string[] | undefined> extends IaBaseSearch
         return this.getResultsGenerator();
     }
 
-    public async *iterAsItems(): AsyncGenerator<IaItem> {
+    public async *getItemsGenerator(): AsyncGenerator<IaItem> {
         const generator = this.getResultsGenerator();
         for await (const result of generator) {
             yield this.session.getItem(result.identifier);

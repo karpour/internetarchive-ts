@@ -1,18 +1,18 @@
 import { IaApiError, IaValueError } from "../error";
 import IaSession from "../session/IaSession";
-import { IaTaskColor, IaTaskMeta, IaTaskPriority, IaTaskType } from "../types";
+import { IaTaskColor, IaTaskMeta, IaTaskPriority } from "../types";
 import { handleIaApiError } from "../util/handleIaApiError";
-import Catalog from "./Catalog";
+import IaCatalog from "./IaCatalog";
 
 
 /**
  * This class represents an Archive.org catalog task. 
- * It is primarily used by {@link Catalog}, and should not be used directly.
+ * It is primarily used by {@link IaCatalog}, and should not be used directly.
  */
-export class CatalogTask implements IaTaskMeta {
+export class IaCatalogTask implements IaTaskMeta {
     protected session: IaSession;
 
-    public constructor(protected taskMetadata: IaTaskMeta, catalogObj: Catalog) {
+    public constructor(protected taskMetadata: IaTaskMeta, catalogObj: IaCatalog) {
         this.session = catalogObj.session;
     }
 
@@ -86,7 +86,7 @@ export class CatalogTask implements IaTaskMeta {
         if (!this.task_id) {
             throw new IaValueError('task_id is None');
         }
-        return CatalogTask.getTaskLog(this.task_id, this.session);
+        return IaCatalogTask.getTaskLog(this.task_id, this.session);
     }
 
     /**
@@ -113,4 +113,4 @@ export class CatalogTask implements IaTaskMeta {
     }
 }
 
-export default CatalogTask;
+export default IaCatalogTask;

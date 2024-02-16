@@ -7,13 +7,16 @@ import {
     IaApiUnauthorizedError,
     IaApiBadRequestError,
     IaApiRangeError,
-    IaApiScopeUnavailableError
+    IaApiScopeUnavailableError,
+    IaApiElasticSearchError,
+    IaAuthenticationError,
+    IaApiAuthenticationError
 } from "../error";
 import { IaApiJsonResult } from "../types";
 
 export type IaHandleApiErrorParams = {
     response: Response,
-    responseBody?: any,
+    responseBody?: string | Record<string, any>,
     request?: Request,
     defaultMessage?: string;
 };
@@ -32,28 +35,43 @@ export async function handleIaApiError({
     responseBody,
     request,
     defaultMessage }: IaHandleApiErrorParams): Promise<IaApiBadRequestError | IaApiUnauthorizedError | IaApiNotFoundError | IaApiMethodNotAllowedError | IaApiTooManyRequestsError | IaApiError> {
+
     let error = defaultMessage;
-    if (responseBody && typeof responseBody === "object") {
-        error = responseBody?.error ?? defaultMessage;
-    } else {
+
+    if (!responseBody) {
         if (response.headers.get("Content-Type") === "application/json") {
-            try {
-                const json = (await response.json()) as IaApiJsonResult;
-                responseBody = json;
-                if (json?.error) {
-                    error = json.error;
-                    if (responseBody.errorType) {
-                        const errorType = responseBody.errorType;
-                        switch (errorType) {
-                            case "RangeError":
-                                throw new IaApiRangeError(error, { response, request, responseBody });
-                            default:
-                        }
-                    } else if(error.startsWith("[SCOPE_UNAVAILABLE]")) {
-                        throw new IaApiScopeUnavailableError(error, { response, request, responseBody })
-                    }
+            responseBody = (await response.json()) as IaApiJsonResult;
+        } else {
+            responseBody = await response.text();
+        }
+    }
+
+
+    if (typeof responseBody === "object" && typeof responseBody.error === "string") {
+        error = responseBody.error as string;
+        if (responseBody.errorType) {
+            const errorType = responseBody.errorType;
+            switch (errorType) {
+                case "RangeError":
+                    throw new IaApiRangeError(error, { response, request, responseBody });
+                default:
+            }
+        } else if (error.startsWith("[SCOPE_UNAVAILABLE]")) {
+            // Handle Scope errors
+            throw new IaApiScopeUnavailableError(error, { response, request, responseBody });
+        } else if (error.startsWith("The request signature we calculated does not match the signature you provided")) {
+            // Handle Scope errors
+            throw new IaApiAuthenticationError(error, { response, request, responseBody });
+        } else if (error === "invalid or no response from Elasticsearch") {
+            // Handle ElasticSearch Errors
+            if (responseBody.forensics) {
+                if(responseBody.forensics.decoded_reply?.message) {
+                    error = responseBody.forensics.decoded_reply.message?.[0] as string ?? error;
+                }else if(responseBody.forensics.decoded_reply?.error?.root_cause?.[0].reason) {
+                    error = responseBody.forensics.decoded_reply?.error?.root_cause?.[0].reason as string ?? error;
                 }
-            } catch (err) { }
+            }
+            throw new IaApiElasticSearchError(error, { response, request, responseBody });
         }
     }
 

@@ -2,7 +2,7 @@ import { getSession } from "../api";
 import { IaAuthConfig } from "../types";
 import { IaApiItemNotFoundError } from "../error";
 import { getCredentials } from "./getCredentials";
-import Catalog from "../catalog/Catalog";
+import IaCatalog from "../catalog/IaCatalog";
 import { setEngine } from "crypto";
 
 async function main() {
@@ -15,7 +15,7 @@ async function main() {
     const identifier = process.argv[2] ?? undefined;
 
     try {
-        const catalog = new Catalog(session);
+        const catalog = new IaCatalog(session);
         const summary = await catalog.getSummary(identifier);
         console.log(summary);
     } catch (err) {

@@ -1,12 +1,6 @@
 import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaSortOption, IaTaskPriority, IaTaskType, Prettify } from ".";
 import IaSession from "../session/IaSession";
 
-
-export type IaDebugParams = {
-    /** Enable debug behaviour for function */
-    debug?: boolean;
-};
-
 export type IaSessionParams = {
     /** IA-S3 accessKey to use when making the given request. */
     accessKey: string;
@@ -24,13 +18,6 @@ export type IaGetSessionParams = {
     config?: IaAuthConfig;
 };
 
-// getItem
-
-export type IaGetItemParams = IaDebugParams & IaGetSessionParams;
-
-export type DebugEnabled<T extends IaDebugParams> = Omit<T, 'debug'> & { debug: true; };
-export type DebugDisabled<T extends IaDebugParams> = Omit<T, 'debug'> & { debug?: false; };
-
 
 // getFiles
 export type IaItemGetFilesParams = {
@@ -46,7 +33,7 @@ export type IaItemGetFilesParams = {
     onTheFly?: boolean;
 };
 
-export type IaGetFilesParams = IaItemGetFilesParams & IaGetItemParams;
+export type IaGetFilesParams = IaItemGetFilesParams & IaGetSessionParams;
 
 
 // Delete Item
@@ -56,7 +43,6 @@ export type IaGetFilesParams = IaItemGetFilesParams & IaGetItemParams;
 export type IaFileDeleteParams = {
     cascadeDelete?: any;
     verbose: boolean;
-    debug: boolean;
     maxRetries?: number;
     headers?: HttpHeaders;
 } & IaSessionParams;
@@ -85,9 +71,9 @@ export type IaItemModifyMetadataParams = {
     priority: IaTaskPriority,
     target?: IaRequestTarget,
     timeout?: number;
-} & IaSessionParams & IaDebugParams;
+} & IaSessionParams;
 
-export type IaModifyMetadataParams = IaItemModifyMetadataParams & IaGetItemParams;
+export type IaModifyMetadataParams = IaItemModifyMetadataParams & IaGetSessionParams;
 
 //Request
 
@@ -98,7 +84,7 @@ export type IaHttpRequestParams = {
     timeout?: number;
 };
 
-export type IaHttpRequestGetParams = IaHttpRequestParams & { stream?: boolean; };
+export type IaHttpRequestGetParams = Prettify<IaHttpRequestParams & { stream?: boolean; }>;
 export type IaHttpRequestPostParams = IaHttpRequestParams & ({ body?: BodyInit; json?: undefined; } | { body?: undefined; json: Record<string, any>; });
 export type IaHttpRequestDeleteParams = IaHttpRequestPostParams;
 
@@ -119,13 +105,12 @@ export type IaItemUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType
 } & IaSessionParams>;
 
 export type IaItemUploadFileParams<M extends IaBaseMetadataType = IaBaseMetadataType, F extends IaFileBaseMetadata = IaFileBaseMetadata> = Prettify<IaItemUploadParams<M> & {
-    // TODO change
     key: string,
     fileMetadata: F;
-    deleteLocalFile: boolean;
+    deleteLocalFiles: boolean;
 }>;
 
-export type IaUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType> = IaItemUploadParams<M> & IaGetItemParams;
+export type IaUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType> = IaItemUploadParams<M> & IaGetSessionParams;
 
 // Download
 

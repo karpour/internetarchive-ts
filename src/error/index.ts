@@ -45,15 +45,25 @@ export class IaApiError<Status extends number = number> extends IaError {
     }
 }
 
-export class IaApiRangeError<Status extends number = number> extends IaApiError<Status> { }
+export class IaApiRangeError<Status extends number = number> extends IaApiError<Status>{
+    public constructor(message: string = "Range Error", options: IaApiErrorOptions) {
+        super(message, { ...options });
+    }
+}
 
 export class IaApiFileUploadError<Status extends number = number> extends IaApiError<Status> { }
 
-export class IaApiScopeUnavailableError<Status extends number = number> extends IaApiError<Status> { }
+export class IaApiScopeUnavailableError<Status extends number = number> extends IaApiError<Status> {
+    public constructor(message: string = "Scope Unavailable", options: IaApiErrorOptions) {
+        super(message, { ...options });
+    }
+}
 
-export class IaApiaAuthenticationError<Status extends number = number> extends IaApiError<Status> { }
+export class IaApiAuthenticationError<Status extends number = number> extends IaApiError<Status> { }
 
 export class IaApiInvalidIdentifierError<Status extends number = number> extends IaApiError<Status> { }
+
+export class IaApiElasticSearchError<Status extends number = number> extends IaApiError<Status> { }
 
 /**
  * Indicates some element of the request was malformed or inappropriate. 

@@ -1,0 +1,25 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "entryPoints": [
+        "./src/api/index.ts",
+        "./src/session/index.ts",
+        "./src/catalog/index.ts",
+        "./src/error/index.ts",
+        "./src/files/index.ts",
+        "./src/item/index.ts",
+        "./src/log/index.ts",
+        "./src/request/index.ts",
+        "./src/search/index.ts",
+        "./src/types/index.ts",
+    ],
+    "entryPointStrategy": "resolve",
+    //"excludeExternals": true,
+    //"excludePrivate": true,
+    //"excludeProtected": true,
+    "hideGenerator": true,
+    "includeVersion": true,
+    "disableSources": false,
+    "out": "doc",
+    "categorizeByGroup": true,
+    "defaultCategory": "Module"
+}

@@ -1,6 +1,5 @@
 import { getSession } from "../api";
 import { IaAuthConfig } from "../types";
-import { IaApiItemNotFoundError, IaApiUnauthorizedError } from "../error";
 import { getCredentials } from "./getCredentials";
 import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
 
@@ -13,7 +12,6 @@ async function main() {
 
     const query = process.argv[2] ?? '(uploader:jake@archive.org)';
 
-    //const search = new IaSearch(session, query, { fullTextSearch: true, params: { user_aggs: "addeddate,mediatype", fields: 'identifier,addeddate,mediatype', rows: 10 } });
     const search = new IaAdvancedSearch(session, query);
 
     console.log(`Results: ${await search.getNumFound()}`)

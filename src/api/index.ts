@@ -1,18 +1,16 @@
-import CatalogTask from "../catalog/CatalogTask";
-import { IaApiaAuthenticationError } from "../error";
+import IaCatalogTask from "../catalog/IaCatalogTask";
+import { IaApiAuthenticationError } from "../error";
 import { IaFile } from "../files";
 import IaCollection from "../item/IaCollection";
 import { IaItem } from "../item/IaItem";
 import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
 import IaSession from "../session/IaSession";
+import { TODO } from "../todotype";
 import {
     IaAuthConfig,
-    IaGetItemParams,
     IaGetFilesParams,
     IaItemExtendedMetadata,
-    DebugDisabled,
     IaModifyMetadataParams,
-    DebugEnabled,
     IaItemDownloadParams,
     IaDeleteItemParams,
     IaGetSessionParams,
@@ -20,7 +18,7 @@ import {
     IaUserInfo,
     IaBaseMetadataType,
 } from "../types";
-import { IaSearchItemsParams } from "../types/IaSearch";
+import { IaSearchAdvancedParams } from "../types/IaSearch";
 import { createS3AuthHeader } from "../util/createS3AuthHeader";
 import { handleIaApiError } from "../util/handleIaApiError";
 
@@ -75,9 +73,8 @@ export function getItem<
     {
         config,
         archiveSession,
-        debug = false
-    }: IaGetItemParams = {}): Promise<IaItem<ItemMetaType, ItemFileMetaType> | IaCollection<ItemMetaType, ItemFileMetaType>> {
-    archiveSession = archiveSession ?? getSession(config, debug);
+    }: IaGetSessionParams = {}): Promise<IaItem<ItemMetaType, ItemFileMetaType> | IaCollection<ItemMetaType, ItemFileMetaType>> {
+    archiveSession = archiveSession ?? getSession(config);
     return archiveSession.getItem(identifier);
 }
 
@@ -117,12 +114,9 @@ export async function getFiles<ItemFileMetaType extends IaBaseMetadataType = IaB
  * @param params.priority Set task priority.
  * @param params.accessKey IA-S3 accessKey to use when making the given request.
  * @param params.secretKey IA-S3 secretKey to use when making the given request.
- * @param params.debug set to `true` to return a Request
- * @returns A Request if debug else a Response.
+ * @returns TODO
  */
-export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetadata, params: DebugDisabled<IaModifyMetadataParams>): Promise<Request>;
-export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetadata, params: DebugEnabled<IaModifyMetadataParams>): Promise<Response>;
-export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetadata, params: IaModifyMetadataParams): Promise<Request | Response> {
+export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetadata, params: IaModifyMetadataParams): Promise<TODO> {
     return getItem(identifier, params)
         .then(item => item.modifyMetadata(metadata, params));
 }
@@ -180,7 +174,7 @@ export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetad
  * @param param1.debug To be passed on to getSession(). 
  * @returns A list Requests if debug else a list of Responses.
  */
-export function downloadFiles(identifier: string, params: IaItemDownloadParams & IaGetItemParams = {}): Promise<Response[] | string[]> {
+export function downloadFiles(identifier: string, params: IaItemDownloadParams & IaGetSessionParams = {}): Promise<Response[] | string[]> {
     return getItem(identifier, params)
         .then(item => item.download(params));
 }
@@ -188,27 +182,24 @@ export function downloadFiles(identifier: string, params: IaItemDownloadParams &
 /**
  * Delete files from an item. Note: Some system files, such as `<itemname>_meta.xml`, cannot be deleted.
  * @param identifier The globally unique Archive.org identifier for a given item.
- * @param param1 Delete item params
- * @param param1.files Only return files matching the given filenames.
- * @param param1.formats Only return files matching the given formats.
- * @param param1.globPattern Only return files matching the given glob pattern.
- * @param param1.cascadeDelete Delete all files associated with the specified file, including upstream derivatives and the original.
- * @param param1.accessKey IA-S3 accessKey to use when making the given request.
- * @param param1.secretKey IA-S3 secretKey to use when making the given request.
- * @param param1.verbose Print actions to stdout.
- * @param param1.debug Set to True to print headers to stdout and exit exit without sending the delete request.
- * @param param1.getItemKwargs
- * @throws {Error} iii
+ * @param params Delete item params
+ * @param params.files Only return files matching the given filenames.
+ * @param params.formats Only return files matching the given formats.
+ * @param params.globPattern Only return files matching the given glob pattern.
+ * @param params.cascadeDelete Delete all files associated with the specified file, including upstream derivatives and the original.
+ * @param params.accessKey IA-S3 accessKey to use when making the given request.
+ * @param params.secretKey IA-S3 secretKey to use when making the given request.
+ * @param params.getItemKwargs
+ * @throws {IaApiError} - {@link IaApiError}
  * @returns 
  */
-export async function deleteFiles(identifier: string, params: IaDeleteItemParams): Promise<Request[] | Response[]> {
+export async function deleteFiles(identifier: string, params: IaDeleteItemParams): Promise<Response[]> {
     const iaFiles = await getFiles(identifier, params);
 
-    const responses: (Request[] | Response[]) = [];
+    const responses: Response[] = [];
     for (const f of iaFiles) {
         const response = await f.delete(params);
-        // TODO fix
-        responses.push(response as any);
+        responses.push(response);
     }
     return responses;
 }
@@ -216,9 +207,9 @@ export async function deleteFiles(identifier: string, params: IaDeleteItemParams
 /**
  * Get tasks from the Archive.org catalog.
  * @param params The URL parameters to send with each request sent to the Archive.org catalog API.
- * @returns A set of {@link CatalogTask} objects.
+ * @returns A set of {@link IaCatalogTask} objects.
  */
-export async function getTasks(params: IaGetSessionParams & IaGetTasksParams): Promise<CatalogTask[]> {
+export async function getTasks(params: IaGetSessionParams & IaGetTasksParams): Promise<IaCatalogTask[]> {
     let { archiveSession, config } = params;
     archiveSession ??= await getSession(config, false);
     return archiveSession.getTasks(params);
@@ -244,7 +235,7 @@ export async function getTasks(params: IaGetSessionParams & IaGetTasksParams): P
  * @param params.maxRetries The number of times to retry a failed request.
  * @returns 
  */
-export async function searchItems(query: string, params: IaSearchItemsParams): Promise<IaAdvancedSearch> {
+export async function searchItems<F extends string[] | undefined>(query: string, params: IaSearchAdvancedParams<F>): Promise<IaAdvancedSearch<F>> {
     const archiveSession = params.archiveSession ?? await getSession(params.config, false);
     return archiveSession.searchAdvanced(query, params);
 }
@@ -287,13 +278,12 @@ export function getUsername(accessKey: string, secretKey: string): Promise<strin
     return getUserInfo(accessKey, secretKey).then(j => j.username ?? "");
 }
 
-
 /**
  * Returns details about an Archive.org user given an IA-S3 key pair.
  * @param accessKey IA-S3 accessKey to use when making the given request.
  * @param secretKey IA-S3 secretKey to use when making the given request.
  * @throws {IaApiError}
- * @throws {IaApiaAuthenticationError}
+ * @throws {IaApiAuthenticationError}
  * @returns Archive.org use info.
  */
 export async function getUserInfo(accessKey: string, secretKey: string): Promise<IaUserInfo> {
@@ -309,7 +299,7 @@ export async function getUserInfo(accessKey: string, secretKey: string): Promise
     }
     const json = await response.json();
     if (json.error) {
-        throw new IaApiaAuthenticationError(json.error, { response });
+        throw new IaApiAuthenticationError(json.error, { response });
     }
     return json;
 }
