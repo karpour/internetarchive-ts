@@ -28,7 +28,8 @@ import {
     IaTaskType,
     IaUserInfo,
     IaSubmitTaskParams,
-    IaCheckLimitApiResult
+    IaCheckLimitApiResult,
+    IaTaskSummary
 } from "../types";
 import getUserAgent from "../util/getUserAgent";
 import { handleIaApiError } from "../util/handleIaApiError";
@@ -442,14 +443,14 @@ export class IaSession {
      * @param params Query parameters, refer to {@link https://archive.org/services/docs/api/tasks.html | Tasks API} for available parameters.
      * @returns Counts of catalog tasks meeting all criteria.
      */
-    public getTasksSummary(identifier: string = "", params?: IaGetTasksBasicParams): any {
+    public getTasksSummary(identifier: string = "", params?: IaGetTasksBasicParams): Promise<IaTaskSummary> {
         return this.catalog.getSummary(identifier, params);
     }
 
     /**
      * Get a list of all tasks meeting all criteria.
      * The list is ordered by submission time.
-     * @param getTaskParams params for the {@link IaCatalog.getTasks} method.
+     * @param getTaskParams params
      * @returns A set of all tasks meeting all criteria.
      */
     public getTasks(getTaskParams: Omit<IaGetTasksParams, 'limit' | 'summary'>): Promise<IaCatalogTask[]> {

@@ -97,7 +97,7 @@ export function getItem<
  */
 export async function getFiles<ItemFileMetaType extends IaBaseMetadataType = IaBaseMetadataType>(
     identifier: string,
-    params: IaGetFilesParams
+    params: IaGetFilesParams = {}
 ): Promise<Generator<IaFile<ItemFileMetaType>>> {
     const item = await getItem<IaBaseMetadataType, ItemFileMetaType>(identifier, params);
     return item.getFiles(params);

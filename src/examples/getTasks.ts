@@ -24,22 +24,4 @@ async function main() {
     }
 }
 
-const a = {
-    category: "history",
-    identifier: "nasa",
-    task_id: 31643502,
-    server: "ia311234.us.archive.org",
-    cmd: "create.php",
-    args: {
-        origcmd: "create",
-        tester: "tracey",
-        dir: "/0/items/nasa"
-    },
-    submittime: "2008-09-10 18:03:04",
-    submitter: "tracey@archive.org",
-    priority: 0,
-    finished: 31194081
-};
-
-
 main().catch((err) => console.log(err));

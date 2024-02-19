@@ -4,7 +4,7 @@ import { IaApiJsonResult, IaBaseMetadataType, IaFileBaseMetadata, IaFileObject, 
 import path from "path";
 import IaSession from "../session/IaSession";
 import { HttpHeaders, HttpParams, IA_ITEM_URL_TYPES, IaFixerOp, IaItemDeleteReviewParams, IaItemUrlType } from "../types";
-import { IaTaskPriority } from "../types/IaTask";
+import { IaTaskPriority, IaTaskSummary } from "../types/IaTask";
 import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams, IaItemUploadFileParams, IaItemUploadParams } from "../types/IaParams";
 import { IaBaseItem } from "./IaBaseItem";
 import { handleIaApiError } from "../util/handleIaApiError";
@@ -121,19 +121,18 @@ export class IaItem<
      * @param params Params to send with your request.
      * @returns A summary of the item's pending tasks.
      */
-    public getTaskSummary(params?: Omit<IaGetTasksParams, 'identifier'>): Record<string, string> {
+    public getTasksSummary(params?: Omit<IaGetTasksParams, 'identifier'>): Promise<IaTaskSummary> {
         return this.session.getTasksSummary(this.identifier, params);
     }
 
     /**
      * Check if there is any pending task for the item.
      * @param params Params to send with your request.
-     * @returns true if no tasks are pending, otherwise false.
+     * @returns true if tasks are pending, otherwise false.
      */
-    public async noTasksPending(params?: Omit<IaGetTasksParams, 'identifier'>): Promise<boolean> {
-        const taskSummaries = await this.getTaskSummary(params);
-        // TODO not sure about this
-        return Object.values(taskSummaries).every(t => t == "0");
+    public async hasTasksPending(params?: Omit<IaGetTasksParams, 'identifier'>): Promise<boolean> {
+        const taskSummaries = await this.getTasksSummary(params);
+        return !Object.values(taskSummaries).every(t => t == 0);
     }
 
     /**
@@ -1025,14 +1024,15 @@ export class IaItem<
                 // Set derive header if queueDerive is True,
                 // and this is the last request being made.
                 // if queueDerive is True and fileIndex >= len(files):
-                const _queueDerive = (queueDerive && fileIndex >= totalFiles);
-                if (!isinstance(f, (list, tuple))) {:
-                    key, body = (None, f);
+                queueDerive = (queueDerive && fileIndex >= totalFiles);
+                let key;
+                let body;
+                if (isIaFileObject(f)) {
+                    key = f.name;
+                    body = f.fileData;
                 } else {
-                    key, body = f;
-                }
-                if (key && !isinstance(key, str)) {
-                    key = str(key);
+                    key = path.basename(f);
+                    body = f;
                 }
                 const response = await this.uploadFile(body, {
                     key,
@@ -1041,7 +1041,7 @@ export class IaItem<
                     headers,
                     accessKey,
                     secretKey,
-                    queueDerive: _queueDerive,
+                    queueDerive,
                     verbose,
                     verify,
                     checksum,
@@ -1055,7 +1055,7 @@ export class IaItem<
             }
         }
         return responses;
-    } 
+    }
 }
 
 function getS3XmlText(arg0: string | undefined): string {
