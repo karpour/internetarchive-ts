@@ -1,4 +1,4 @@
-import { IaBaseMetadataType, IaMetaDataHeaders } from "./IaTypes";
+import { IaBaseMetadataType, IaMetaDataHeaders, Prettify } from "./IaTypes";
 
 export type testmeta = {
     a: string;
@@ -15,8 +15,8 @@ const b: testmeta = {
     b: [1, 2, 3]
 };
 
-type ccc = IaMetaDataHeaders<{
+type ccc = Prettify<IaMetaDataHeaders<{
     a: "aa",
     b: [1, 2, 3, "sss", 444, true];
     c: string | undefined;
-}, 'meta'>;
+}, 'meta'>>;

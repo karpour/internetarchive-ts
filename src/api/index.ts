@@ -41,9 +41,7 @@ import { handleIaApiError } from "../util/handleIaApiError";
  * s.getTasks({taskIds:[31643513]})[0].server
  * 
  * @param config A dictionary used to configure your session.
- * @param configFile A path to a config file used to configure your session.
  * @param debug To be passed on to this session's method calls.
- * @param httpAdapterKwargs Keyword arguments that `requests.adapters.HTTPAdapter` takes.
  * @returns a new ArchiveSession object
  */
 export function getSession(config?: IaAuthConfig, debug: boolean = false): IaSession {
@@ -60,9 +58,9 @@ export function getSession(config?: IaAuthConfig, debug: boolean = false): IaSes
  * 
  * @param identifier The globally unique Archive.org item identifier.
  * @param param1 
- * @param param1.config Session configuration.
- * @param param1.archiveSession An {@link IaSession} object.
- * @param param1.debug To be passed on to getSession(). 
+ * @param param1.config - Session configuration.
+ * @param param1.archiveSession - An {@link IaSession} object.
+ * @param param1.debug - To be passed on to getSession(). 
  * @returns The Item that fits the criteria.
  */
 export function getItem<

@@ -39,6 +39,7 @@ import { IaLongViewcounts, IaShortViewcounts } from "../types/IaViewCount";
 import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult";
 import { getUserInfo } from "../api";
 import { TODO } from "../todotype";
+import { isValidIdentifier } from "../util/isValidIdentifier";
 
 class ArchiveSessionCookies {
     setCookie(cookie: any) {
@@ -158,19 +159,15 @@ export class IaSession {
         <ItemMetaType extends IaItemBaseMetadata = IaItemExtendedMetadata,
             ItemFileMetaType extends IaFileBaseMetadata | IaRawMetadata<IaFileBaseMetadata> = IaFileBaseMetadata>
         (identifier: string): Promise<IaItemData<ItemMetaType, ItemFileMetaType>> {
-        const response = await this.get(`${this.url}/metadata/${identifier}`);
-        if (response.ok) {
-            return response.json().then(json => {
+        return this.getJson<IaItemData<ItemMetaType, ItemFileMetaType>>(`${this.url}/metadata/${identifier}`)
+            .then(json => {
                 // The metadata endpoint returns status of 200 with a body of "{}" if the item does not exist.
                 // We convert this into an error here
                 if (Object.keys(json).length === 0) {
-                    throw new IaApiItemNotFoundError(`Item "${identifier}" does not exist`, { response });
+                    throw new IaApiItemNotFoundError(`Item "${identifier}" does not exist`);
                 }
                 return json;
-            }) as Promise<IaItemData<ItemMetaType, ItemFileMetaType>>;
-        } else {
-            throw await handleIaApiError({ response });
-        }
+            });
     }
 
     /**
@@ -359,7 +356,7 @@ export class IaSession {
     };
 
     /**
-     * 
+     * Submit a task
      * @param identifier Item identifier.
      * @param cmd Task command to submit, see {@link https://archive.org/services/docs/api/tasks.html#supported-tasks | supported task commands}
      * @param param2.comment A reasonable explanation for why the task is being submitted.
@@ -383,7 +380,7 @@ export class IaSession {
             data,
             headers = {},
             reducedPriority
-        }: Omit<IaSubmitTaskParams,'identifier'|'cmd'> & { reducedPriority?: boolean; }): Promise<Response> {
+        }: Omit<IaSubmitTaskParams, 'identifier' | 'cmd'> & { reducedPriority?: boolean; }): Promise<Response> {
         return this.catalog.submitTask({
             identifier,
             cmd,
@@ -536,7 +533,7 @@ export class IaSession {
      * 
      * This endpoint requires no authorization.
      * 
-     * @see {@link https://archive.org/services/swagger/?url=%2Fservices%2Fsearch%2Fv1%2Fswagger.yaml#!/meta/get_fields}
+     * @see {@link https://web.archive.org/web/20230327211907/https://archive.org/services/swagger/?url=%2Fservices%2Fsearch%2Fv1%2Fswagger.yaml#!/meta/get_fields}
      * @returns list of fields that can be requested
      * @throws {IaApiScopeUnavailableError} If scope is now available to the current user
      * @throws {IaApiError}
@@ -556,26 +553,34 @@ export class IaSession {
      * If an identifier does not exist, this function will not fail, but the
      * `have_data` attribute of the corresponding item will be set to `false`.
      * 
-     * This method requires TODO privileges
-     * 
-     * @see {@link TODO}
+     * @see {@link https://archive.org/developers/views_api.html#simple-summary-view-count-data}
      * 
      * @param identifiers Identifiers to get view counts for
-     * @returns 
+     * @returns View counts object
      * @throws {IaApiUnauthorizedError}
      * @throws {IaApiError}
     */
     public getShortViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaShortViewcounts<T[number]>> {
-        // TODO
-        throw new Error("Not implemented");
+        return this.getJson(`${this.protocol}//be-api.us.${this.host}/views/v1/short/${identifiers.map(encodeURIComponent).join(',')}`)
     };
-
-    // TODO docs
+    
+    /**
+     * Get list of detailed view counts for the supplied list of identifiers
+     * If an identifier does not exist, this function will not fail, but the
+     * `have_data` attribute of the corresponding item will be set to `false`.
+     * 
+     * This API call provides data suitable for making item sparclines, and very general summary reporting.
+     * 
+     * @see {@link https://archive.org/developers/views_api.html#per-day-view-data}
+     * 
+     * @param identifiers Identifiers to get view counts for
+     * @returns Detailed View counts object
+     * @throws {IaApiUnauthorizedError}
+     * @throws {IaApiError}
+    */
     public getLongViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaLongViewcounts<T[number]>> {
-        // TODO
-        throw new Error("Not implemented");
+        return this.getJson(`${this.protocol}//be-api.us.${this.host}/views/v1/long/${identifiers.map(encodeURIComponent).join(',')}`)
     };
-
 
     /**
      * Create a new Item with the supplied metadata and files
@@ -587,22 +592,12 @@ export class IaSession {
         if (!isValidIdentifier(identifier)) {
             throw new IaInvalidIdentifierError(`Not a valid identifier: "${identifier}"`);
         }
-
+        // TODO implement
 
 
         throw new Error("Not implemented");
 
     }
-}
-
-/**
- * Check whether a string is a valid Internet Archive Identifier
- * @param identifier String to check
- * @returns true if passed string is a valid Internet Archive identifier
- */
-function isValidIdentifier(identifier: string): boolean {
-    // TODO implement
-    return true;
 }
 
 export default IaSession;

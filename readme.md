@@ -7,12 +7,12 @@
 This API is intended to serve as a base for server-, desktop- and web-applications and offers both ways to easily fetch, create and update items from the Internet Archive as well as access the full functionality of the Archive.org API.
 The code is partially based on the Internet Archive Python API client and contains all features of the python package, however no cli is included. For an out-of-the-box cli tool, please use the python package.
 
-## To do
+## To Do
 
 - [ ] Provide native function for handling MARC
 - [ ] Downloading files
 - [ ] Wayback machine code
-- [ ] Create hybrid ESM/CJS package
+- [ ] Create hybrid ESM/CJS package (probably not needed as everything moves to ESM, and node can handle ESM/CJS better)
 
 ## Features
 
@@ -46,5 +46,3 @@ npm test
 ## Dependencies
 
 - [rfc6902]() - for generating JSON Patches
-
-## ToDo

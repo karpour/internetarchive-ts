@@ -1,27 +1,59 @@
-import IaCatalogTask from "../catalog/IaCatalogTask";
-import log from "../log";
-import { IaApiJsonResult, IaBaseMetadataType, IaFileBaseMetadata, IaFileObject, IaFileSourceMetadata, IaFixerData, IaGetTasksBasicParams, IaGetTasksParams, IaItemData, IaItemPostReviewBody, IaItemReview, IaItemUrls, IaRawMetadata, isIaFileObject } from "../types";
+import { createReadStream, statSync } from "fs";
 import path from "path";
+
+import log from "../log";
 import IaSession from "../session/IaSession";
-import { HttpHeaders, HttpParams, IA_ITEM_URL_TYPES, IaFixerOp, IaItemDeleteReviewParams, IaItemUrlType } from "../types";
+import IaCatalogTask from "../catalog/IaCatalogTask";
+import S3Request from "../request/S3Request";
+import {
+    getMd5,
+    lstrip,
+    makeArray,
+    recursiveFileCount,
+    recursiveIterDirectoryWithKeys,
+    sleepMs
+} from "../util";
+import {
+    IaApiJsonResult,
+    IaBaseMetadataType,
+    IaFileBaseMetadata,
+    IaFileObject,
+    IaFileSourceMetadata,
+    IaFixerData,
+    IaGetTasksBasicParams,
+    IaGetTasksParams,
+    IaItemData,
+    IaItemPostReviewBody,
+    IaItemReview,
+    IaItemUrls,
+    isIaFileObject,
+    HttpHeaders,
+    HttpParams,
+    IA_ITEM_URL_TYPES,
+    IaFixerOp,
+    IaItemDeleteReviewParams,
+    IaItemUrlType
+} from "../types";
 import { IaTaskPriority, IaTaskSummary } from "../types/IaTask";
 import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams, IaItemUploadFileParams, IaItemUploadParams } from "../types/IaParams";
 import { IaBaseItem } from "./IaBaseItem";
+
 import { handleIaApiError } from "../util/handleIaApiError";
 import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
-import { getMd5, makeArray, recursiveFileCount, recursiveIterDirectoryWithKeys } from "../util";
 import { patternsMatch } from "../util/patternsMatch";
+import { getFileSize } from "../util/getFileSize";
+import { normFilepath } from "../util/normFilePath";
+import { getApiResultValue } from "../util/getApiResultValue";
+import { readStreamToReadableStream } from "../util/readStreamToReadableStream";
+
 import { IaMetadataRequest } from "../request/IaMetadataRequest";
 import { IaFile } from "../files";
-import sleepMs from "../util/sleepMs";
-import { IaApiError, IaApiFileUploadError, IaApiServiceUnavailableError, IaTypeError } from "../error";
-import S3Request from "../request/S3Request";
-import { getFileSize } from "../util/getFileSize";
-import { createReadStream, statSync } from "fs";
-import lstrip from "../util/lstrip";
-import { normFilepath } from "../util/normFilePath";
-import { readStreamToReadableStream } from "../util/readStreamToReadableStream";
-import { getApiResultValue } from "../util/getApiResultValue";
+import {
+    IaApiError,
+    IaApiFileUploadError,
+    IaApiServiceUnavailableError,
+    IaTypeError
+} from "../error";
 import { IaLongViewCountItem, IaShortViewCountItem } from "../types/IaViewCount";
 
 /** 
@@ -70,16 +102,16 @@ export class IaItem<
      * @param archiveSession 
      * @param identifier The globally unique Archive.org identifier for this item.
      *     
-     *        An identifier is composed of any unique combination of
-     *        alphanumeric characters, underscore (`_`) and dash (`-`).While
-     *        there are no official limits it is strongly suggested that they
-     *        be between 5 and 80 characters in length. Identifiers must be
-     *        unique across the entirety of Internet Archive, not simply
-     *        unique within a single collection.
-     *        
-     *        Once defined an identifier can not be changed. It will travel
-     *        with the item or object and is involved in every manner of
-     *        accessing or referring to the item.
+     *                   An identifier is composed of any unique combination of
+     *                   alphanumeric characters, underscore (`_`) and dash (`-`).While
+     *                   there are no official limits it is strongly suggested that they
+     *                   be between 5 and 80 characters in length. Identifiers must be
+     *                   unique across the entirety of Internet Archive, not simply
+     *                   unique within a single collection.
+     *                   
+     *                   Once defined an identifier can not be changed. It will travel
+     *                   with the item or object and is involved in every manner of
+     *                   accessing or referring to the item.
      * 
      * @param itemMetadata The Archive.org item metadata used to initialize this item.
      */
@@ -271,12 +303,17 @@ export class IaItem<
      *        Your task will more likely be accepted, but it might
      *        not run for a long time. Note that you still may be
      *        subject to rate-limiting. This is different than
-     *        ``priority`` in that it will allow you to possibly
+     *        `priority` in that it will allow you to possibly
      *        avoid rate-limiting.
      * @param data Additional parameters to submit with the task.
-     * @returns 
+     * @returns TODO
      */
-    public async undark(comment: string, priority: IaTaskPriority = 0, reducedPriority: boolean = false, data?: Record<string, any>): Promise<Response> {
+    public async undark(
+        comment: string,
+        priority: IaTaskPriority = 0,
+        reducedPriority: boolean = false,
+        data?: Record<string, any>
+    ): Promise<Response> {
         const response = await this.session.submitTask(
             this.identifier,
             'make_undark.php',
@@ -289,7 +326,7 @@ export class IaItem<
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
-        return response;
+        return response; // TODO process response
     }
 
     // TODO: dark and undark have different order for data and reduced_priority
@@ -306,7 +343,7 @@ export class IaItem<
      *        subject to rate-limiting. This is different than
      *        `priority` in that it will allow you to possibly
      *        avoid rate-limiting.
-     * @returns 
+     * @returns TODO
      */
     public async dark(comment: string, priority: IaTaskPriority = 0, data?: Record<string, any>, reducedPriority: boolean = false): Promise<Response> {
         const response = await this.session.submitTask(
@@ -321,7 +358,7 @@ export class IaItem<
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
-        return response;
+        return response; // TODO process response
     }
 
     /**
@@ -348,7 +385,7 @@ export class IaItem<
     }
 
     /**
-     * 
+     * Delete a review from the item
      * @param username 
      * @param screenname 
      * @param itemname 
@@ -365,10 +402,10 @@ export class IaItem<
     }
 
     /**
-     * 
-     * @param title 
-     * @param body 
-     * @param stars 
+     * Add a review to an item
+     * @param param0.title Review title
+     * @param param0.body Review body
+     * @param param0.stars amount of stars (0-5)
      * @returns 
      */
     public async review(review: IaItemPostReviewBody): Promise<Response> {

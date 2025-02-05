@@ -27,9 +27,9 @@ However, in a search result using the advancedSearch API endpoint, the subject f
 }   
 ```
 
-This means that at one point during indexing in ElasticSearch, subject fields actually do get split on semicolons, however the item metadata itself still has the un-split string as subject, introducing an inconsistency between item metadata and search result.
+What I assume is that at one point during indexing in ElasticSearch, subject fields actually do get split on semicolons, however the item metadata itself still has the un-split string as subject, introducing an inconsistency between item metadata and search result.
 
-# Any field does not contain does not work in search
+# "Any field" + "does not contain" does not work in search
 
 Filling the form to set `Any field` to `does not contain` and value to `computer` produces results that all contain the word computer.
 
@@ -47,7 +47,7 @@ For the following request:
 
 https://archive.org/advancedsearch.php?q=computer%20chronicles&output=json&rows=10001&page=8&fl[]=identifier
 
-The expected response would be:
+The expected response body would be:
 
 ```json
 {

@@ -1,5 +1,5 @@
 /**
- * Common request options
+ * Common request options for PHP API calls
  * See {@link https://archive.org/developers/md-read.html#common-options}
  */
 export type IaReadRequestCommonOptions = {

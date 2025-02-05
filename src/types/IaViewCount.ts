@@ -5,7 +5,7 @@ import { Prettify } from "./IaTypes";
  */
 export type IaShortViewcounts<T extends string> = {
     [key in T]: IaShortViewCountItem
-} & {};
+};
 
 /**
  * This type represents an entry in the {@link IaShortViewCountItem} type
@@ -25,7 +25,7 @@ export type IaLongViewcounts<T extends string> = {
     ids: {
         [key in T]: IaLongViewCountItem
     };
-} & {};
+};
 
 export type IaLongViewCountItemDetails = {
     per_day: number[];
@@ -42,4 +42,3 @@ export type IaLongViewCountItem = Prettify<IaShortViewCountItem & {
         unrecognized: IaLongViewCountItemDetails,
     },
 }>;
-

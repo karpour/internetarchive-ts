@@ -244,6 +244,13 @@ export type IaPrepareFilesPatchParams = {
 };
 
 
-
-export type IaMetadataRequestConstructorParams =
-    Prettify<IaMetadataRequestPrepareBodyParams & Omit<IaRequestConstructorParams, 'method'>>;
+// TODO Not priority
+export type IaMetadataRequestConstructorParams = Prettify<{
+    metadata: IaMultiMetadata | IaBaseMetadataType,
+    sourceMetadata: IaItemData,
+    target?: IaRequestTarget,
+    priority: IaTaskPriority,
+    append: boolean,
+    appendList: boolean,
+    insert: boolean;
+} & Omit<IaRequestConstructorParams, 'method' | 'priority'>>;

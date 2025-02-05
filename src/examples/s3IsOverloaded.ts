@@ -1,4 +1,4 @@
-import { getItem, getSession } from "../api";
+import { getSession } from "../api";
 
 async function main() {
     const session = getSession();

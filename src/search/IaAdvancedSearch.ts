@@ -28,7 +28,7 @@ const RegExp_User_Aggs_Key = /^user_aggs__terms__field:(?<field>.*)__size:\d+$/;
  *     console.log(result);
  * }
  */
-export class IaAdvancedSearch<const Fields extends string[] | undefined> extends IaBaseSearch {
+export class IaAdvancedSearch<const Fields extends string[] | undefined> extends IaBaseSearch<IaAdvancedSearchResult> {
     protected readonly session: IaSession;
     protected readonly url: string;
     protected readonly basicParams: IaAdvancedSearchParams;

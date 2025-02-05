@@ -4,14 +4,14 @@ import IaSession from "../session/IaSession";
 export const IA_MIN_SEARCH_RESULT_COUNT = 100;
 export const IA_MAX_SEARCH_RESULT_COUNT = 10000;
 
-export abstract class IaBaseSearch {
+export abstract class IaBaseSearch<ResultType> {
     protected numFound: number | undefined;
 
     public constructor(protected readonly session: IaSession, protected query: string) { }
     public toString() {
         return `${this.constructor.name}(query=${this.query})`;
     }
-    public abstract getResultsGenerator(): AsyncGenerator;
+    public abstract getResultsGenerator(): AsyncGenerator<ResultType>;
     public abstract getItemsGenerator(): AsyncGenerator<IaItem>;
     protected abstract fetchNumFound(): Promise<number>;
 

@@ -15,6 +15,7 @@ export type IaFileBasicMetadata<NameType extends string = string> = {
      * @see {@link IA_FILE_FORMATS}
      */
     readonly format: IaFileFormat;
+    
     /** 
      * Cryptographic hash used to verify contents of file. 32-length hex digest
      * Defined by: IA software
@@ -59,19 +60,6 @@ export type IaFileBaseMetadata = Prettify<IaFileBasicMetadata & IaBaseMetadataTy
  */
 export type IaFileSourceMetadata<IaFileUserMetadata extends IaBaseMetadataType = IaFileExtendedMetadata> =
     Prettify<IaFileBaseMetadata & Partial<IaRawMetadata<Omit<IaFileUserMetadata, keyof IaFileBasicMetadata>>>>;
-
-
-type A = {
-    /** Path to file name */
-    readonly name: string;
-    /** 
-     * Indicates the type (format) of file. See tab "File Formats" for examples
-     * 
-     * @see {@link IA_FILE_FORMATS}
-     */
-    readonly format: number;
-    blub: string;
-};
 
 export type IaFileDefinedByIaMetadata = {
     /** 

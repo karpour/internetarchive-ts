@@ -23,7 +23,7 @@ import { IaBaseSearch, IA_MAX_SEARCH_RESULT_COUNT, IA_MIN_SEARCH_RESULT_COUNT } 
  *     console.log(result);
  * }
  */
-export class IaSearch<const Fields extends string[] | undefined> extends IaBaseSearch {
+export class IaSearch<const Fields extends string[] | undefined> extends IaBaseSearch<IaSearchResultMetaItem<SearchFields<Fields>>> {
     protected readonly url: string;
     protected readonly basicParams: IaScrapeSearchParams;
     protected readonly params: IaScrapeSearchParams;

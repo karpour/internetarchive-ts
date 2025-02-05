@@ -1,29 +1,21 @@
-// The internetarchive module is a Python/CLI interface to Archive.org.
-//
-// Copyright (C) 2012-2019 Internet Archive
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as
-// published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-import { IaApiGetRateLimitResult, IaApiGetTasksResult, IaGetTasksBasicParams, IaGetTasksParams, IaSubmitTaskParams } from "../types";
+import {
+    IaApiGetRateLimitResult,
+    IaApiGetTasksResult,
+    IaGetTasksBasicParams,
+    IaGetTasksParams,
+    IaSubmitTaskParams,
+    IaTaskSummary,
+    IaTaskType
+} from "../types";
 import IaSession from "../session/IaSession";
-import { IaTaskSummary, IaTaskType } from "../types/IaTask";
 import IaCatalogTask from "./IaCatalogTask";
-import { handleIaApiError } from "../util/handleIaApiError";
-import { getApiResultValue } from "../util/getApiResultValue";
+import {
+    handleIaApiError,
+    getApiResultValue,
+    arrayFromAsyncGenerator
+} from "../util";
 import { Readable } from "stream";
 import readline from "readline";
-import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
 import { TODO } from "../todotype";
 
 export function getSortByDate(task: IaCatalogTask): Date {
@@ -45,17 +37,17 @@ export function getSortByDate(task: IaCatalogTask): Date {
  * {@link https://archive.org/services/docs/api/tasks.html | Tasks API}
  * 
  * @example
- * from internetarchive import {getSession, Catalog} from "internetarchive-ts";
+ * import { getSession, IaCatalog } from "internetarchive-ts";
  * const s = getSession();
  * const c = new Catalog(s);
- * tasks = c.getTasks('nasa');
+ * let tasks = c.getTasks('nasa');
  */
 export class IaCatalog {
     protected readonly url: string;
 
     /**
-     * Initialize Catalog object.
-     * @param session An ArchiveSession object.
+     * Initialize IaCatalog
+     * @param session An IaSession object
      */
     public constructor(
         public readonly session: IaSession,
@@ -75,7 +67,7 @@ export class IaCatalog {
      * @throws {IaApiTooManyRequestsError}
      * @throws {IaApiError}
      */
-    protected async makeTasksRequest<T extends IaApiGetTasksResult | IaApiGetRateLimitResult<any>>(params: IaGetTasksParams = {}): Promise<T> {
+    protected async makeTasksRequest<T extends IaApiGetTasksResult | IaApiGetRateLimitResult<IaTaskType>>(params: IaGetTasksParams = {}): Promise<T> {
         const response = await this.session.get(this.url, { params });
         if (response.ok) {
             return getApiResultValue<T>(response);
@@ -103,8 +95,6 @@ export class IaCatalog {
         const result = await this.makeTasksRequest<IaApiGetTasksResult>(getTaskParams);
         return result.summary!;
     }
-
-
 
     /**
      * A generator that can make arbitrary requests to the Tasks API. It handles paging (via cursor) automatically.
@@ -203,7 +193,7 @@ export class IaCatalog {
         data = {},
         headers = {}
     }: IaSubmitTaskParams): Promise<Response> {
-        const _data:TODO = {
+        const _data: TODO = {
             ...data,
             cmd,
             identifier,
