@@ -1,13 +1,14 @@
-import { IaItemExtendedMetadata } from "../types/IaItemMetadata";
 import { IaItemData, ItemDataKey } from "../types/IaItemData";
 import { IaSimplelistEntry } from "../types/IaSimplelistEntry";
-import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFilesXmlMetadata } from "../types/IaFileMetadata";
-import { IaBaseMetadataType, IaItemReview, IaRawMetadata } from "../types";
+import { IaBaseMetadataType, IaItemReview } from "../types";
 import { createHash } from "crypto";
 
+/** Metadata keys to exclude when making hash calculation */
+const EXCLUDED_ITEM_METADATA_KEYS: ItemDataKey[] = ['workable_servers', 'server'];
 
-const EXCLUDED_ITEM_METADATA_KEYS: ItemDataKey[] = ['workable_servers', 'server'] as const;
-
+/**
+ * The base class for an Internet Archive Item, providing common methods of {@link IaItem} and {@link IaCollection}
+ */
 export abstract class IaBaseItem<
     ItemMetaType extends IaBaseMetadataType = IaBaseMetadataType,
     ItemFileMetaType extends IaBaseMetadataType = IaBaseMetadataType
@@ -15,7 +16,6 @@ export abstract class IaBaseItem<
 
     protected exists: boolean = false;
     //protected readonly _collection:IaCollection[] = []
-
 
     public get created(): number {
         return this.itemData.created;
@@ -81,7 +81,6 @@ export abstract class IaBaseItem<
         return this.itemData.reviews ?? [];
     }
 
-
     public constructor(public itemData: IaItemData<ItemMetaType, ItemFileMetaType>) {
         this.load();
     }
@@ -108,14 +107,26 @@ export abstract class IaBaseItem<
     }
 
     /**
-     * 
+     * Get thumbnail URL for this item
+     * @returns URL
+     */
+    public getImgUrl(): string {
+        return `https://archive.org/services/img/${this.identifier}`;
+    }
+
+    /**
+     * Compare this item with another item, for sorting. Compares the 2 identifiers using {@link String.localeCompare}
      * @param other Item to compare this item with
-     * @returns 
+     * @returns Return type of {@link String.localeCompare} which might differ based on the runtime
      */
     public lessOrEqual(other: IaBaseItem): ReturnType<String['localeCompare']> {
         return this.identifier.localeCompare(other.identifier);
     }
 
+    /**
+     * Create hash of this item based on the stringified metadata object, excluding keys defined in {@link EXCLUDED_ITEM_METADATA_KEYS}
+     * @returns MD5 hash as string
+     */
     public hash(): string {
         const items: Partial<IaItemData<ItemMetaType, ItemFileMetaType>> = { ...this.itemData };
         for (const key of EXCLUDED_ITEM_METADATA_KEYS) {

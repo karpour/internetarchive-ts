@@ -62,11 +62,11 @@ export class IaCatalogTask implements IaTaskMeta {
     }
 
     public toString() {
-        return `CatalogTask(identifier=${this.taskMetadata.identifier},` +
-            ` taskId=${this.taskMetadata.task_id},` +
-            ` server=${this.taskMetadata.server},` +
-            ` cmd=${this.taskMetadata.cmd},` +
-            ` submitter=${this.taskMetadata.submitter},` +
+        return `CatalogTask(identifier=${this.identifier},` +
+            ` taskId=${this.task_id},` +
+            ` server=${this.server},` +
+            ` cmd=${this.cmd},` +
+            ` submitter=${this.submitter},` +
             ` color=${this.color})`;
     }
 
@@ -94,6 +94,7 @@ export class IaCatalogTask implements IaTaskMeta {
      * @param taskId The task id for the task log you'd like to fetch.
      * @param session The ArchiveSession
      * @returns 
+     * @throws {IaApiError}
      */
     public static async getTaskLog(
         taskId: number,

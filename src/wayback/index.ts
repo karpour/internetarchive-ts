@@ -3,6 +3,9 @@
  * @see https://archive.org/developers/wayback-cdx-server.html
  */
 
+import log from "../log";
+import { dateToYYYYMMDDHHMMSS } from "../util/dateToYYYYMMDDHHMMSS";
+
 const WAYBACK_CDX_API_URL = "http://web.archive.org/cdx/search/cdx";
 const WAYBACK_API_URL = "https://web.archive.org";
 
@@ -10,9 +13,24 @@ const WAYBACK_API_URL = "https://web.archive.org";
 /**
  * Save a page to the Wayback Machine
  * @param url URL of the page to save
+ * @param options
+ * @param options.captureAll
+ * @param options.captureOutlinks
+ * @param options.captureScreenshot
+ * @param options.delayWbAvailability
+ * @param options.forceGet
+ * @param options.skipFirstArchive
+ * @param options.ifNotArchivedWithin
+ * @param options.outlinksAvailability
+ * @param options.emailResult
+ * @param options.jsBehaviorTimeout
+ * @param options.captureCookie
+ * @param options.use_user_agent
+ * @param options.targetUsername
+ * @param options.targetPassword
  */
-export async function save(url: string, options: SaveOptions = {}): Promise<SavePageResult> {
-    const urlSearchParams: URLSearchParams = new URLSearchParams();
+export async function save(url: string, options: WaybackSaveOptions = {}): Promise<WaybackSavePageResult> {
+    const urlSearchParams: URLSearchParams = new URLSearchParams({ url });
     if (options.captureAll) urlSearchParams.append("capture_all", "1");
     if (options.captureOutlinks) urlSearchParams.append("capture_outlinks", "1");
     if (options.captureScreenshot) urlSearchParams.append("capture_screenshot", "1");
@@ -72,6 +90,10 @@ export async function getSystemStatus(): Promise<WaybackSystemStatusResponse> {
     return response.json();
 }
 
+/**
+ * Get status for saved items by current user
+ * @returns 
+ */
 export async function getUserStatus(): Promise<WaybackUserStatusResponse> {
     const response = await fetch(`${new URL(`save/status/system`, WAYBACK_API_URL)}?${new URLSearchParams({ _t: `${new Date().getTime()}}` })}`, {
         headers: {
@@ -91,7 +113,7 @@ type WaybackSystemStatusResponse = {
     status: string;
 };
 
-type SavePageResult = {
+type WaybackSavePageResult = {
     url: string,
     job_id: string;
 };
@@ -119,7 +141,7 @@ type WaybackJobStatusResponse = {
     resources: [];
 };
 
-const ErrorMapping = {
+const WaybackErrorMapping = {
     "error:bad-gateway": "Bad Gateway for URL (HTTP status=502).",
     "error:bad-request": "The server could not understand the request due to invalid syntax. (HTTP status=401)",
     "error:bandwidth-limit-exceeded": "The target server has exceeded the bandwidth specified by the server administrator. (HTTP status=509).",
@@ -157,13 +179,13 @@ const ErrorMapping = {
     "error:unauthorized": "The server requires authentication (HTTP status=401).",
 } as const;
 
-type StatusExt = keyof typeof ErrorMapping;
+type StatusExt = keyof typeof WaybackErrorMapping;
 
 
 
 
 
-export type SaveOptions = {
+export type WaybackSaveOptions = {
     /** 
      * Capture a web page with errors (HTTP status=4xx or 5xx). By default SPN2 captures only status=200 URLs. 
      * @default false
@@ -250,46 +272,19 @@ export async function retrieve(url: string) {
 
 }
 
-function dateToYYYYMMDDHHMMSS(date: Date) {
-    return date.getFullYear().toString().padStart(4, '0') +
-        String(date.getMonth() + 1).padStart(2, '0') +
-        String(date.getDate()).padStart(2, '0') +
-        String(date.getHours()).padStart(2, '0') +
-        String(date.getMinutes()).padStart(2, '0') +
-        String(date.getSeconds()).padStart(2, '0');
-}
-
-
-
-function parseSnapshotMatch(line: string): WaybackSnapshotInfo {
-    let g: Record<string, string> | undefined;
-    if (g = RegExp_WaybackSnapshotInfo.exec(line)?.groups) {
-        return {
-            urlkey: g.urlkey!,
-            timestamp: g.timestamp!,
-            original: g.original!,
-            mimetype: g.mimetype! as WaybackSnapshotMimeType,
-            statuscode: g.statuscode!,
-            digest: g.digest!,
-            length: parseInt(g.length!),
-        };
-    }
-    throw new Error(`Could not parse line: "${line}"`);
-}
-
-function createSearchParams(options: Record<string, string | string[] | number>): URLSearchParams {
+function createSearchParams(options: Record<string, string | string[] | number | undefined | boolean>): URLSearchParams {
     const urlSearchParams = new URLSearchParams();
     for (let entry of Object.entries(options)) {
         const [key, value] = entry;
+        if (value === undefined) continue;
         switch (typeof value) {
             case "string":
-                urlSearchParams.append(key, value);
-                break;
             case "number":
+            case "boolean":
                 urlSearchParams.append(key, `${value}`);
                 break;
             case "object":
-                for (let item of value) {
+                for (let item of value as any) {
                     urlSearchParams.append(key, `${item}`);
                 }
                 break;
@@ -302,12 +297,37 @@ function createSearchParams(options: Record<string, string | string[] | number>)
 
 // TODO add auth token
 
-export async function getSnapshotMatches(url: string, options: WaybackCdxOptions = {}): Promise<WaybackSnapshotInfo[]> {
-    const matches = await (await fetch(`${WAYBACK_CDX_API_URL} ? ${new URLSearchParams({ url }).toString()}`)).text();
-    return matches.split(/[\r\n]+/g).filter(l => l !== "").map(parseSnapshotMatch);
+type MatchesType = string[][];
+
+export async function getSnapshotMatches<T extends (keyof WaybackSnapshotInfo)[] | undefined = undefined>(url: string, options?: WaybackCdxOptions<T>):
+    Promise<T extends (keyof WaybackSnapshotInfo)[] ? Pick<WaybackSnapshotInfo, T[number]>[] : WaybackSnapshotInfo[]> {
+    if (options?.fl) options.fl = options.fl.join(",") as any;
+    const searchParams = createSearchParams({ ...options, url, output: "json" });
+
+    log.verbose(`${WAYBACK_CDX_API_URL}?${searchParams.toString()}`);
+    // TODO make this use the session get method
+    const matches: MatchesType = await (await fetch(`${WAYBACK_CDX_API_URL}?${searchParams.toString()}`,)).json();
+
+    // TODO Error handling
+
+    const returnObj: Array<any> = [];
+
+    if (matches.length == 0) throw new Error(`No matches`);
+    const firstEntry = matches.shift()!;
+    for (const entry of matches) {
+        const temp: Record<string, string> = {};
+        for (let i = 0; i < firstEntry.length; i++) {
+            const index: string = firstEntry[i]!;
+            temp[index] = entry[i]!;
+        }
+        returnObj.push(temp);
+    }
+
+    return returnObj as any;
 }
 
-export const WAYBACK_CDX_FIELDS = [
+// TODO probably don't need these at run-time
+/*export const WAYBACK_CDX_FIELDS = [
     "urlkey",
     "timestamp",
     "original",
@@ -315,45 +335,40 @@ export const WAYBACK_CDX_FIELDS = [
     "statuscode",
     "digest",
     "length",
-] as const;
+] as const;*/
 
-export type WaybackCdxField = typeof WAYBACK_CDX_FIELDS[number];
+// TODO add handler for https://archive.org/help/wayback_api.php
 
-type WaybackCdxCollapseOption = WaybackCdxField | `${WaybackCdxField}: ${number}`;
-
-type WaybackCdxOptions = {
-    /**
-     * @default "exact"
-     */
-    matchType?: WaybackCdxMatchType;
-    limit?: number;
-    from?: number;
-    to?: number;
-    filter?: string | string[];
-    showDupeCount?: true;
-    showSkipCount?: true;
-    lastSkipTimestamp?: true;
-    /**
-     * Collapses the results based on the field contents or substring of the field content.
-     * Add one or more collapse items by either specifying the field name or <fieldname>:N where N
-     * is a positive integer and specifies that the first N characters of the field value are used for collapsing
-     * @see {@link https://archive.org/developers/wayback-cdx-server.html#collapsing|Collapsing}
-     */
-    collapse?: WaybackCdxCollapseOption | WaybackCdxCollapseOption[];
+export type WaybackAvailabilityData = {
+    available: boolean,
+    url: string,
+    timestamp: string,
+    status: string;
 };
 
+type WaybackGetAvailabilityResponse = {
+    archived_snapshots: {
+        closest?: WaybackAvailabilityData;
+    };
+};
+
+
 /**
- * exact (default if omitted) will return results matching exactly the domain
- * prefix will return results for all results under the given path
- * host will return results from same host
- * domain will return results from host archive.org and all subhosts, e.g. *.archive.org;
+ * Get most recent match, or match closest to specified timestamp
+ * @param url URL to get the match for
+ * @param timestamp Optional timestamp
+ * @returns If no timestamp is provided: closest match to current date. If timestamp is provided: closest match to timestamp
  */
-type WaybackCdxMatchType = "exact" | "prefix" | "host" | "domain";
+export async function getAvailability(url: string, timestamp?: string | Date): Promise<WaybackAvailabilityData | undefined> {
+    const searchParams = createSearchParams({ url });
+    if (timestamp) {
+        searchParams.append('timestamp', typeof timestamp === "string" ? timestamp : dateToYYYYMMDDHHMMSS(timestamp));
+    }
+    const data: WaybackGetAvailabilityResponse = await (await fetch(`http://archive.org/wayback/available?${searchParams.toString()}`,)).json();
+    return data.archived_snapshots.closest;
+}
 
-
-type WaybackSnapshotMimeType = "text/html" | "warc/revisit";
-
-const RegExp_WaybackSnapshotInfo = /(?<urlkey>[^\s]+)\s(?<timestamp>[^\s]+)\s(?<original>[^\s]+)\s(?<mimetype>[^\s]+)\s(?<statuscode>[^\s]+)\s(?<digest>[^\s]+)\s(?<length>[\d]+)/;
+type WaybackCdxCollapseOption = WaybackCdxField | `${WaybackCdxField}:${number}`;
 
 type WaybackSnapshotInfo = {
     /** A canonical transformation of the URL you supplied, for example, org,eserver,tc)/. Such keys are useful for indexing. */
@@ -375,7 +390,49 @@ type WaybackSnapshotInfo = {
     length: number;
 };
 
+export type WaybackCdxField = keyof WaybackSnapshotInfo;
 
-getSnapshotMatches("http://www.awoostria.at", {
 
-});;
+type WaybackCdxOptionsWithFields = {
+    fl: WaybackCdxField[];
+};
+
+type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
+    /**
+     * @default "exact"
+     */
+    matchType?: WaybackCdxMatchType;
+    /**
+     * Return the first n results. Use -N to return the last n results
+     */
+    limit?: number;
+    offset?: number;
+    from?: number;
+    to?: number;
+    filter?: string | string[];
+    showDupeCount?: true;
+    showSkipCount?: true;
+    lastSkipTimestamp?: true;
+    fl?: T;
+    /**
+     * Collapses the results based on the field contents or substring of the field content.
+     * Add one or more collapse items by either specifying the field name or <fieldname>:N where N
+     * is a positive integer and specifies that the first N characters of the field value are used for collapsing
+     * @see {@link https://archive.org/developers/wayback-cdx-server.html#collapsing|Collapsing}
+     */
+    collapse?: WaybackCdxCollapseOption | WaybackCdxCollapseOption[];
+};
+
+/**
+ * `"exact"` (default if omitted) will return results matching exactly the domain
+ * 
+ * `"prefix"` will return results for all results under the given path
+ * 
+ * `"host"` will return results from same host
+ * 
+ * `"domain"` will return results from host archive.org and all subhosts, e.g. *.archive.org;
+ */
+type WaybackCdxMatchType = "exact" | "prefix" | "host" | "domain";
+
+
+type WaybackSnapshotMimeType = "text/html" | "warc/revisit";

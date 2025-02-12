@@ -1,5 +1,8 @@
+/**import { existsSync, mkdirSync, chmodSync } from "fs";
+import path from "path";
+import { IaAuthConfig, IaAuthConfigSectionName } from "../types";
 
-/*export function writeConfigFile(authConfig: Partial<IaAuthConfig>, configFile?: string) {
+export function writeConfigFile(authConfig: Partial<IaAuthConfig>, configFile?: string) {
     const { configFilePath, isXdg, config } = parseConfigFile(configFile);
     const configParser = new ConfigParser();
 

@@ -11,6 +11,29 @@ import { Writable } from 'stream';
 import S3Request from "../request/S3Request";
 import { getMd5 } from "../util";
 import { IaBaseMetadataType } from "../types";
+import { writeReadableStreamToWritable } from "../util/writeReadableStreamToWritable";
+
+function getTargetFile(target: string, defaultFilename: string): string {
+    if (fs.existsSync(target)) {
+        // Target exists
+        if (statSync(target).isDirectory()) {
+            // Target is dir, save using default file name
+            return path.join(target, defaultFilename);
+        } else {
+            // Target exists and is file, 
+            return target;
+        }
+    } else {
+        if (target.endsWith('\\') || target.endsWith('/')) {
+            // Target is directory
+            mkdirSync(target, { recursive: true });
+            return path.join(target, defaultFilename);
+        } else {
+            mkdirSync(path.dirname(target), { recursive: true });
+            return target;
+        }
+    }
+}
 
 
 /**
@@ -29,7 +52,6 @@ import { IaBaseMetadataType } from "../types";
  * 
  * ```typescript
  * file.download()
- * file.download('fabulous_movie_of_stairs.avi')
  * ```
  * 
  * This class also uses IA's S3-like interface to delete a file
@@ -37,7 +59,7 @@ import { IaBaseMetadataType } from "../types";
  * environment variables in order to delete:
  * 
  * ```typescript
- * file.delete({accessKey: 'Y6oUrAcCEs4sK8ey', secretKey: 'youRSECRETKEYzZzZ'});
+ * file.delete();
  * ```
  * 
  * You can retrieve S3 keys here: https://archive.org/account/s3.php
@@ -46,6 +68,7 @@ import { IaBaseMetadataType } from "../types";
 export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetadata> extends IaBaseFile<IaFileMeta> {
     public readonly url: string;
 
+    // TODO figure out the best way to ensure that this cannot be instantiated by anything but IaItem
     /**
      * 
      * @param item The item that the file is part of.
@@ -58,7 +81,7 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
     }
 
     public toString() {
-        return `File(identifier=${this.identifier}, filename=${this.name}, size=${this.size}, format=${this.format})`;
+        return `IaFile(identifier=${this.identifier}, filename=${this.name}, size=${this.size}, format=${this.format})`;
     }
 
     /**
@@ -68,7 +91,7 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
      * @param param1.ignoreExisting Overwrite local files if they already exist.
      * @param param1.checksum Skip downloading file based on checksum.
      * @param param1.destdir The directory to download files to.
-     * @param param1.retries The number of times to retry on failed requests.
+     * @param param1.retries The number of times to retry on failed requests. (default:`2`)
      * @param param1.ignoreErrors Don't fail if a single file fails to download, continue to download other files.
      * @param param1.fileobj Write data to the given file-like object (e.g. sys.stdout).
      * @param param1.returnResponses Rather than downloading files to disk, return a list of response objects.
@@ -81,90 +104,55 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
      * 
      * @returns true if file was successfully downloaded.
      */
-    public async download(filePath: string = this.name, {
-        verbose = false,
+    public async download({
         ignoreExisting = false,
         checksum = false,
-        destdir,
         retries = 2,
         ignoreErrors = false,
-        fileobj,
+        target = '.',
         returnResponses = false,
         noChangeTimestamp = false,
         params,
         chunkSize = 1048576,
-        stdout = false,
         ors = false,
         timeout = 12,
     }: IaFileDownloadParams): Promise<boolean | Response> {
-        // TODO
-        //this.item.session.mountHttpAdapter({ maxRetries: retries });
+        let targetPath = typeof target == "string" && getTargetFile(target, this.name);
 
-        if (destdir) {
-            if (!returnResponses) {
-                try {
-                    mkdirSync(destdir, { recursive: true });
-                } catch (err: any) { //except FileExistsError:
-                    // pass
-                }
+        const getWriteable: (targetPath?: string) => Writable = () => {
+            if (typeof target === "string") {
+                let targetPath = getTargetFile(target, this.name);
+                return fs.createWriteStream(targetPath, { flags: 'wb' });
+            } else {
+                return target;
             }
-            if (!statSync(destdir).isDirectory()) {
-                throw new Error(`${destdir} is not a directory!`);
-            }
-            filePath = path.join(destdir, filePath);
-        }
+        };
 
-        if (!returnResponses && existsSync(filePath)) {
+        if (targetPath && fs.existsSync(targetPath)) {
             if (ignoreExisting) {
-                log.info(`skipping "${filePath}", file already exists.`);
+                log.info(`skipping "${targetPath}", file already exists.`);
                 return false;
             } else if (checksum) {
-                const md5Sum = await getMd5(filePath);
+                const md5Sum = await getMd5(targetPath);
                 if (md5Sum === this.metadata.md5) {
-                    log.info(`skipping "${filePath}", file already exists based on checksum.`);
+                    log.info(`skipping "${targetPath}", file already exists based on checksum.`);
                     return false;
                 }
-            } else if (!fileobj) {
-                const st = statSync(filePath);
+            } else {
+                const st = statSync(targetPath);
                 if (((st.mtime.getTime() == this.mtime) && (st.size == this.size)) || this.name.endsWith('_files.xml') && st.size !== 0) {
-                    log.verbose(`skipping ${filePath}, file already exists based on length and date.`);
+                    log.verbose(`skipping ${targetPath}, file already exists based on length and date.`);
                     return false;
                 }
             }
+        }
 
-            const parentDir = path.dirname(filePath);
 
-            async function writeReadableStreamToWritable(
-                stream: ReadableStream,
-                writable: Writable
-            ) {
-                let reader = stream.getReader();
-                let flushable = writable as { flush?: Function; };
-
-                try {
-                    while (true) {
-                        let { done, value } = await reader.read();
-
-                        if (done) {
-                            writable.end();
-                            break;
-                        }
-
-                        writable.write(value);
-                        if (typeof flushable.flush === "function") {
-                            flushable.flush();
-                        }
-                    }
-                } catch (error: unknown) {
-                    writable.destroy(error as Error);
-                    throw error;
-                }
-            }
-
+        const errCount = 0;
+        do {
+            if (errCount) log.verbose(`Retry ${errCount} for file ${this}`);
+            let targetWritable: Writable | undefined = undefined;
             try {
-                if (parentDir != '' && !returnResponses) {
-                    mkdirSync(parentDir, { recursive: true });
-                }
 
                 const response = await this.item.session.get(this.url,
                     {
@@ -172,29 +160,31 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
                         timeout,
                         params
                     });
+
                 if (!response.ok) {
                     throw await handleIaApiError({ response });
                 }
+
                 if (returnResponses) {
                     return response;
                 }
 
-                //if (stdout) {
-                //    fileobj = process.stdout;
-                //}
-                //if (!fileobj) {
-                //    fileobj = fs.createWriteStream(filePath, { flags: 'wb' });
-                //}
+                // If no targetWritable is supplied, write to file
+                targetWritable = getWriteable();
 
-                await writeReadableStreamToWritable(response.body!, fs.createWriteStream(filePath, { flags: 'wb' }));
+                await writeReadableStreamToWritable(response.body!, targetWritable);
 
                 if (ors) {
-                    fileobj?.getWriter().write(process.env.ORS ?? "\n");
+                    targetWritable.write(process.env.ORS ?? "\n");
                 }
+
+                targetWritable.end();
+                continue;
             } catch (err: any) {
-                log.error(`Error downloading file "${filePath}": ${err.message}`);
+                log.error(`Error downloading file "${targetPath}": ${err.message}`);
                 try {
-                    unlinkSync(filePath);
+                    targetPath && unlinkSync(targetPath);
+                    targetWritable?.end();
                 } catch (err: any) {
                 }
                 if (ignoreErrors) {
@@ -203,15 +193,15 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
                     throw err;
                 }
             }
-        }
+        } while (errCount < retries);
 
         // Set mtime with mtime from files.xml.
-        if (!noChangeTimestamp) {
+        if (!noChangeTimestamp && targetPath) {
             // If we want to set the timestamp to that of the original archive...
-            utimesSync(filePath, 0, this.mtime);
+            utimesSync(targetPath, 0, this.mtime);
         }
 
-        log.info(`Downloaded "${this.identifier}/${this.name}" to "${filePath}"`);
+        log.verbose(`Downloaded "${this.identifier}/${this.name}" to "${targetPath ? targetPath : '<Writable>'}"`);
         return true;
     }
 
@@ -221,28 +211,17 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
      * Note: Some files -- such as `<itemname>_meta.xml` -- can not be deleted.
      * @param param0 
      * @param param0.cascadeDelete Delete all files associated with the specified file, including upstream derivatives and the original.
-     * @param param0.accessKey IA-S3 accessKey to use when making the given request.
-     * @param param0.secretKey IA-S3 secretKey to use when making the given request.
-     * @param param0.verbose Print actions to stdout.
-     * @param param0.debug Set to True to print headers to stdout and exit without sending the delete request.
-     * @param param0.maxRetries 
-     * @param param0.headers 
+     * @param param0.maxRetries The number of times to retry on failed requests.
+     * @param param0.headers URL parameters to send with download request
      * @returns 
      */
     public async delete({
         cascadeDelete,
-        accessKey,
-        secretKey,
-        verbose,
-        maxRetries = 2,
+        retries = 2,
         headers = {},
     }: IaFileDeleteParams): Promise<Response> {
         const url = `${this.item.session.protocol}//s3.us.archive.org/${this.identifier}/${encodeURIComponent(this.name)}`;
-        /*this.item.session.mountHttpAdapter({
-            maxRetries,
-            statusForcelist: [503],
-            host: 's3.us.archive.org'
-        });*/
+
         const request = new S3Request(url, {
             method: 'DELETE',
             headers: {
@@ -252,33 +231,19 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
             auth: this.item.session.auth
         });
 
-        if (verbose) {
-            let msg = ` deleting: {this.name}`;
-            if (cascadeDelete) {
-                msg += ` and all derivative files.`;
-            }
-            //log.verbose(msg);
-        }
+        log.verbose(`Deleting: ${this.name}${cascadeDelete && " and all derivative files."}`);
+
         try {
             const response = await this.item.session.send(request);
             if (!response.ok) {
-                throw await handleIaApiError({ response });
+                throw await handleIaApiError({ request, response });
             }
             return response;
         } catch (err: any) {
-            const errorMsg = `Error deleting ${url}`;
-            log.error(errorMsg);
+            log.error(`Error deleting "${url}"`);
+            log.error(err);
             throw err;
-        } finally {
-            // The retry adapter is mounted to the session object.
-            // Make sure to remove it after delete, so it isn't
-            // mounted if and when the session object is used for an
-            // upload. This is important because we use custom retry
-            // handling for IA-S3 uploads.
-            //const urlPrefix = `${this.item.session.protocol}//s3.us.archive.org`;
-            //delete this.item.session.adapters[urlPrefix];
         }
-
     }
 }
 

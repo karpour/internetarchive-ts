@@ -26,7 +26,7 @@ export async function getAuthConfig(email: string, password: string, host: strin
         } else if (msg == 'account_bad_password') {
             throw new IaApiAuthenticationError('Incorrect password, try again.', { response });
         } else if (!msg) {
-            throw new IaApiAuthenticationError(`Authentication failed, but no value.reason or error field was set in response.`, { response });
+            throw new IaApiAuthenticationError(`Authentication failed, but no values.reason or error field was set in response.`, { response });
         } else {
             throw new IaApiAuthenticationError(`Authentication failed: ${msg}`, { response });
         }

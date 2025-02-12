@@ -9,14 +9,16 @@ export function getConfigFilePath(configFile?: string): { configFilePath: string
     let configFilePath = configFile;
 
     let isXdg: boolean = false;
-    /** {@link https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html XDG Base Directory Specification} */
+
+    /** {@link https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html|XDG Base Directory Specification} */
     let xdgConfigHome = process.env['XDG_CONFIG_HOME'];
     if (!xdgConfigHome || !isAbsolute(xdgConfigHome)) {
-        // Per the XDG Base Dir specification, this should be $HOME /.config. Unfortunately, $HOME
+        // Per the XDG Base Dir specification, this should be $HOME/.config. Unfortunately, $HOME
         // does not exist on all systems. Therefore, we use ~/.config here. On a POSIX-compliant
         // system, where $HOME must always be set, the XDG spec will be followed precisely.
         xdgConfigHome = path.join(homedir(), '.config');
     }
+
     const xdgConfigFile = path.join(xdgConfigHome, 'internetarchive', 'ia.ini');
     if (!configFilePath) {
         let candidates: string[] = [];

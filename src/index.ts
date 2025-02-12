@@ -1,5 +1,6 @@
 /**
  * The Internet Archive Typescript API client.
+ * TODO
  * @beta
  *
  * @packageDocumentation
@@ -15,4 +16,6 @@ export * from "./request";
 export * from "./search";
 export * from "./session";
 export * from "./types";
+export * from "./services";
+export * from "./wayback";
 //export * from "./util";

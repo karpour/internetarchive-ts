@@ -1,3 +1,4 @@
+import { Writable } from "stream";
 import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaSortOption, IaTaskPriority, IaTaskType, Prettify } from ".";
 import IaSession from "../session/IaSession";
 
@@ -42,8 +43,7 @@ export type IaGetFilesParams = IaItemGetFilesParams & IaGetSessionParams;
 
 export type IaFileDeleteParams = {
     cascadeDelete?: any;
-    verbose: boolean;
-    maxRetries?: number;
+    retries?: number;
     headers?: HttpHeaders;
 } & IaSessionParams;
 
@@ -132,18 +132,20 @@ export type IaItemDownloadParams = {
     returnResponses?: boolean,
     noChangeTimestamp?: boolean,
     ignoreHistoryDir?: boolean,
-    source?: string | string[],
-    excludeSource?: string | string[],
     stdout?: boolean,
     params?: HttpParams,
     timeout?: number;
-};
+} & ({
+    source?: string | string[],
+    excludeSource?: undefined,
+} | {
+    source?: undefined,
+    excludeSource?: string | string[],
+});
 
 // Download
 
 export type IaFileDownloadParams = {
-    /** Turn on verbose output. */
-    verbose: boolean;
     /** Overwrite local files if they already exist. */
     ignoreExisting: boolean;
     /** Skip downloading file based on checksum. */
@@ -155,7 +157,7 @@ export type IaFileDownloadParams = {
     /** Don't fail if a single file fails to download, continue to download other files. */
     ignoreErrors: boolean;
     /** Write data to the given file-like object (e.g. sys.stdout). */
-    fileobj?: WritableStream;
+    target: Writable | string;
     /** Rather than downloading files to disk, return a list of response objects. */
     returnResponses: boolean;
     /** If True, leave the time stamp as the current time instead of changing it to that given in the original archive. */
@@ -164,8 +166,6 @@ export type IaFileDownloadParams = {
     params?: HttpParams;
     /** */
     chunkSize?: number;
-    /** Print contents of file to stdout instead of downloading to file. */
-    stdout: boolean;
     /** (optional) Append a newline or `$ORS` to the end of file. This is mainly intended to be used internally with `stdout`. */
     ors?: boolean;
     /**  */

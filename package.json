@@ -2,7 +2,8 @@
   "name": "internetarchive-ts",
   "version": "0.1.0",
   "description": "Archive.org API wrapper written in Typescript",
-  "main": "/dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "cross-env NODE_ENV=testing ts-mocha --timeout 10000 --file \"./src/test/postTest.ts\" \"./src/**/*.spec.ts\"",
     "test:coverage": "nyc --reporter=html --reporter=text --reporter=text-summary npm test",

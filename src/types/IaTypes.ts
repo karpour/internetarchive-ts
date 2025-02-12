@@ -151,20 +151,6 @@ export type IaParsedCuration<T extends IaCuration> = Prettify<T extends `[curato
     { state: undefined; }
   ) : never>;
 
-const enum StupidEnum {
-  A = 'A',
-  B = 'B',
-  C = 'C',
-}
-
-type StupidEnumType = typeof StupidEnum[keyof typeof StupidEnum];
-
-function func(a: StupidEnumType) {
-}
-
-func(StupidEnum.A); // error
-
-
 // Types for testing
 
 type AssertEqual<T, U> = (<G>() => G extends T ? 1 : 2) extends (<G>() => G extends U ? 1 : 2) ? T : never;
@@ -312,13 +298,13 @@ export const IA_MEDIA_TYPES = [
   "account",
   "audio",
   "collection",
+  "data",
+  "etree",
   "image",
   "movies",
-  "texts",
-  "web",
   "software",
-  "data",
-  "etree"
+  "texts",
+  "web"
 ] as const;
 
 /** 
@@ -397,7 +383,9 @@ export type IaGetTasksParams = Prettify<IaGetTasksBasicParams & {
 }>;
 
 
-
+/**
+ * Auth config object, which is used when 
+ */
 export type IaAuthConfig = {
   s3?: {
     'access'?: string;
@@ -409,8 +397,20 @@ export type IaAuthConfig = {
     [key: string]: string | undefined;
   },
   general?: {
+    /**
+     * Specify screen name
+     * @default undefined
+     */
     'screenname'?: string;
+    /**
+     * Specify hostname to use for the API connection
+     * @default "archive.org"
+     */
     'host'?: string;
+    /**
+     * Specify whether to use https or http for the connection
+     * @default true
+     */
     'secure'?: boolean;
   };
 };
@@ -655,22 +655,48 @@ export type IaApiGetTasksResult = {
   catalog?: IaTaskMeta[],
   cursor?: string;
   summary?: IaTaskSummary,
-}
+};
 
 export type IaCheckLimitApiResult = {
   accesskey: string,
   bucket: string,
   detail: {
-      accesskey_ration: number,
-      accesskey_tasks_queued: number,
-      bucket_limit: number,
-      bucket_ration: number,
-      bucket_tasks_queued: number,
-      limit_reason: string,
-      rationing_engaged: number,
-      rationing_level: number,
-      total_global_limit: number,
-      total_tasks_queued: number;
+    accesskey_ration: number,
+    accesskey_tasks_queued: number,
+    bucket_limit: number,
+    bucket_ration: number,
+    bucket_tasks_queued: number,
+    limit_reason: string,
+    rationing_engaged: number,
+    rationing_level: number,
+    total_global_limit: number,
+    total_tasks_queued: number;
   },
   over_limit: number;
+};
+
+
+/**
+ * Announcement item form the homepage API
+ * Gets returned by {@link getAnnouncements}
+ */
+export type IaAnnouncementItem = {
+  title: string,
+  link: string;
+};
+
+/**
+* Counts for each media category, exluding accounts
+* Gets returned by {@link getMediacounts}
+*/
+export type IaMediacounts = Record<Exclude<IaMediaType, 'account'>, number>;
+
+/**
+* Info for top IA collection
+* Gets returned by {@link getTopCollections}
+*/
+export type IaTopCollectionInfo = {
+  identifier: string,
+  title: string,
+  item_count: `${number}`;
 };

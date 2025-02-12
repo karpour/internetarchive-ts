@@ -2,7 +2,7 @@ import { getSession } from "../api";
 import { IaAggregatableField, IaAuthConfig } from "../types";
 import { getCredentials } from "../examples/getCredentials";
 import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
-import sleepMs from "../util/sleepMs";
+import { sleepMs } from "../util";
 
 async function main() {
     /** Credentials read from "./.env.json" */
@@ -12,7 +12,7 @@ async function main() {
     const session = getSession(config);
 
     const query = process.argv[2] ?? 'computer chronicles';
-    const aggs:IaAggregatableField[] = [
+    const aggs: IaAggregatableField[] = [
         'year'
     ];
 

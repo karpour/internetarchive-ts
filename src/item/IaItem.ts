@@ -537,25 +537,18 @@ export class IaItem<
             returnResponses = false,
             noChangeTimestamp = false,
             ignoreHistoryDir = false,
-            source = [],
-            excludeSource = [],
-            stdout = false,
+            source,
+            excludeSource,
             params,
             timeout = 120
         }: IaItemDownloadParams = {}
     ): Promise<Response[] | string[]> {
 
-        const _sources = makeArray(source);
-        const _excludeSources = makeArray(excludeSource);
+        const sources = source && makeArray(source);
+        const excludeSources = excludeSource && makeArray(excludeSource);
 
         let fileobj: any;
-        if (stdout) {
-            // TODO
-            //fileobj = os.fdopen(sys.stdout.fileno(), "wb", closefd=false)
-            verbose = false;
-        } else {
-            fileobj = undefined;
-        }
+
 
         if (dryRun) {
             if (itemIndex && verbose) {
@@ -580,10 +573,6 @@ export class IaItem<
             gFiles = this.getFiles({ onTheFly });
         }
         let numFiles: number = 0;
-        if (stdout) {
-            gFiles = Array.from(gFiles);
-            numFiles = gFiles.length;
-        }
 
         let errors: string[] = [];
         let downloaded = 0;
@@ -593,35 +582,33 @@ export class IaItem<
         for (let file of gFiles) {
             if (ignoreHistoryDir) {
                 if (file.name.startsWith('history/')) {
+                    log.verbose(`Skipped file "${file.name}" because it is history dir"`);
                     continue;
                 }
             }
-            if (source && !source.includes(file.source)) {
+            if (sources && !sources.includes(file.source)) {
+                log.verbose(`Skipped file "${file.name}" because it is not in sources"`);
                 continue;
-            }
-            if (excludeSource && excludeSource.includes(file.source)) {
+            } else if (excludeSources && excludeSources.includes(file.source)) {
+                log.verbose(`Skipped file "${file.name}" because it is not in excludeSources"`);
                 continue;
             }
             fileCount++;
-            let filePath = noDirectory ? file.name : path.join(this.identifier, file.name);
+            let target = noDirectory ? file.name : path.join(this.identifier, file.name);
             if (dryRun) {
-                console.log(file.url);
+                log.info(`[DRYRUN] Downloading ${file.url}`);
                 continue;
             }
-            const ors = (stdout && fileCount < numFiles);
-            const response = await file.download(filePath, {
-                verbose,
+            const response = await file.download({
                 ignoreExisting,
                 checksum,
                 destdir,
                 retries,
                 ignoreErrors,
-                fileobj,
+                target,
                 returnResponses,
                 noChangeTimestamp,
                 params,
-                stdout,
-                ors,
                 timeout
             });
             if (returnResponses) {
@@ -632,14 +619,9 @@ export class IaItem<
                 } else {
                     downloaded += 1;
                 }
-
             }
             if (fileCount == 0) {
-                const msg = `skipping {this.identifier}, no matching files found.`;
-                log.info(msg);
-                if (verbose) {
-                    console.error(` ${msg}`);
-                }
+                log.info(`Skipping ${this.identifier}, no matching files found.`);
                 return [];
             }
         }
@@ -879,7 +861,7 @@ export class IaItem<
                 if (request.headers.get('transfer-encoding') === 'chunked') {
                     request.headers.delete('transfer-encoding');
                 }
-                const response = await this.session.send(request, { stream: true });
+                const response = await this.session.send(request);
                 if ((response.status == 503) && (retries > 0)) {
                     const text = await response.text();
                     if (text.includes('appears to be spam')) {
@@ -901,23 +883,16 @@ export class IaItem<
                     }
                     throw await handleIaApiError({ response, request });
                 }
-            } catch (err) {
-                let msg: string;
+            } catch (err:any) {
+                let msg: string = err.message;
                 if (err instanceof IaApiError) {
                     msg = getS3XmlText(await err.response?.text()) ??
                         `IA S3 returned invalid XML (HTTP status code ${err.status}).` +
                         `This is a server side error which is either temporary, or requires the intervention of IA admins.`;
                 }
-
-                msg = ('IA S3 returned invalid XML (HTTP status code {exc.response.statusCode}). This is a server side error which is either temporary, or requires the intervention of IA admins.');
-
-                const errorMsg = ` error uploading ${key} to ${this.identifier}, ${msg}`;
+                const errorMsg = `Error uploading ${key} to ${this.identifier}, ${msg}`;
                 log.error(errorMsg);
-                if (verbose)
-                    console.error(` error uploading ${key}: ${msg}`);
-                // Raise HTTPError with error message.
-                //throw type(exc)(errorMsg, response=exc.response, request=exc.request)
-                throw new IaApiFileUploadError(errorMsg, { request });
+                throw new IaApiFileUploadError(errorMsg, { request, response: err.response });
             } finally {
                 //_body.close();
             }
@@ -987,9 +962,9 @@ export class IaItem<
         let remoteDirName = undefined;
         const _files = makeArray(files);
 
-        if (_files.every(isIaFileObject)) {
-
-        }
+        //if (_files.every(isIaFileObject)) {
+        //
+        //}
 
         const fileNames = _files.map(file => isIaFileObject(file) ? file.name : file);
 

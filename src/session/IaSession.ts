@@ -24,7 +24,6 @@ import {
     IaItemExtendedMetadata,
     IaRawMetadata,
     IaAdvancedSearchConstructorParams,
-    IaTaskPriority,
     IaTaskType,
     IaUserInfo,
     IaSubmitTaskParams,
@@ -37,7 +36,6 @@ import { createS3AuthHeader } from "../util/createS3AuthHeader";
 import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
 import { IaLongViewcounts, IaShortViewcounts } from "../types/IaViewCount";
 import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult";
-import { getUserInfo } from "../api";
 import { TODO } from "../todotype";
 import { isValidIdentifier } from "../util/isValidIdentifier";
 
@@ -47,13 +45,13 @@ class ArchiveSessionCookies {
     }
 }
 
-
-
-
 /** 
  * The {@link IaSession} class collects together useful 
  * functionality from `internetarchive` as well as important
  * data such as configuration information and credentials.
+ * 
+ * It is recommended to use an instance of this class to access 
+ * Internet Archive API endpoints.
  * 
  * @example
  *
@@ -62,7 +60,6 @@ class ArchiveSessionCookies {
  * const item = await getItem('nasa');
  */
 export class IaSession {
-
     public readonly host: string;
     public readonly protocol: string;
     public readonly url: string;
@@ -97,7 +94,7 @@ export class IaSession {
         this.cookies = new ArchiveSessionCookies();
         this.catalog = new IaCatalog(this);
 
-
+        // TODO manage cookies
         /*for (let ck in this.config.cookies ?? {}) {
             const rawCookie = `${ck}=${this.config.cookies[ck]}`;
             const cookieDict = parseDictCookies(rawCookie);
@@ -126,7 +123,7 @@ export class IaSession {
 
         this.headers = {};
         this.headers['User-Agent'] = getUserAgent(this.accessKey);
-        this.headers['Connection'] = 'close';
+        //this.headers['Connection'] = 'close';
     }
 
     /**
@@ -292,12 +289,17 @@ export class IaSession {
         });
     }
 
-    public async send(request: IaMetadataRequest, params?: any): Promise<Response> {
+    /**
+     * Send a HTTP request. This method does not perform any error handling currently.
+     * @param request Request to send
+     * @returns Response
+     */
+    public async send(request: Request): Promise<Response> {
         return fetch(request);
     }
 
     /**
-    * Search for items on Archive.org using the {@link https://archive.org/advancedsearch.php | advanced search API }
+    * Search for items on Archive.org using the {@link https://archive.org/advancedsearch.php|Advanced search API}
     * @param query The Archive.org search query to yield results for. Refer to {@link https://archive.org/advancedsearch.php#raw} for help formatting your query.
     * @param params
     * @param params.fields Fields to include in the results. If not supplied, a standard set of fields will be returned.
@@ -594,11 +596,8 @@ export class IaSession {
         }
         // TODO implement
 
-
         throw new Error("Not implemented");
-
     }
 }
 
 export default IaSession;
-

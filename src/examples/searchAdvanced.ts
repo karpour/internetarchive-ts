@@ -5,10 +5,10 @@ import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
 
 async function main() {
     /** Credentials read from "./.env.json" */
-    const credentials = getCredentials();
+    //const credentials = getCredentials();
 
-    const config: IaAuthConfig = { 's3': { 'access': credentials.accessKey, 'secret': credentials.secretKey } };
-    const session = getSession(config);
+    //const config: IaAuthConfig = { 's3': { 'access': credentials.accessKey, 'secret': credentials.secretKey } };
+    const session = getSession();
 
     const query = process.argv[2] ?? '(uploader:jake@archive.org)';
 

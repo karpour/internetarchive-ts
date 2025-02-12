@@ -18,7 +18,7 @@ const IA_FTS_API_TARGET = 'v3.11.1';
  * creating an AsyncGenerator that continuously yields results, 
  * and a method that returns pre-defined aggregations.
  */
-export class IaFullTextSearch extends IaBaseSearch {
+export class IaFullTextSearch extends IaBaseSearch<IaFullTextSearchResultHitItem> {
     protected readonly url: string;
     protected readonly params: IaFullTextSearchParams;
     protected readonly limit?: number;
@@ -34,6 +34,7 @@ export class IaFullTextSearch extends IaBaseSearch {
      * @param param2.limit Maximum amount of results to return. By default all results will be returned
      * @param param2.scope Scope `"standard"` or `"all"` (default: `"standard"`)
      * @param param2.size Number of results to return per API call (default: `10`)
+     * @throws {IaValueError}
      */
     public constructor(
         session: IaSession,
@@ -129,8 +130,8 @@ export class IaFullTextSearch extends IaBaseSearch {
     /**
      * Get aggregations for the query.
      * @returns object with aggregations for
-     *          "top-collection", "top-mediatype", "top-year", "top-subject", 
-     *          "top-languages" and "top-creator".
+     *          `"top-collection"`, `"top-mediatype"`, `"top-year"`, 
+     *          `"top-subject"`, `"top-languages"` and `"top-creator"`.
      * @throws {IaApiError}
      */
     public async getAggregations(): Promise<IaFullTextSearchResult['aggregations']> {

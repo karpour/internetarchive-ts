@@ -150,26 +150,25 @@ export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetad
 /**
  * Download files from an item.
  * @param identifier The globally unique Archive.org item identifier.
- * @param param1.files Only return files matching the given file names.
- * @param param1.formats Only return files matching the given formats.
- * @param param1.globPattern Only return files matching the given glob pattern.
- * @param param1.dryRun Print URLs to files to stdout rather than downloading them.
- * @param param1.verbose Turn on verbose output.
- * @param param1.ignoreExisting Skip files that already exist locally.
- * @param param1.checksum Skip downloading file based on checksum.
- * @param param1.destdir The directory to download files to.
- * @param param1.noDirectory Download files to current working directory rather than creating an item directory.
- * @param param1.retries The number of times to retry on failed requests.
- * @param param1.itemIndex The index of the item for displaying progress in bulk downloads.
- * @param param1.ignoreErrors Don't fail if a single file fails to download, continue to download other files.
- * @param param1.onTheFly Download on-the-fly files (i.e. derivative EPUB, MOBI, DAISY files).
- * @param param1.returnResponses Rather than downloading files to disk, return a list of response objects.
- * @param param1.noChangeTimestamp 
- * @param param1.timeout 
- * @param param1.config A dictionary used to configure your session.
- * @param param1.configFile A path to a config file used to configure your session.
- * @param param1.archiveSession An {@link IaSession} object.
- * @param param1.debug To be passed on to getSession(). 
+ * @param params.files Only return files matching the given file names.
+ * @param params.formats Only return files matching the given formats.
+ * @param params.globPattern Only return files matching the given glob pattern.
+ * @param params.dryRun Print URLs to files to stdout rather than downloading them.
+ * @param params.verbose Turn on verbose output.
+ * @param params.ignoreExisting Skip files that already exist locally.
+ * @param params.checksum Skip downloading file based on checksum.
+ * @param params.destdir The directory to download files to.
+ * @param params.noDirectory Download files to current working directory rather than creating an item directory.
+ * @param params.retries The number of times to retry on failed requests.
+ * @param params.itemIndex The index of the item for displaying progress in bulk downloads.
+ * @param params.ignoreErrors Don't fail if a single file fails to download, continue to download other files.
+ * @param params.onTheFly Download on-the-fly files (i.e. derivative EPUB, MOBI, DAISY files).
+ * @param params.returnResponses Rather than downloading files to disk, return a list of response objects.
+ * @param params.noChangeTimestamp 
+ * @param params.timeout 
+ * @param params.config A dictionary used to configure your session.
+ * @param params.archiveSession An {@link IaSession} object.
+ * @param params.debug To be passed on to getSession(). 
  * @returns A list Requests if debug else a list of Responses.
  */
 export function downloadFiles(identifier: string, params: IaItemDownloadParams & IaGetSessionParams = {}): Promise<Response[] | string[]> {
@@ -227,13 +226,13 @@ export async function getTasks(params: IaGetSessionParams & IaGetTasksParams): P
  * @param params.params The URL parameters to send with each request sent to the Archive.org Advancedsearch Api.
  * @param params.fullTextSearch Beta support for querying the archive.org Full Text Search API.
  * @param params.dslFts Beta support for querying the archive.org Full Text Search API in dsl (i.e. do not prepend `!L` to the `full_text_search` query.
- * @param params.archiveSession 
+ * @param params.archiveSession Session to use
  * @param params.config Configuration options for session.
  * @param params.configFile A path to a config file used to configure your session.
  * @param params.maxRetries The number of times to retry a failed request.
- * @returns 
+ * @returns Search Results
  */
-export async function searchItems<F extends string[] | undefined>(query: string, params: IaSearchAdvancedParams<F>): Promise<IaAdvancedSearch<F>> {
+export async function searchItems<F extends string[] | undefined>(query: string, params: IaSearchAdvancedParams<F> = {}): Promise<IaAdvancedSearch<F>> {
     const archiveSession = params.archiveSession ?? await getSession(params.config, false);
     return archiveSession.searchAdvanced(query, params);
 }
@@ -270,10 +269,10 @@ export async function searchItems<F extends string[] | undefined>(query: string,
  * 
  * @param accessKey IA-S3 accessKey to use when making the given request
  * @param secretKey IA-S3 secretKey to use when making the given request
- * @returns The username or an empty string if response contains no username.
+ * @returns The username or undefined if response contains no username.
  */
 export function getUsername(accessKey: string, secretKey: string): Promise<string> {
-    return getUserInfo(accessKey, secretKey).then(j => j.username ?? "");
+    return getUserInfo(accessKey, secretKey).then(j => j.username ?? undefined);
 }
 
 /**
