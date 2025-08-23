@@ -6,6 +6,7 @@
  * @packageDocumentation
  */
 
+
 export * from "./api";
 export * from "./catalog";
 export * from "./error";
@@ -19,3 +20,5 @@ export * from "./types";
 export * from "./services";
 export * from "./wayback";
 //export * from "./util";
+
+export { isValidIaIdentifier } from "./util/isValidIdentifier";

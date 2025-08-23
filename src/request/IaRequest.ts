@@ -32,7 +32,7 @@ class IaRequest extends Request {
      */
     public static prepareUrl(url: string, params: Record<string, string>): string {
         const urlObject = new URL(url);
-        if (urlObject.protocol !== 'http') throw new Error(`Only HTTP URLs are allowed`);
+        if (urlObject.protocol !== 'https:' && urlObject.protocol !== 'http:') throw new Error(`Only HTTP URLs are allowed`);
         for (const entry of Object.entries(params)) {
             const [key, value] = entry;
             urlObject.searchParams.append(key, value);

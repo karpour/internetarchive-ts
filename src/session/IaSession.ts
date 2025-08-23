@@ -37,13 +37,8 @@ import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
 import { IaLongViewcounts, IaShortViewcounts } from "../types/IaViewCount";
 import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult";
 import { TODO } from "../todotype";
-import { isValidIdentifier } from "../util/isValidIdentifier";
-
-class ArchiveSessionCookies {
-    setCookie(cookie: any) {
-        throw new Error("Method not implemented.");
-    }
-}
+import { isValidIaIdentifier } from "../util/isValidIdentifier";
+import IaCookieJar from "./IaCookieJar";
 
 /** 
  * The {@link IaSession} class collects together useful 
@@ -69,12 +64,12 @@ export class IaSession {
     protected readonly secure: boolean;
     protected readonly config: IaAuthConfig;
     protected readonly catalog: IaCatalog;
+    protected readonly cookies: IaCookieJar;
     public userEmail?: string;
 
     /** HTTP Headers */
     public headers: HttpHeaders;
 
-    protected cookies: ArchiveSessionCookies;
 
     /**
      * Initialize {@link IaSession} object with config.
@@ -91,22 +86,14 @@ export class IaSession {
         this.host = this.config.general?.host ?? 'archive.org';
         this.protocol = this.secure ? 'https:' : 'http:';
         this.url = `${this.protocol}//${this.host}`;
-        this.cookies = new ArchiveSessionCookies();
+        this.cookies = new IaCookieJar();
         this.catalog = new IaCatalog(this);
 
-        // TODO manage cookies
-        /*for (let ck in this.config.cookies ?? {}) {
-            const rawCookie = `${ck}=${this.config.cookies[ck]}`;
-            const cookieDict = parseDictCookies(rawCookie);
-            if (!cookieDict[ck]) {
-                continue;
+        if (this.config.cookies) {
+            for (let [key,value] of Object.entries(this.config.cookies)) {
+                this.cookies.setCookie(key, value);
             }
-            const cookie = createCookie(ck, cookieDict[ck], {
-                domain: cookieDict.domain ?? '.archive.org',
-                path: cookieDict.path ?? '/'
-            });
-            this.cookies.setCookie(cookie);
-        }*/
+        }
 
         let userEmail = this.config.cookies?.['logged-in-user'];
         if (userEmail) {
@@ -563,9 +550,9 @@ export class IaSession {
      * @throws {IaApiError}
     */
     public getShortViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaShortViewcounts<T[number]>> {
-        return this.getJson(`${this.protocol}//be-api.us.${this.host}/views/v1/short/${identifiers.map(encodeURIComponent).join(',')}`)
+        return this.getJson(`${this.protocol}//be-api.us.${this.host}/views/v1/short/${identifiers.map(encodeURIComponent).join(',')}`);
     };
-    
+
     /**
      * Get list of detailed view counts for the supplied list of identifiers
      * If an identifier does not exist, this function will not fail, but the
@@ -581,7 +568,7 @@ export class IaSession {
      * @throws {IaApiError}
     */
     public getLongViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaLongViewcounts<T[number]>> {
-        return this.getJson(`${this.protocol}//be-api.us.${this.host}/views/v1/long/${identifiers.map(encodeURIComponent).join(',')}`)
+        return this.getJson(`${this.protocol}//be-api.us.${this.host}/views/v1/long/${identifiers.map(encodeURIComponent).join(',')}`);
     };
 
     /**
@@ -591,7 +578,7 @@ export class IaSession {
      * @param files 
      */
     public createItem<MetadataType extends IaBaseMetadataType = IaBaseMetadataType>(identifier: string, metadata: MetadataType, files: TODO): Promise<IaItem<MetadataType>> {
-        if (!isValidIdentifier(identifier)) {
+        if (!isValidIaIdentifier(identifier)) {
             throw new IaInvalidIdentifierError(`Not a valid identifier: "${identifier}"`);
         }
         // TODO implement

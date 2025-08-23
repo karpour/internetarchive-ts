@@ -18,7 +18,7 @@ const RegExp_User_Aggs_Key = /^user_aggs__terms__field:(?<field>.*)__size:\d+$/;
  * @typeParam Fields - Search fields, inferred by the search params. If not supplied, a default set of fields will be returned
  * 
  * @example
- * 
+ * ```typescript
  * import { IaSearch } from "internetarchive-ts";
  * 
  * const search = new IaAdvancedSearch(session, 'computer chronicles');
@@ -27,7 +27,9 @@ const RegExp_User_Aggs_Key = /^user_aggs__terms__field:(?<field>.*)__size:\d+$/;
  * for await (const result of search.getResultsGenerator()) {
  *     console.log(result);
  * }
+ * ```
  */
+// TODO make Fields readonly
 export class IaAdvancedSearch<const Fields extends string[] | undefined> extends IaBaseSearch<IaAdvancedSearchResult> {
     protected readonly session: IaSession;
     protected readonly url: string;
@@ -78,16 +80,14 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
             ...this.basicParams
         };
         // Always return identifier.
-        if (fields) {
-            this.fields = fields.length === 0 ? ['identifier'] : fields;
-            if (!this.fields.includes('identifier')) {
-                this.fields.push('identifier');
-            }
-            // Add fields
-            for (const entry of Object.entries(this.fields)) {
-                const [fieldIdx, fieldName] = entry;
-                this.params[`fl[${fieldIdx}]`] = fieldName;
-            }
+        this.fields = Array.isArray(fields) ? [...fields] : [];
+        if (!this.fields.includes('identifier')) {
+            this.fields.push('identifier');
+        }
+        // Add fields
+        for (const entry of Object.entries(this.fields)) {
+            const [fieldIdx, fieldName] = entry;
+            this.params[`fl[${fieldIdx}]`] = fieldName;
         }
         // Add sorts
         for (const entry of Object.entries(this.sorts)) {
@@ -230,12 +230,7 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
             rows: 0,
             page: undefined,
         };
-        const response = await this.session.getJson<IaAdvancedSearchResult>(this.url, {
-            params: {
-                ...this.params,
-
-            }
-        });
+        const response = await this.session.getJson<IaAdvancedSearchResult>(this.url, { params });
         return response.response.numFound;
     }
 }

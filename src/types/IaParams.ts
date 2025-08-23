@@ -189,13 +189,13 @@ export type IaRequestConstructorParams = Prettify<{
     files?: string[];
     params?: Record<string, string>;
     cookies?: Record<string, string>;
-    hooks?: any;
     auth?: HttpHeaders;
     /** Accept a compressed response
      * @default true
      */
     compression?: boolean;
-} & Omit<RequestInit, 'method' | 'headers'>>;
+    body?: BodyInit;
+}>;
 
 /**
  * Params for the {@link Catalog.submitTask} method

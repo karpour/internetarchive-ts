@@ -11,9 +11,12 @@ type IaPrepareMetadataParams<M extends IaBaseMetadataType, S extends IaBaseMetad
     insert?: boolean;
 };
 
+
+
+
 /**
  * Prepare a metadata object for an {@link S3Request} or a {@link IaMetadataRequest}
- * @param newMetadata The metadata dict to be prepared.
+ * @param newMetadata The metadata to be prepared.
  * @param sourceMetadata (optional) The source metadata for the item being modified.
  * @param append 
  * @param appendList 
@@ -21,7 +24,7 @@ type IaPrepareMetadataParams<M extends IaBaseMetadataType, S extends IaBaseMetad
  * @returns A filtered metadata dict to be used for generating IA S3 and Metadata API requests.
  */
 export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMetadataType>({
-    metadata: metadata,
+    metadata,
     sourceMetadata,
     append = false,
     appendList = false,
@@ -33,7 +36,7 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
     // TODO convert source and new metadata to raw
     // Make a deepcopy of sourceMetadata if it exists. A deepcopy is
     // necessary to avoid modifying the original dict.
-    const _sourceMetadata: IaRawMetadata = sourceMetadata !== undefined ? convertToRawMetadata(sourceMetadata) : {};
+    const _sourceMetadata: IaRawMetadata = sourceMetadata ? convertToRawMetadata(sourceMetadata) : {};
     const preparedMetadata: IaRawMetadata = {};
 
     // Create indexedKeys counter dict. i.e.: {'subject': 3} -- subject

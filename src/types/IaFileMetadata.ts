@@ -1414,12 +1414,21 @@ export type IaFileExtendedMetadata = IaFileBaseMetadata & IaFileDefinedByIaMetad
      */
     video_codec?: string;
 
-    // TODO
     /**
      * Virus Check
+     * This tag only functions on items of mediatype collection. 
+     * The tag is either present with a value of `true` or it should not be 
+     * present in the item metadata at all. Currently all items uploaded into
+     * the open community collections have the virus check task run on them, 
+     * without needing this tag. 
+     * Any other collection that needs virus checking should have this tag 
+     * present in order to trigger the virus check task to run on items uploaded
+     * into the collection.
      * 
+     * defined by: IA software
+     * edit access: IA admin
      */
-    viruscheck?: string;
+    viruscheck?: "true";
 
     /**
      * Volume

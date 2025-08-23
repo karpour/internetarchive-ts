@@ -3,8 +3,11 @@
  * @see https://archive.org/developers/wayback-cdx-server.html
  */
 
+import { IaTypeError } from "../error";
 import log from "../log";
+import { Prettify } from "../types";
 import { dateToYYYYMMDDHHMMSS } from "../util/dateToYYYYMMDDHHMMSS";
+import { ArrayOfArraysWithHeaderRow, convertArrayOfArraysWithHeaderRow } from "./convertArrayOfArraysWithHeaderRow";
 
 const WAYBACK_CDX_API_URL = "http://web.archive.org/cdx/search/cdx";
 const WAYBACK_API_URL = "https://web.archive.org";
@@ -168,7 +171,7 @@ const WaybackErrorMapping = {
     "error:no-access": "Target URL could not be accessed (status=403).",
     "error:not-found": "Target URL not found (status=404).",
     "error:proxy-error": "SPN2 back-end proxy error.",
-    "error:protocol-error": "HTTP connection broken. (A possible cause of this error is “IncompleteRead”).",
+    "error:protocol-error": "HTTP connection broken. (A possible cause of this error is \"IncompleteRead\").",
     "error:read-timeout": "HTTP connection read timeout.",
     "error:soft-time-limit-exceeded": "Capture duration exceeded 45s time limit and was terminated.",
     "error:service-unavailable": "Service unavailable for URL (HTTP status=503).",
@@ -227,8 +230,8 @@ export type WaybackSaveOptions = {
 
     /** 
      * Capture web page only if the latest existing capture at the Archive is older than the <timedelta> limit. 
-     * Its format could be any datetime expression like “3d 5h 20m” or just a number of seconds, e.g. “120”. 
-     * If there is a capture within the defined timedelta, SPN2 returns that as a recent capture. The default system <timedelta> is 45 min.
+     * Its format could be any datetime expression like \"3d 5h 20m” or \"ust a number of seconds, e.g. \"120”. 
+     * \"f there is a capture within the defined timedelta, SPN2 returns that as a recent capture. The default system <timedelta> is 45 min.
      * When using 2 <timedelta> values, the first one applies to the main capture and the second one applies to outlinks.
      */
     ifNotArchivedWithin?: string | [string, string];
@@ -283,13 +286,15 @@ function createSearchParams(options: Record<string, string | string[] | number |
             case "boolean":
                 urlSearchParams.append(key, `${value}`);
                 break;
+            // TODO why is this even here
+            /*
             case "object":
                 for (let item of value as any) {
                     urlSearchParams.append(key, `${item}`);
                 }
-                break;
+                break;*/
             default:
-                throw new Error(`Invalid option value: ${typeof value}`);
+                throw new IaTypeError(`Invalid option value type: ${typeof value}`);
         }
     }
     return urlSearchParams;
@@ -297,37 +302,36 @@ function createSearchParams(options: Record<string, string | string[] | number |
 
 // TODO add auth token
 
-type MatchesType = string[][];
+/**
+ * Get snapshot matches for given url
+ * @see {@link https://archive.org/developers/wayback-cdx-server.html}
+ * @param url 
+ * @param options 
+ * @returns Results as an array of result objects
+ */
+export async function getSnapshotMatches<T extends WaybackCdxField[] | undefined>(url: string, options?: WaybackCdxOptions<T>):
+    Promise<Prettify<WaybackSnapshotResponse<WaybackCdxOptions<T>>>[]> {
 
-export async function getSnapshotMatches<T extends (keyof WaybackSnapshotInfo)[] | undefined = undefined>(url: string, options?: WaybackCdxOptions<T>):
-    Promise<T extends (keyof WaybackSnapshotInfo)[] ? Pick<WaybackSnapshotInfo, T[number]>[] : WaybackSnapshotInfo[]> {
-    if (options?.fl) options.fl = options.fl.join(",") as any;
-    const searchParams = createSearchParams({ ...options, url, output: "json" });
+    /** New options object where fls are merged into a single comma-separated string */
+    const opt: Omit<WaybackCdxOptions<T>, "fl"> & { fl?: string; } | undefined = {
+        ...options,
+        fl: options?.fl?.join(",")
+    };
+
+    /** Search params object that forms the arguments for the API call */
+    const searchParams = createSearchParams({ ...opt, url, output: "json" });
 
     log.verbose(`${WAYBACK_CDX_API_URL}?${searchParams.toString()}`);
     // TODO make this use the session get method
-    const matches: MatchesType = await (await fetch(`${WAYBACK_CDX_API_URL}?${searchParams.toString()}`,)).json();
+    const matches: ArrayOfArraysWithHeaderRow<any> = await (await fetch(`${WAYBACK_CDX_API_URL}?${searchParams.toString()}`,)).json();
 
-    // TODO Error handling
-
-    const returnObj: Array<any> = [];
-
-    if (matches.length == 0) throw new Error(`No matches`);
-    const firstEntry = matches.shift()!;
-    for (const entry of matches) {
-        const temp: Record<string, string> = {};
-        for (let i = 0; i < firstEntry.length; i++) {
-            const index: string = firstEntry[i]!;
-            temp[index] = entry[i]!;
-        }
-        returnObj.push(temp);
-    }
-
-    return returnObj as any;
+    return convertArrayOfArraysWithHeaderRow(matches) as Prettify<WaybackSnapshotResponse<WaybackCdxOptions<T>>>[];
 }
 
-// TODO probably don't need these at run-time
-/*export const WAYBACK_CDX_FIELDS = [
+
+
+// All possible fields that can be returned by the WayBack CDX API
+export const WAYBACK_CDX_FIELDS = [
     "urlkey",
     "timestamp",
     "original",
@@ -335,7 +339,7 @@ export async function getSnapshotMatches<T extends (keyof WaybackSnapshotInfo)[]
     "statuscode",
     "digest",
     "length",
-] as const;*/
+] as const;
 
 // TODO add handler for https://archive.org/help/wayback_api.php
 
@@ -378,24 +382,30 @@ type WaybackSnapshotInfo = {
     /** The originally archived URL, which could be different from the URL you supplied. */
     original: string;
     /** The mimetype of the archived content, which can be one of these: 
-     * - `"text/html"`;
-     * - `"warc/revisit"`;
+     * - `"text/html"`
+     * - `"warc/revisit"`
     */
-    mimetype: WaybackSnapshotMimeType;
+    mimetype: string;
     /** The HTTP status code of the snapshot. If the mimetype is warc/revisit, the value returned for the statuscode key can be blank, but the actual value is the same as that of any other entry that has the same digest as this entry. */
     statuscode: string;
-    /** The SHA1 hash digest of the content, excluding the headers. It’s usually a base-32-encoded string. */
+    /** The SHA1 hash digest of the content, excluding the headers. It's usually a base-32-encoded string. */
     digest: string;
     /** The compressed byte size of the corresponding WARC record, which includes WARC headers, HTTP headers, and content payload. */
     length: number;
 };
 
-export type WaybackCdxField = keyof WaybackSnapshotInfo;
-
-
-type WaybackCdxOptionsWithFields = {
-    fl: WaybackCdxField[];
+type WaybackSnapshotOptionalFields = {
+    /** shows duplicates */
+    dupecount: string;
 };
+
+type WaybackSnapshotResponse<O extends WaybackCdxOptions<any>> = Prettify<
+    (O["fl"] extends WaybackCdxField[] ? Pick<WaybackSnapshotInfo, O["fl"][number]> : WaybackSnapshotInfo) &
+    O extends { showDupeCount: true; } ? Pick<WaybackSnapshotOptionalFields, "dupecount"> : {}>;
+
+export type WaybackCdxField = Prettify<keyof WaybackSnapshotInfo>;
+
+type WaybackCdxFilter = `${"!" | ""}${WaybackCdxField}:${string}`;
 
 type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
     /**
@@ -404,16 +414,64 @@ type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
     matchType?: WaybackCdxMatchType;
     /**
      * Return the first n results. Use -N to return the last n results
+     * @see {@link https://archive.org/developers/wayback-cdx-server.html#query-result-limits}
      */
     limit?: number;
+    /**
+     * The offset= M param can be used in conjunction with limit to ‘skip’ the first M records. This allows for a simple way to scroll through the results.
+     * However, the offset/limit model does not scale well to large querties since the CDX server must read and skip through the number of results specified by offset, so the CDX server begins reading at the beginning every time.
+     * @see {@link https://archive.org/developers/wayback-cdx-server.html#query-result-limits}
+     */
     offset?: number;
+    /**
+     * Advanced Option: Return some number of latest results for an exact match.
+     * This option and is faster than the standard last results search. 
+     * The number of results is at least 1 so limit=-1 implies this setting.
+     * The number of results may be greater >1 when a secondary index format
+     * (such as ZipNum) is used, but is not guaranteed to return any more 
+     * than 1 result. Combining this setting with limit= will ensure that 
+     * no more than N last results.
+     * @see {@link https://archive.org/developers/wayback-cdx-server.html#query-result-limits}
+     */
+    fastLatest?: true;
     from?: number;
     to?: number;
-    filter?: string | string[];
+    filter?: WaybackCdxFilter | WaybackCdxFilter[];
+    /**
+     * 
+     * It is possible to track how many CDX lines were skipped due to Filtering and Collapsing by adding the special skipcount counter with showSkipCount=true. An optional endtimestamp count can also be used to print the timestamp of the last capture by adding lastSkipTimestamp=true
+     * @see {@link https://archive.org/developers/wayback-cdx-server.html#duplicate-counter}
+     */
     showDupeCount?: true;
+    /**
+     * 
+     */
     showSkipCount?: true;
     lastSkipTimestamp?: true;
     fl?: T;
+    /**
+     * Page number
+     * If pagination is not supported, the CDX server will return a 400.
+     * @see {@link https://archive.org/developers/wayback-cdx-server.html#pagination-api}
+     */
+    page?: number;
+
+    /**
+     * It is possible to adjust the page size to a smaller value than the 
+     * default by setting the pageSize=P where 1 <= P <= default page size.
+     */
+    pageSize?: number;
+    /**
+     * To determine the number of pages, add the showNumPages=true param. 
+     * This is a special query that will return a single number indicating the number of pages
+     */
+    showNumPages?: boolean;
+
+    /**
+     * It is also possible to have the CDX server return the raw secondary index, by specifying showPagedIndex=true. 
+     * This query returns the secondary index instead of the CDX results and may be subject to access restrictions.
+     */
+    showPagedIndex?: true;
     /**
      * Collapses the results based on the field contents or substring of the field content.
      * Add one or more collapse items by either specifying the field name or <fieldname>:N where N

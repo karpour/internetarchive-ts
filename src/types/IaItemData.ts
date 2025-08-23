@@ -1,7 +1,7 @@
 import { IaItemReview } from "./IaItemReview";
 import { IaItemBaseMetadata, IaItemExtendedMetadata, IaItemSourceMetadata } from "./IaItemMetadata";
 import { IaFilesXmlMetadata, IaFileBaseMetadata, IaFileSourceMetadata } from "./IaFileMetadata";
-import { IaSimplelistEntry } from "./IaSimplelistEntry";
+import { IaSimplelistEntries, IaSimplelistEntry } from "./IaSimplelistEntry";
 import { IaBaseMetadataType, IaRawMetadata } from "./IaTypes";
 import { IaPageNumbersInfo } from "./IaPages";
 
@@ -62,11 +62,13 @@ export type IaItemData<
     /** A list of data nodes currently available for accessing the item's contents */
     workable_servers: string[];
 
-    // TODO
-    /**  */
+    /** 
+     * Simplelist relations
+     * @see {@link https://archive.org/developers/simplelists.html}
+     */
     simplelists?: {
         /** Simple list name */
-        [key: string]: IaSimplelistEntry;
+        holdings: IaSimplelistEntries;
     };
 
     /** The item is only stored on a single node (rare) */

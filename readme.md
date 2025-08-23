@@ -43,6 +43,12 @@ This API uses S3 API credentials for authentication. You can obtain them [here](
 npm test
 ```
 
+## Referenced Documentation
+
+- [Save Page Now 2 Public API Docs Draft, Vangelis Banos, 2023-01-22](https://docs.google.com/document/d/1Nsv52MvSjbLb2PCpHlat0gkzw0EvtSgpKHu4mk0MnrA/edit?tab=t.0#heading=h.1gmodju1d6p0)
+- [Derivative Formats](https://web.archive.org/web/20190711182843/https://archive.org/help/derivatives.php)
+
+
 ## Dependencies
 
 - [rfc6902]() - for generating JSON Patches

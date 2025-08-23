@@ -19,6 +19,7 @@ import {
     IaBaseMetadataType,
 } from "../types";
 import { IaSearchAdvancedParams } from "../types/IaSearch";
+import { IaShortViewcounts } from "../types/IaViewCount";
 import { createS3AuthHeader } from "../util/createS3AuthHeader";
 import { handleIaApiError } from "../util/handleIaApiError";
 
@@ -311,3 +312,20 @@ export async function isIdentifierAvailable(identifier: string, params?: IaGetSe
     const archiveSession = params?.archiveSession ?? await getSession(params?.config, false);
     return archiveSession.isIdentifierAvailable(identifier);
 }
+
+/**
+ * Get list of short view counts for the supplied list of identifiers
+ * If an identifier does not exist, this function will not fail, but the
+ * `have_data` attribute of the corresponding item will be set to `false`.
+ * 
+ * @see {@link https://archive.org/developers/views_api.html#simple-summary-view-count-data}
+ * 
+ * @param identifiers Identifiers to get view counts for
+ * @returns View counts object
+ * @throws {IaApiUnauthorizedError}
+ * @throws {IaApiError}
+*/
+export async function getShortViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaShortViewcounts<T[number]>> {
+    const archiveSession = await getSession();
+    return archiveSession.getShortViewcounts(identifiers);
+};

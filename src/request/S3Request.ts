@@ -14,8 +14,8 @@ export class S3Request extends IaRequest {
         files,
         params,
         auth,
-        cookies,
-        hooks }: S3RequestConstructorParams) {
+        cookies
+    }: S3RequestConstructorParams) {
         super(url, {
             method,
             headers: {
@@ -23,13 +23,12 @@ export class S3Request extends IaRequest {
                 'x-archive-queue-derive': queueDerive ? '1' : '0',
                 ...headers,
                 ...prepareMetadataHeaders(prepareMetadata({ metadata: { scanner: `Internet Archive Javascript library ${PACKAGE_VERSION}`, ...metadata } }), 'meta'),
-                ...(fileMetadata ? prepareMetadataHeaders(prepareMetadata({ metadata: fileMetadata }), 'filemeta') : {}),
+                ...(fileMetadata && prepareMetadataHeaders(prepareMetadata({ metadata: fileMetadata }), 'filemeta')),
             },
             files,
             params,
             auth,
-            cookies,
-            hooks
+            cookies
         });
     }
 }

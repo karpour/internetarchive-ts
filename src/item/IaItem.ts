@@ -329,7 +329,7 @@ export class IaItem<
         return response; // TODO process response
     }
 
-    // TODO: dark and undark have different order for data and reduced_priority
+    // TODO dark and undark have different order for data and reduced_priority
 
     /**
      * Dark the item.
@@ -451,7 +451,8 @@ export class IaItem<
 
         const itemFiles = [...this.files];
         // Add support for on-the-fly files (e.g. EPUB).
-        // TODO make sure otf is still a thing?
+        
+        // TODO make sure otf is still applicable
         /**if (onTheFly) {
             const otfFiles: [string, string][] = [
                 ['EPUB', `${this.identifier}.epub`],
@@ -636,10 +637,12 @@ export class IaItem<
      * {@link https://tools.ietf.org/html/draft-ietf-appsawg-json-patch-02 | JSON Patch version 02}
      * 
      * @example
+     * ```typescript
      * import {IaItem} from 'internetarchive-ts';
      * const item = new IaItem('mapi_test_item1');
      * const md = {'new_key': 'new_value', 'foo': ['bar', 'bar2']};
      * item.modifyMetadata(md);
+     * ```
      * 
      * @param metadata Metadata used to update the item.
      * @param param1.target Set the metadata target to update.
@@ -647,7 +650,6 @@ export class IaItem<
      * @param param1.appendList Append values to an existing multi-value metadata field. No duplicate values will be added.
      * @param param1.insert 
      * @param param1.priority Set task priority.
-     * @param param1.debug 
      * @param param1.headers 
      * @param param1.timeout 
      * @returns A Request if debug else a Response.
@@ -663,8 +665,7 @@ export class IaItem<
         headers = { ...this.session.headers, ...headers };
 
         const url = `${this.session.url}/metadata/${this.identifier}`;
-        // TODO: currently files and metadata targets do not support dict's,
-        // but they might someday?? refactor this check.
+        // TODO currently files and metadata targets do not support dict's, but they might someday? refactor this check.
         const sourceMetadata = this.itemData;
         const request = new IaMetadataRequest(url, {
             // TODO
@@ -678,11 +679,10 @@ export class IaItem<
             insert
         });
         const response = await this.session.send(request);
-        // Re-initialize the Item object with the updated metadata.
         if (!response.ok) {
             throw await handleIaApiError({ request, response });
         }
-        this.refresh();
+        await this.refresh();
         return response;
     }
 
@@ -785,7 +785,7 @@ export class IaItem<
         const size = filename ? getFileSize(filename) : undefined;
 
         // Support for uploading empty files.
-        if (size == 0) {
+        if (size === 0) {
             _headers['Content-Length'] = '0';
         }
 
@@ -842,7 +842,7 @@ export class IaItem<
         }
 
 
-        while (true) {
+        do {
             let request: Request | undefined;
             try {
                 if (retries > 0) {
@@ -883,7 +883,7 @@ export class IaItem<
                     }
                     throw await handleIaApiError({ response, request });
                 }
-            } catch (err:any) {
+            } catch (err: any) {
                 let msg: string = err.message;
                 if (err instanceof IaApiError) {
                     msg = getS3XmlText(await err.response?.text()) ??
@@ -896,7 +896,7 @@ export class IaItem<
             } finally {
                 //_body.close();
             }
-        }
+        } while (retries > 0);
     }
 
     // TODO fix examples

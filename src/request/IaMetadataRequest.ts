@@ -17,9 +17,6 @@ export class IaMetadataRequest extends IaRequest {
     }
 }
 
-
-
-
 export function validateMetadata(metadata: object): metadata is IaBaseMetadataType {
     return true;
 }
