@@ -1,3 +1,16 @@
+# Does the curation field in item metadata always contain only one item of curation?
+It is marked as non repeatable, so if there are multiple items, how are they formatted?
+
+**Answer:** The curation field gets overwritten by every new curation task
+
+# Is `<identifier>_files.xml` the only file in an item without the `mtime` and `size` fields?
+
+**Answer:** Yes
+
+# When using the user_aggs option, for every field, 25 buckets get returned. Is it possible to specifiy how many buckets are returned, or is this fixed at 25?
+
+**Answer:** set `user_aggs_size` to the specified size 
+
 # Consistency in subject metadata field
 
 The metadata of the item `youtube-Tdj8gh9GPc4` has a single string as a subject, which is tags separated by `;` (instead of `,`). This is assumed to be a mistake by the uploader

@@ -30,12 +30,6 @@ This API uses S3 API credentials for authentication. You can obtain them [here](
 ## Examples
 
 
-## Things to figure out
-
-- Does the curation field in item metadata always contain only one item of curation?
-  It is marked as non repeatable, so if there are multiple items, how are they formatted?
-- Is `<identifier>_files.xml` the only file in an item without the `mtime` and `size` fields?
-- When using the user_aggs option, for every field, 25 buckets get returned. Is it possible to specifiy how many buckets are returned, or is this fixed at 25?
 
 ## Unit tests
 
