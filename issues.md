@@ -42,14 +42,6 @@ However, in a search result using the advancedSearch API endpoint, the subject f
 
 What I assume is that at one point during indexing in ElasticSearch, subject fields actually do get split on semicolons, however the item metadata itself still has the un-split string as subject, introducing an inconsistency between item metadata and search result.
 
-# "Any field" + "does not contain" does not work in search
-
-Filling the form to set `Any field` to `does not contain` and value to `computer` produces results that all contain the word computer.
-
-Expected result would be a list of items where no field contains computer, including title.
-
-See https://archive.org/search?query=-%28computer%29
-
 # Wrong content-type for range error
 
 Trying to query the advancedsearch API endpoint pagination enabled and a `rows` argument above the maximum (10000) results in an Error, as expected.
