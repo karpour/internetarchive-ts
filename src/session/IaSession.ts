@@ -28,7 +28,8 @@ import {
     IaUserInfo,
     IaSubmitTaskParams,
     IaCheckLimitApiResult,
-    IaTaskSummary
+    IaTaskSummary,
+    HttpMethod
 } from "../types";
 import getUserAgent from "../util/getUserAgent";
 import { handleIaApiError } from "../util/handleIaApiError";
@@ -90,7 +91,7 @@ export class IaSession {
         this.catalog = new IaCatalog(this);
 
         if (this.config.cookies) {
-            for (let [key,value] of Object.entries(this.config.cookies)) {
+            for (let [key, value] of Object.entries(this.config.cookies)) {
                 this.cookies.setCookie(key, value);
             }
         }
@@ -173,6 +174,40 @@ export class IaSession {
             throw await handleIaApiError({ response, responseBody: json });
         }
         return json as T;
+    }
+
+    // TODO test and implement
+    /**
+     * Private fetch wrapper with support for timeouts
+     * @param url 
+     * @param params 
+     * @param options 
+     * @param timeoutMs 
+     * @returns 
+     */
+    private async fetch(url: string, method: HttpMethod, params: Record<string, string | number | boolean | undefined>, options: RequestInit, timeoutMs?: number) {
+        const urlObj = new URL(url);
+        if (params) {
+            for (const param of Object.entries(params)) {
+                const [key, value] = param;
+                if (value !== undefined) {
+                    urlObj.searchParams.set(key, `${value}`);
+                }
+            }
+        }
+
+        let id: ReturnType<typeof setTimeout> | undefined;
+        if (timeoutMs) {
+            const controller = new AbortController();
+            id = setTimeout(() => controller.abort(), timeoutMs);
+            options.signal = controller.signal;
+        }
+        try {
+            const res = await fetch(urlObj.href, { method, ...options });
+            return res;
+        } finally {
+            clearTimeout(id);
+        }
     }
 
     /**
@@ -366,7 +401,7 @@ export class IaSession {
         {
             comment,
             priority,
-            data,
+            args,
             headers = {},
             reducedPriority
         }: Omit<IaSubmitTaskParams, 'identifier' | 'cmd'> & { reducedPriority?: boolean; }): Promise<Response> {
@@ -375,7 +410,7 @@ export class IaSession {
             cmd,
             comment,
             priority,
-            data,
+            args,
             headers: {
                 ...headers,
                 ...(reducedPriority && { 'X-Accept-Reduced-Priority': '1' })

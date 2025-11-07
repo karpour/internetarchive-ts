@@ -20,6 +20,7 @@ export function convertToRawFlattenedMetadata<T extends IaBaseMetadataType>(meta
                     for (let i = 0; i < value.length; i++) {
                         if (value !== undefined && value !== null) {
                             rawMetadata[`${key}[${i}]`] = `${value[i]}`;
+                            // TODO handle undefined
                         }
                     }
                     break;

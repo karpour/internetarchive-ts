@@ -8,6 +8,7 @@ import { IaBaseSearch } from "./IaBaseSearch";
 import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult";
 import { IaAdvancedSearchConstructorParams, IaAdvancedSearchParams, IaAdvancedSearchResult, IaAggregatableField, IaUserAggs, IaUserAggsSearchParams } from "../types/IaSearch";
 import log from "../log";
+import { retry } from "../util/retry";
 
 const RegExp_User_Aggs_Key = /^user_aggs__terms__field:(?<field>.*)__size:\d+$/;
 
@@ -29,7 +30,6 @@ const RegExp_User_Aggs_Key = /^user_aggs__terms__field:(?<field>.*)__size:\d+$/;
  * }
  * ```
  */
-// TODO make Fields readonly
 export class IaAdvancedSearch<const Fields extends string[] | undefined> extends IaBaseSearch<IaAdvancedSearchResult> {
     protected readonly session: IaSession;
     protected readonly url: string;
@@ -38,6 +38,7 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
     protected readonly fields?: string[];
     protected readonly sorts: IaSortOption[];
     protected readonly limit?: number;
+    protected readonly maxRetries: number;
 
     /**
      * Create a new advanced search
@@ -75,6 +76,7 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
             rows: rows ?? 100,
             scope
         };
+        this.maxRetries = maxRetries;
         // Initialize params.
         this.params = {
             ...this.basicParams
@@ -103,12 +105,12 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
      * @returns Search Result object
      */
     public async getResults(page?: number): Promise<IaAdvancedSearchResult> {
-        const response = await this.session.get(this.url, {
+        const response = await retry(() => this.session.get(this.url, {
             params: {
                 ...this.params,
                 page
             }
-        });
+        }), this.maxRetries);
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
@@ -162,18 +164,23 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
      * Return aggregations for the specified fields
      * For each supplied field, up to 25 buckets will be returned.
      * 
-     * This does only workd on specific fields. These are defined in {@link IA_AGGREGATABLE_FIELDS}
+     * This only works on specific fields. These are defined in {@link IA_AGGREGATABLE_FIELDS}
      * 
      * @param aggFields fields to return aggregations for
+     * @param aggsSize number of aggregations to return (Default 25)
      * @returns Record where the keys are the requested fields and 
-     *          the values are object containing the corresponging aggregations
+     *          the values are object containing the corresponding aggregations
      * @template AggFields Array of fields to aggregate
      * @throws {IaApiError}
+     * @throws {IaTypeError}
      * @throws {IaApiElasticSearchError}
      */
-    public async getAggregations<const AggFields extends IaAggregatableField[]>(aggFields: AggFields): Promise<IaUserAggs<AggFields>> {
+    public async getAggregations<const AggFields extends IaAggregatableField[]>(aggFields: AggFields, aggsSize?: number): Promise<IaUserAggs<AggFields>> {
         if (!aggFields || aggFields.length === 0) {
             throw new IaTypeError(`Aggregation fields must be a non-empty string array`);
+        }
+        if (aggsSize && (!Number.isInteger(aggsSize) || aggsSize < 0)) {
+            throw new IaTypeError(`aggsSize must be a positive integer`);
         }
 
         // For getting user aggs, we can omit params like fields, sorts, etc.
@@ -183,7 +190,8 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
             ...this.basicParams,
             page: 1,
             rows: 0,
-            user_aggs: aggFields.join(',')
+            user_aggs: aggFields.join(','),
+            user_aggs_size: aggsSize
         };
 
         const response = await this.session.getJson<IaAdvancedSearchResult<undefined, AggFields>>(this.url, { params });

@@ -11,6 +11,8 @@ async function main() {
         fl: ["original", "statuscode", "timestamp"] // Specify which fields to return
     });
 
+    
+
     matches.forEach(m => {
         console.log(`${dateToYYYYMMDD(parseWaybackTimestamp(m.timestamp))} ${m.statuscode} ${m.original}`);
     });

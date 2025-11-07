@@ -3,6 +3,7 @@ import {
     IaApiGetTasksResult,
     IaGetTasksBasicParams,
     IaGetTasksParams,
+    IaSubmitTaskData,
     IaSubmitTaskParams,
     IaTaskSummary,
     IaTaskType
@@ -79,7 +80,7 @@ export class IaCatalog {
     /**
      * Get the total counts of catalog tasks meeting all criteria, organized by run status (queued, running, error, and paused).
      * Important: If the supplied identifier does not exist, this method does not fail!
-     * @param identifier Item identifier. Both * (asterisk) and % (percentage sign) may be used as wildcard characters within criteria that accept them.
+     * @param identifier Item identifier. Both `'*'` (asterisk) and `'%'` (percentage sign) may be used as wildcard characters within criteria that accept them.
      * @param params Query parameters
      * @returns the total counts of catalog tasks meeting all criteria
      * @throws {IaApiError}
@@ -92,8 +93,7 @@ export class IaCatalog {
             catalog: 0,
             identifier
         };
-        const result = await this.makeTasksRequest<IaApiGetTasksResult>(getTaskParams);
-        return result.summary!;
+        return this.makeTasksRequest<IaApiGetTasksResult>(getTaskParams).then(result => result.summary!);
     }
 
     /**
@@ -103,7 +103,6 @@ export class IaCatalog {
      */
     public async *iterTasks(params: IaGetTasksParams = {}): AsyncGenerator<IaCatalogTask> {
         let cursor: string | undefined = params.cursor;
-
         do {
             const result = await this.makeTasksRequest<IaApiGetTasksResult>(params);
             for (const row of result.catalog ?? []) {
@@ -129,6 +128,7 @@ export class IaCatalog {
         return result;
     }
 
+    // TODO change to submittime_gt, etc...
     /**
      * Get a list of all tasks meeting all criteria. 
      * The list is ordered by submission time.
@@ -139,7 +139,6 @@ export class IaCatalog {
      * @param params.submitter
      * @param params.priority
      * @param params.wait_admin
-     * // TODO change to submittime_gt, etc...
      * @param params'submittime>'
      * @param params'submittime<'
      * @param params'submittime>='
@@ -147,7 +146,7 @@ export class IaCatalog {
      * @param params.cursor
      * @param params.catalog
      * @param params.history
-     * @param params.identifier The item identifier, if provided will return tasks for only this item filtered by other criteria provided in params.
+     * @param params.identifier The item identifier, if provided, will return tasks for only this item filtered by other criteria provided in params.
      * @returns A list of all tasks meeting all criteria.
      */
     public async getTasks(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): Promise<IaCatalogTask[]> {
@@ -176,7 +175,9 @@ export class IaCatalog {
 
     /**
      * Submit a task
-     * @param {IaSubmitTaskParams} param0 Options
+     * 
+     * See {@link https://archive.org/developers/tasks.html#task-submission|Task submission}
+     * @param param0 Options
      * @param param0.identifier Item identifier
      * @param param0.cmd Task command to submit. See {@link https://archive.org/services/docs/api/tasks.html#supported-tasks | Supported task commands}
      * @param param0.comment A reasonable explanation for why the task is being submitted
@@ -190,21 +191,21 @@ export class IaCatalog {
         cmd,
         comment,
         priority = 0,
-        data = {},
+        args,
         headers = {}
     }: IaSubmitTaskParams): Promise<Response> {
-        const _data: TODO = {
-            ...data,
+        const data: IaSubmitTaskData = {
+            args,
             cmd,
             identifier,
             priority,
         };
         if (comment) {
-            _data.args ??= {};
-            _data.args.comment = comment;
+            data.args ??= {};
+            data.args.comment = comment;
         }
         return this.session.post(this.url, {
-            body: JSON.stringify(_data),
+            body: JSON.stringify(data),
             headers
         });
     }

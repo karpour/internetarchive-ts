@@ -469,9 +469,10 @@ export type IaFileExtendedMetadata = IaFileBaseMetadata & IaFileDefinedByIaMetad
     /**
      * Publication Date
      * 
-     * Date of publication
      * We encourage people to use YYYY, YYYY-MM, or YYYY-MM-DD for this field, but sometimes exact dates are not possible to determine. Other common usages: [YYYY] (brackets) when a date is not certain; c.a. YYYY (c.a.) when a date is approximate; and [n.d.] when a date is unknown (you may also leave the field blank in this case). If an item has a date range, such as YYYY-YYYY, we currently index only the first date in the range. Books, movies, and CDs often only have YYYY for a publication date. Magazines often have YYYY-MM for a publication date. Concerts and articles often have YYYY-MM-DD publication dates. Use the most specific verifiable date you have access to. When the item is a digitial representation of a physical piece of media (e.g. a book, a 78rpm disc, etc.) the publication date should represent the date that the specific physical item was published. A book may have been written in 1850, and then an edition was republished in 1885. If the digitized version is the edition republished in 1885, use 1885 as the publication date (not 1850).
+     * 
      * Defined by: uploader
+     * 
      * Edit access: uploader
      * 
      * See {@link https://archive.org/developers/metadata-schema/index.html#date}

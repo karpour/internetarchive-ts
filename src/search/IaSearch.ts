@@ -57,12 +57,16 @@ export class IaSearch<const Fields extends string[] | undefined> extends IaBaseS
         super(session, query);
 
         this.fields = fields ?? [];
+
+        // fields must include identifier
         if (!this.fields.includes('identifier')) {
             this.fields.push('identifier');
         }
+
         if (sorts) {
             this.sorts = sorts.length === 0 ? undefined : sorts;
         }
+        
         this.url = `${this.session.url}/services/search/v1/scrape`;
         this.limit = limit;
 

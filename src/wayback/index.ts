@@ -182,7 +182,7 @@ const WaybackErrorMapping = {
     "error:unauthorized": "The server requires authentication (HTTP status=401).",
 } as const;
 
-type StatusExt = keyof typeof WaybackErrorMapping;
+export type StatusExt = keyof typeof WaybackErrorMapping;
 
 
 
@@ -310,7 +310,7 @@ function createSearchParams(options: Record<string, string | string[] | number |
  * @returns Results as an array of result objects
  */
 export async function getSnapshotMatches<T extends WaybackCdxField[] | undefined>(url: string, options?: WaybackCdxOptions<T>):
-    Promise<Prettify<WaybackSnapshotResponse<WaybackCdxOptions<T>>>[]> {
+    Promise<Prettify<WaybackSnapshotResponse<T>>[]> {
 
     /** New options object where fls are merged into a single comma-separated string */
     const opt: Omit<WaybackCdxOptions<T>, "fl"> & { fl?: string; } | undefined = {
@@ -325,10 +325,8 @@ export async function getSnapshotMatches<T extends WaybackCdxField[] | undefined
     // TODO make this use the session get method
     const matches: ArrayOfArraysWithHeaderRow<any> = await (await fetch(`${WAYBACK_CDX_API_URL}?${searchParams.toString()}`,)).json();
 
-    return convertArrayOfArraysWithHeaderRow(matches) as Prettify<WaybackSnapshotResponse<WaybackCdxOptions<T>>>[];
+    return convertArrayOfArraysWithHeaderRow(matches) as Prettify<WaybackSnapshotResponse<T>>[];
 }
-
-
 
 // All possible fields that can be returned by the WayBack CDX API
 export const WAYBACK_CDX_FIELDS = [
@@ -399,9 +397,9 @@ type WaybackSnapshotOptionalFields = {
     dupecount: string;
 };
 
-type WaybackSnapshotResponse<O extends WaybackCdxOptions<any>> = Prettify<
-    (O["fl"] extends WaybackCdxField[] ? Pick<WaybackSnapshotInfo, O["fl"][number]> : WaybackSnapshotInfo) &
-    O extends { showDupeCount: true; } ? Pick<WaybackSnapshotOptionalFields, "dupecount"> : {}>;
+type WaybackSnapshotResponse<F extends WaybackCdxField[] | undefined, O extends WaybackCdxOptions<F> = WaybackCdxOptions<F>> = Prettify<
+    (F extends WaybackCdxField[] ? Pick<WaybackSnapshotInfo, F[number]> : WaybackSnapshotInfo) &
+    (O extends { showDupeCount: true; } ? Pick<WaybackSnapshotOptionalFields, "dupecount"> : {})>;
 
 export type WaybackCdxField = Prettify<keyof WaybackSnapshotInfo>;
 
@@ -438,8 +436,12 @@ type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
     to?: number;
     filter?: WaybackCdxFilter | WaybackCdxFilter[];
     /**
+     * It is possible to track how many CDX lines were skipped due to Filtering
+     * and Collapsing by adding the special skipcount counter with
+     * `showSkipCount = true`.
      * 
-     * It is possible to track how many CDX lines were skipped due to Filtering and Collapsing by adding the special skipcount counter with showSkipCount=true. An optional endtimestamp count can also be used to print the timestamp of the last capture by adding lastSkipTimestamp=true
+     * An optional endtimestamp count can also be used to print the timestamp
+     * of the last capture by adding lastSkipTimestamp=true
      * @see {@link https://archive.org/developers/wayback-cdx-server.html#duplicate-counter}
      */
     showDupeCount?: true;
@@ -448,7 +450,7 @@ type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
      */
     showSkipCount?: true;
     lastSkipTimestamp?: true;
-    fl?: T;
+    fl: T;
     /**
      * Page number
      * If pagination is not supported, the CDX server will return a 400.
@@ -490,7 +492,7 @@ type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
  * 
  * `"domain"` will return results from host archive.org and all subhosts, e.g. *.archive.org;
  */
-type WaybackCdxMatchType = "exact" | "prefix" | "host" | "domain";
+export type WaybackCdxMatchType = "exact" | "prefix" | "host" | "domain";
 
-
-type WaybackSnapshotMimeType = "text/html" | "warc/revisit";
+// TODO 
+export type WaybackSnapshotMimeType = "text/html" | "warc/revisit" | string;

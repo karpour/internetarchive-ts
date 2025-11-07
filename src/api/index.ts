@@ -43,7 +43,7 @@ import { handleIaApiError } from "../util/handleIaApiError";
  * 
  * @param config A dictionary used to configure your session.
  * @param debug To be passed on to this session's method calls.
- * @returns a new ArchiveSession object
+ * @returns a new {@link IaSession} object
  */
 export function getSession(config?: IaAuthConfig, debug: boolean = false): IaSession {
     return new IaSession(config);
@@ -151,6 +151,7 @@ export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetad
 /**
  * Download files from an item.
  * @param identifier The globally unique Archive.org item identifier.
+ * @param params
  * @param params.files Only return files matching the given file names.
  * @param params.formats Only return files matching the given formats.
  * @param params.globPattern Only return files matching the given glob pattern.
@@ -188,7 +189,7 @@ export function downloadFiles(identifier: string, params: IaItemDownloadParams &
  * @param params.accessKey IA-S3 accessKey to use when making the given request.
  * @param params.secretKey IA-S3 secretKey to use when making the given request.
  * @param params.getItemKwargs
- * @throws {IaApiError} - {@link IaApiError}
+ * @throws API Error {@link IaApiError}
  * @returns 
  */
 export async function deleteFiles(identifier: string, params: IaDeleteItemParams): Promise<Response[]> {

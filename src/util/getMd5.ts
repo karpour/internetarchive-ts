@@ -1,7 +1,13 @@
 import fs from 'fs';
-import { createHash } from "crypto";
+import { BinaryLike, createHash } from "crypto";
 import { IaTypeError } from '../error';
 
+/**
+ * Generates md5 hash for the specified input data
+ * @param body Input data. If a string is supplied, it is assumed to be a file 
+ *             path, and the md5 will be generated for the contents of the file.
+ * @returns md5 hash
+ */
 export function getMd5(body: string | Buffer | Blob): Promise<string> {
     if (typeof body === "string") {
         return getMd5FromFile(body);
@@ -19,14 +25,15 @@ export function getMd5FromFile(filePath: string): Promise<string> {
         const hash = createHash('md5');
         const fileStream = fs.createReadStream(filePath, 'utf-8');
 
-        fileStream.on('data', d => hash.update(d));
+        fileStream.on('data', d => hash.update(d as BinaryLike));
         fileStream.on('end', () => resolve(hash.digest('hex')));
         fileStream.on('error', err => reject(err));
     });
 }
 
 export async function getMd5FromBuffer(buffer: Buffer): Promise<string> {
-    return createHash('md5').update(buffer).digest('hex');
+    // TODO figure out more proper way
+    return createHash('md5').update(buffer as BinaryLike).digest('hex');
 }
 
 export async function getMd5FromBlob(blob: Blob): Promise<string> {

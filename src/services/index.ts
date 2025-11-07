@@ -6,6 +6,8 @@ import {
 } from "../types";
 import { handleIaApiError } from "../util";
 
+// TODO use session fetch
+
 type IaAnnouncementsResponse = IaApiJsonResult<{ posts: IaAnnouncementItem[]; }>;
 
 /**
@@ -39,10 +41,10 @@ export async function getMediacounts(): Promise<IaMediacounts> {
 type IaTopCollectionsResponse = IaApiJsonResult<{ docs: IaTopCollectionInfo[]; }>;
 
 /**
- * Get top collections from the `colletions` endpoint of the home page API
+ * Get top collections from the `collections` endpoint of the home page API
  * @param count number of top collections to return
  * @param page Page number
- * @returns Array of to `count` items of collection info
+ * @returns Array of up to `count` items of collection info
  */
 export async function getTopCollections(count: number = 50, page: number = 1): Promise<IaTopCollectionInfo[]> {
     const response = await fetch(`https://archive.org/services/offshoot/home-page/collections.php?${new URLSearchParams({ page: `${page}`, count: `${count}` }).toString()}`);

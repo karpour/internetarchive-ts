@@ -1,6 +1,7 @@
 import { Writable } from "stream";
-import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaSortOption, IaTaskPriority, IaTaskType, Prettify } from ".";
+import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaSortOption, IaTaskPriority, IaTaskRequestHttpHeaders, IaTaskType, Prettify } from ".";
 import IaSession from "../session/IaSession";
+import { TODO } from "../todotype";
 
 export type IaSessionParams = {
     /** IA-S3 accessKey to use when making the given request. */
@@ -211,9 +212,22 @@ export type IaSubmitTaskParams = {
     priority: IaTaskPriority,
     /** Extra POST data to submit with the request. 
      * Refer to {@link https://archive.org/services/docs/api/tasks.html#request-entity | Tasks API Request Entity} */
-    data?: Record<string, any>,
+    args?: Record<string, TODO>,
     /** Additional headers to add to the request */
-    headers?: HttpHeaders;
+    headers?: IaTaskRequestHttpHeaders;
+};
+
+
+/** See {@link https://archive.org/developers/tasks.html#request-entity|Request Entity} */
+export type IaSubmitTaskData = {
+    /** Identifier */
+    identifier: string,
+    /** Task command to submit. See {@link https://archive.org/services/docs/api/tasks.html#supported-tasks | Supported task commands} */
+    cmd: IaTaskType,
+    /** Task priority from 10 to -10 */
+    priority: IaTaskPriority,
+    /** Map of key - value pairs */
+    args?: Record<string, TODO>,
 };
 
 export type IaMetadataRequestPrepareBodyParams = {

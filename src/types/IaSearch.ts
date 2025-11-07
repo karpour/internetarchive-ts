@@ -175,6 +175,7 @@ export type IaFullTextSearchParams = {
 
 export type IaUserAggsSearchParams = Pick<IaAdvancedSearchParams, 'q' | 'page' | 'rows'> & {
     user_aggs: string;
+    user_aggs_size?: number;
 };
 
 export type IaScrapeSearchResult<Fields extends string> = {

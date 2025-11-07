@@ -88,7 +88,7 @@ export class IaItem<
 
     /** A copyable link to the item, in MediaWiki format */
     public readonly wikilink?: string;
-    static readonly DEFAULT_URL_FORMAT = (itm: IaItem, path: string) => `${itm.session.url}/${path}/${itm.identifier}`;
+    static readonly DEFAULT_URL_FORMAT = (item: IaItem, path: string) => `${item.session.url}/${path}/${item.identifier}`;
 
     /** Item URL types */
     public readonly urls: IaItemUrls;
@@ -240,7 +240,7 @@ export class IaItem<
             {
                 comment: '',
                 priority,
-                data,
+                args: data, // TODO
                 headers,
                 reducedPriority
             });
@@ -284,7 +284,7 @@ export class IaItem<
             {
                 comment: '',
                 priority,
-                data,
+                args: data.args,
                 headers,
                 reducedPriority
             });
@@ -320,7 +320,7 @@ export class IaItem<
             {
                 comment,
                 priority,
-                data,
+                args: data, // TODO
                 reducedPriority
             });
         if (!response.ok) {
@@ -352,7 +352,7 @@ export class IaItem<
             {
                 comment,
                 priority,
-                data,
+                args: data,
                 reducedPriority
             });
         if (!response.ok) {
@@ -921,11 +921,11 @@ export class IaItem<
      * @example // Uploading file objects
      * 
      * const f = Buffer.from("some data");
-     * const r = item.upload({'remote-name.txt': f});
+     * const r = item.upload({name: 'remote-name.txt', fileData: f});
      * 
      * @example // Setting the remote filename with an object
      * 
-     * const r = item.upload({'remote-name.txt': '/path/to/local/file.txt'})
+     * const r = item.upload({name: 'remote-name.txt', fileData: '/path/to/local/file.txt'})
      * 
      * @param files 
      * @param param1

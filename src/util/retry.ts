@@ -1,0 +1,30 @@
+import log from "../log";
+
+/**
+ * Retries an async function up to a specified a number of times
+ * @param func Function to retry
+ * @param maxRetries Maximum number of retries
+ * @param cooldown optional cooldown between retries in ms
+ * @returns result of the function if the original try or any of the retries succeeds
+ * @throws {Error} Error of the last failed function call, if none of the retries is successful 
+ */
+export async function retry<T>(func: () => Promise<T>, maxRetries: number, cooldown: number = 0): Promise<T> {
+    let attempts: number = 1;
+    do {
+        try {
+            return await func();
+        } catch (err) {
+            log.error(err as any);
+            log.warning(`Failed to execute function, retrying (${attempts}/${maxRetries})`);
+            if (++attempts <= maxRetries) continue;
+            throw err;
+        }
+    } while (true);
+}
+
+async function alwaysFail(): Promise<void> {
+    if (Math.random() < 0.8) throw new Error("failed");
+}
+
+log.info("Testing");
+retry(() => alwaysFail(), 5);

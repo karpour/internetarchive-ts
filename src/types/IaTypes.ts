@@ -167,6 +167,27 @@ export type HttpHeaders = Record<string, string>;
 
 export type HttpParams = Record<string, string>;
 
+/** Custom HTTP headers */
+
+type IaAcceptReducedPriorityHeader = {
+  /** Header value should be a string describing which error should be simulated by the service. `"help"` may be used to return a list of errors which can be simulated. */
+  "X-Archive-Simulate-Error"?: (string & {}) | "help";
+};
+
+type IaArchiveSimulateErrorHeader = {
+  /** When set to a true-ish value (e.g., 1), a client submitting a task for execution can avoid rate limiting. The task will be queued at a reduced priority. */
+  "X-Accept-Reduced-Priority"?: string;
+};
+
+/** See {@link https://archive.org/developers/iarest.html#request-headers|Custom Headers} */
+export type IaTaskRequestHttpHeaders = Prettify<HttpHeaders & IaAcceptReducedPriorityHeader & IaArchiveSimulateErrorHeader>;
+
+/** See {@link https://archive.org/developers/iarest.html#request-headers|Custom Headers} */
+export type IaMetadataRequestHttpHeaders = Prettify<HttpHeaders & IaAcceptReducedPriorityHeader>;
+
+/** See {@link https://archive.org/developers/iarest.html#request-headers|Custom Headers} */
+export type IaS3RequestHttpHeaders = Prettify<HttpHeaders & IaArchiveSimulateErrorHeader>;
+
 
 export type IaFileObject = { name: string, fileData: Buffer | string; };
 
@@ -319,7 +340,7 @@ export type IaMediaType = typeof IA_MEDIA_TYPES[number];
  * @see {@link https://archive.org/services/docs/api/tasks.html | Tasks API}
  */
 export type IaGetTasksBasicParams = {
-  /** task identifier */
+  /** Task identifier */
   task_id?: number;
   /** IA node task will or was executed upon (may be wildcarded) */
   server?: string;
@@ -333,20 +354,14 @@ export type IaGetTasksBasicParams = {
   priority?: number;
   /** Task run state (see below) */
   wait_admin?: number;
-
-  /** YYYY-MM-DD */
+  /** Filter by submit time greater than supplied time. Time must be formatted as `"YYYY-MM-DD"` */
   'submittime>'?: string;
-
-  /** YYYY-MM-DD */
+  /** Filter by submit time lower than supplied time. Time must be formatted as `"YYYY-MM-DD"` */
   'submittime<'?: string;
-
-  /** YYYY-MM-DD */
+  /** Filter by submit time greater or equal to supplied time. Time must be formatted as `"YYYY-MM-DD"` */
   'submittime>='?: string;
-
-  /** YYYY-MM-DD */
+  /** Filter by submit time lower or equal to supplied time. Time must be formatted as `"YYYY-MM-DD"` */
   'submittime<='?: string;
-
-
   /** The current default is 50 tasks per request, but the caller may request more with the limit parameter 
    * The current maximum limit is 500 tasks. Values outside this range are clamped to the server maximum.
    * If the caller wishes to receive all tasks in a single round-trip, they may set limit=0 in the request query.
@@ -354,13 +369,13 @@ export type IaGetTasksBasicParams = {
    * 
   */
   limit?: number;
-
+  /** Cursor for pagination */
   cursor?: string;
 };
 
 
 /**
- * Params for the {@link Catalog.getTasks} method
+ * Params for the {@link IaCatalog.getTasks} method
  * @see {@link https://archive.org/services/docs/api/tasks.html | Tasks API}
  */
 export type IaGetTasksParams = Prettify<IaGetTasksBasicParams & {
@@ -520,6 +535,7 @@ type ObjectValuesOf<T> = Exclude<
   Array<any>
 >;
 
+// TODO replace any's with possibly {}
 type UnionToIntersection<U> = (U extends any
   ? (k: U) => void
   : never) extends ((k: infer I) => void)
