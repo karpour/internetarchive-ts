@@ -23,6 +23,8 @@ export type IaItemBaseMetadata = {
     publicdate?: string;
     /** Indicates to the website what collection(s) this item belongs to. */
     collection: IaCollectionId | IaCollectionId[];
+    /** Optional search term for collections */
+    search_collection?: string;
 } & IaBaseMetadataType;
 
 export type IaSearchResultMetaItem<F extends string> = {

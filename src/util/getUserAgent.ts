@@ -5,6 +5,7 @@ import { PACKAGE_VERSION } from "../PACKAGE_VERSION";
  * @returns Tuple of runtime and optional version
  */
 export function getRuntime(): [runTime: string, version?: string] {
+    // TODO figure out which browser
     if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
         return ['Browser'];
     } else if (typeof global !== 'undefined' && (global as any).Deno) {

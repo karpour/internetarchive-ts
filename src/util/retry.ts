@@ -1,4 +1,5 @@
 import log from "../log";
+import { sleepMs } from "./sleepMs";
 
 /**
  * Retries an async function up to a specified a number of times
@@ -16,8 +17,10 @@ export async function retry<T>(func: () => Promise<T>, maxRetries: number, coold
         } catch (err) {
             log.error(err as any);
             log.warning(`Failed to execute function, retrying (${attempts}/${maxRetries})`);
-            if (++attempts <= maxRetries) continue;
-            throw err;
+            if (++attempts > maxRetries) throw err;
+        }
+        if (cooldown) {
+            await sleepMs(cooldown);
         }
     } while (true);
 }

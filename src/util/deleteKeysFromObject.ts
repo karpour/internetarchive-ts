@@ -1,8 +1,3 @@
-/** Type which omits all the keys that hava a value of type `RT` */
-export type TagsRemoved<T extends { [key: string]: any; }, RT extends string> = {
-    [K in keyof T as T[K] extends RT ? never : K]: T[K];
-} & {};
-
 /**
  * Recursively deletes keys that have value `valueToDelete` from an object
  * @param obj Object of which to delete keys from
@@ -20,5 +15,9 @@ export function deleteKeysFromObject<T extends { [key: string]: any; }, RT exten
     return obj as TagsRemoved<T, RT>;
 }
 
+/** Type which omits all the keys that hava a value of type `RT` */
+export type TagsRemoved<T extends { [key: string]: any; }, RT extends string> = {
+    [K in keyof T as T[K] extends RT ? never : K]: T[K] extends { [key: string]: any; } ? TagsRemoved<T[K], RT> : T[K];
+} & {};
 
 export default deleteKeysFromObject;

@@ -27,7 +27,7 @@ export type IaItemReview = {
     stars: `${IaItemReviewRating}`;
 };
 
-export type IaParsedItemReview = {
+export type IaItemReviewParsed = {
     /** Multiline text */
     reviewbody: string;
     /** A single line of text */

@@ -1,8 +1,12 @@
 import { parseIaUtcDate } from "./parseIaUtcDate";
-import { IaItemReview, IaItemReviewRating, IaParsedItemReview } from "../types/IaItemReview";
+import { IaItemReview, IaItemReviewRating, IaItemReviewParsed } from "../types/IaItemReview";
 
-
-export function convertIaItemReview(review: IaItemReview): IaParsedItemReview {
+/**
+ * Returns a review object where stars are converted to a number and dates are converted to Date objects
+ * @param review Review to convert
+ * @returns Converted review
+ */
+export function convertIaItemReview(review: IaItemReview): IaItemReviewParsed {
     return {
         ...review,
         stars: parseInt(review.stars) as IaItemReviewRating,

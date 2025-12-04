@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "cross-env NODE_ENV=testing ts-mocha --timeout 10000 --file \"./src/test/postTest.ts\" \"./src/**/*.spec.ts\"",
+    "test": "cross-env NODE_ENV=testing ts-mocha --timeout 1000 \"./src/**/*.spec.ts\"",
     "test:coverage": "nyc --reporter=html --reporter=text --reporter=text-summary npm test",
     "clean": "rm -rf ./lib",
     "build": "npm run clean && tsc",
@@ -26,7 +26,7 @@
   "devDependencies": {
     "@types/chai": "^4.3.3",
     "@types/mocha": "^10.0.0",
-    "@types/node": "^24.9.1",
+    "@types/node": "^24.10.1",
     "chai": "^4.3.6",
     "cross-env": "^7.0.3",
     "nyc": "^15.1.0",

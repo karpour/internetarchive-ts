@@ -163,3 +163,12 @@ export class IaApiInternalServerError extends IaApiError<500> {
         super(message, { ...options, status: 500 });
     }
 }
+
+/**
+ * Used to indicate that an upload failed due to being recognized as spam
+ */
+export class IaApiSpamError extends IaApiError<503> {
+    public constructor(message: string = "Spam Filter Error", options: IaApiErrorOptions) {
+        super(message, { ...options, status: 503 });
+    }
+}

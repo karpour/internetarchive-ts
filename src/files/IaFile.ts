@@ -68,7 +68,6 @@ function getTargetFile(target: string, defaultFilename: string): string {
 export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetadata> extends IaBaseFile<IaFileMeta> {
     public readonly url: string;
 
-    // TODO figure out the best way to ensure that this cannot be instantiated by anything but IaItem
     /**
      * 
      * @param item The item that the file is part of.

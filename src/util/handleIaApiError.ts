@@ -9,7 +9,6 @@ import {
     IaApiRangeError,
     IaApiScopeUnavailableError,
     IaApiElasticSearchError,
-    IaAuthenticationError,
     IaApiAuthenticationError
 } from "../error";
 import { IaApiJsonResult } from "../types";

@@ -39,7 +39,6 @@ import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams,
 import { IaBaseItem } from "./IaBaseItem";
 
 import { handleIaApiError } from "../util/handleIaApiError";
-import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
 import { patternsMatch } from "../util/patternsMatch";
 import { getFileSize } from "../util/getFileSize";
 import { normFilepath } from "../util/normFilePath";
@@ -52,6 +51,7 @@ import {
     IaApiError,
     IaApiFileUploadError,
     IaApiServiceUnavailableError,
+    IaApiSpamError,
     IaTypeError
 } from "../error";
 import { IaLongViewCountItem, IaShortViewCountItem } from "../types/IaViewCount";
@@ -187,7 +187,7 @@ export class IaItem<
      * @returns A list of completed catalog tasks for the item.
      */
     public async getTaskHistory(params?: IaGetTasksBasicParams): Promise<IaCatalogTask[]> {
-        return arrayFromAsyncGenerator(this.session.iterTaskHistory(this.identifier, params));
+        return Array.fromAsync(this.session.iterTaskHistory(this.identifier, params));
     }
 
     /**
@@ -196,7 +196,7 @@ export class IaItem<
      * @returns A list of pending catalog tasks for the item.
      */
     public async getCatalogTasks(params?: IaGetTasksBasicParams): Promise<IaCatalogTask[]> {
-        return arrayFromAsyncGenerator(this.session.iterCatalogTasks(this.identifier, params));
+        return Array.fromAsync(this.session.iterCatalogTasks(this.identifier, params));
     }
 
     /**
@@ -216,23 +216,19 @@ export class IaItem<
      *        Your task will more likely be accepted, but it might
      *        not run for a long time. Note that you still may be
      *        subject to rate-limiting.
-     * @param data 
-     * @param headers 
+     * @param args Additional optional args 
+     * @param headers Additional optional headers
      * @returns 
      */
     public async derive(
         priority: IaTaskPriority = 0,
         removeDerived?: string,
         reducedPriority: boolean = false,
-        data: Record<string, any> = {},
+        args: Record<string, any> = {},
         headers?: HttpHeaders
     ): Promise<Response> {
         if (removeDerived) {
-            if (!data.args) {
-                data.args = { removeDerived: removeDerived };
-            } else {
-                data.args.removeDerived = removeDerived;
-            }
+            args.removeDerived = removeDerived;
         }
         const response = await this.session.submitTask(
             this.identifier,
@@ -240,7 +236,7 @@ export class IaItem<
             {
                 comment: '',
                 priority,
-                args: data, // TODO
+                args,
                 headers,
                 reducedPriority
             });
@@ -305,14 +301,14 @@ export class IaItem<
      *        subject to rate-limiting. This is different than
      *        `priority` in that it will allow you to possibly
      *        avoid rate-limiting.
-     * @param data Additional parameters to submit with the task.
+     * @param args Additional arguments to submit with the task.
      * @returns TODO
      */
     public async undark(
         comment: string,
         priority: IaTaskPriority = 0,
         reducedPriority: boolean = false,
-        data?: Record<string, any>
+        args?: Record<string, any>
     ): Promise<Response> {
         const response = await this.session.submitTask(
             this.identifier,
@@ -320,7 +316,7 @@ export class IaItem<
             {
                 comment,
                 priority,
-                args: data, // TODO
+                args,
                 reducedPriority
             });
         if (!response.ok) {
@@ -329,13 +325,10 @@ export class IaItem<
         return response; // TODO process response
     }
 
-    // TODO dark and undark have different order for data and reduced_priority
-
     /**
      * Dark the item.
      * @param comment The curation comment explaining reason for darking item
      * @param priority The task priority.
-     * @param data Additional parameters to submit with the task.
      * @param reducedPriority Submit your derive at a lower priority.
      *        This option is helpful to get around rate-limiting.
      *        Your task will more likely be accepted, but it might
@@ -343,16 +336,17 @@ export class IaItem<
      *        subject to rate-limiting. This is different than
      *        `priority` in that it will allow you to possibly
      *        avoid rate-limiting.
+     * @param args Additional arguments to submit with the task.
      * @returns TODO
      */
-    public async dark(comment: string, priority: IaTaskPriority = 0, data?: Record<string, any>, reducedPriority: boolean = false): Promise<Response> {
+    public async dark(comment: string, priority: IaTaskPriority = 0, reducedPriority: boolean = false, args?: Record<string, any>): Promise<Response> {
         const response = await this.session.submitTask(
             this.identifier,
             'make_dark.php',
             {
                 comment,
                 priority,
-                args: data,
+                args,
                 reducedPriority
             });
         if (!response.ok) {
@@ -451,17 +445,17 @@ export class IaItem<
 
         const itemFiles = [...this.files];
         // Add support for on-the-fly files (e.g. EPUB).
-        
+
         // TODO make sure otf is still applicable
-        /**if (onTheFly) {
+        /*if (onTheFly) {
             const otfFiles: [string, string][] = [
                 ['EPUB', `${this.identifier}.epub`],
                 ['MOBI', `${this.identifier}.mobi`],
                 ['DAISY', `${this.identifier}_daisy.zip`],
                 ['MARCXML', `${this.identifier}_archive_marc.xml`],
             ];
-            for (let [format, fileName] of otfFiles) {
-                itemFiles.push({ name: fileName, format, otf: true });
+            for (let [format, name] of otfFiles) {
+                itemFiles.push({ name, format, otf: true });
             }
         }*/
 
@@ -489,33 +483,31 @@ export class IaItem<
         }
     }
 
-
-
     /**
-     * 
-     * @param param1 Download file parameters
-     * @param param1.files Only download files matching given file names.
-     * @param param1.formats Only download files matching the given Formats.
-     * @param param1.globPattern Only download files matching the given glob pattern.
-     * @param param1.excludePattern Exclude files whose filename matches the given glob pattern.
-     * @param param1.dryRun Output download URLs to stdout, don't download anything.
-     * @param param1.verbose Turn on verbose output.
-     * @param param1.ignoreExisting Skip files that already exist locally.
-     * @param param1.checksum Skip downloading file based on checksum.
-     * @param param1.destdir The directory to download files to.
-     * @param param1.noDirectory Download files to current working directory rather than creating an item directory.
-     * @param param1.retries The number of times to retry on failed requests.
-     * @param param1.itemIndex The index of the item for displaying progress in bulk downloads.
-     * @param param1.ignoreErrors Don't fail if a single file fails to download, continue to download other files.
-     * @param param1.onTheFly Download on-the-fly files (i.e. derivative EPUB, MOBI, DAISY files).
-     * @param param1.returnResponses Rather than downloading files to disk, return a list of response objects.
-     * @param param1.noChangeTimestamp If true, leave the time stamp as the current time instead of changing it to that given in the original archive.
-     * @param param1.ignoreHistoryDir Do not download any files from the history dir. This param defaults to ``false``.
-     * @param param1.source Filter files based on their source value in files.xml (i.e. `original`, `derivative`, `metadata`).
-     * @param param1.excludeSource Filter files based on their source value in files.xml (i.e. `original`, `derivative`, `metadata`).
-     * @param param1.stdout 
-     * @param param1.params URL parameters to send with download request (e.g. `cnt=0`).
-     * @param param1.timeout 
+     * Download a file
+     * @param param0 Download file parameters
+     * @param param0.files Only download files matching given file names.
+     * @param param0.formats Only download files matching the given Formats.
+     * @param param0.globPattern Only download files matching the given glob pattern.
+     * @param param0.excludePattern Exclude files whose filename matches the given glob pattern.
+     * @param param0.dryRun Output download URLs to stdout, don't download anything.
+     * @param param0.verbose Turn on verbose output.
+     * @param param0.ignoreExisting Skip files that already exist locally.
+     * @param param0.checksum Skip downloading file based on checksum.
+     * @param param0.destdir The directory to download files to.
+     * @param param0.noDirectory Download files to current working directory rather than creating an item directory.
+     * @param param0.retries The number of times to retry on failed requests.
+     * @param param0.itemIndex The index of the item for displaying progress in bulk downloads.
+     * @param param0.ignoreErrors Don't fail if a single file fails to download, continue to download other files.
+     * @param param0.onTheFly Download on-the-fly files (i.e. derivative EPUB, MOBI, DAISY files).
+     * @param param0.returnResponses Rather than downloading files to disk, return a list of response objects.
+     * @param param0.noChangeTimestamp If true, leave the time stamp as the current time instead of changing it to that given in the original archive.
+     * @param param0.ignoreHistoryDir Do not download any files from the history dir. This param defaults to ``false``.
+     * @param param0.source Filter files based on their source value in files.xml (i.e. `original`, `derivative`, `metadata`).
+     * @param param0.excludeSource Filter files based on their source value in files.xml (i.e. `original`, `derivative`, `metadata`).
+     * @param param0.stdout 
+     * @param param0.params URL parameters to send with download request (e.g. `cnt=0`).
+     * @param param0.timeout 
      * 
      * @returns true if if all files have been downloaded successfully.
      */
@@ -827,7 +819,8 @@ export class IaItem<
             method: 'PUT',
             headers,
             auth: this.session.auth,
-            body: _body,
+            // TODO fix/test
+            body: _body as any,
             metadata,
             fileMetadata,
             queueDerive
@@ -865,9 +858,8 @@ export class IaItem<
                 if ((response.status == 503) && (retries > 0)) {
                     const text = await response.text();
                     if (text.includes('appears to be spam')) {
-                        // TODO 503 error obj
                         log.error('detected as spam, upload failed');
-                        break;
+                        throw new IaApiSpamError(text, { response, request });
                     }
                     log.info(`s3 is overloaded, sleeping for ${retriesSleep} seconds and retrying. ${retries} retries left.`);
                     await sleepMs(retriesSleep);

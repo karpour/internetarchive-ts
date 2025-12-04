@@ -11,8 +11,31 @@ type IaPrepareMetadataParams<M extends IaBaseMetadataType, S extends IaBaseMetad
     insert?: boolean;
 };
 
-
-
+/** @internal */
+export function createIndexedKeys(metadata: IaBaseMetadataType, sourceMetadata: IaBaseMetadataType = {}): [indexedKeys: Record<string, number>, metadataStringified: Record<string, string>] {
+    /** Copy of the new Metadata with all values stringified */
+    const metadataStringified: Record<string, string> = {};
+    /** indexedKeys counter Record
+     * @example
+     * { subject: 3 } // subject (with the index removed) appears 3 times in the metadata dict.
+     */
+    const indexedKeys: Record<string, number> = {};
+    for (const [key, val] of Object.entries(metadata)) {
+        // Convert number values to strings into our new metadata array
+        metadataStringified[key] = `${val}`;
+        const [parsedKey, idx] = extractKeyAndIndex(key);
+        if (idx !== undefined) {
+            const cnt = indexedKeys[parsedKey];
+            indexedKeys[parsedKey] = cnt === undefined ?
+                // Initialize count.
+                // If key without index exists, already count it here
+                (sourceMetadata[parsedKey] !== undefined ? 2 : 1) :
+                // Otherwise, increase counter
+                cnt + 1;
+        }
+    }
+    return [indexedKeys, metadataStringified];
+}
 
 /**
  * Prepare a metadata object for an {@link S3Request} or a {@link IaMetadataRequest}
@@ -30,69 +53,48 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
     appendList = false,
     insert = false }: IaPrepareMetadataParams<M, S>): IaRawMetadata<M & S> {
 
-    // Copy of the new Metadata, will be populated in the next for loop
-    const _metadata: Record<string, string> = {};
-
     // TODO convert source and new metadata to raw
     // Make a deepcopy of sourceMetadata if it exists. A deepcopy is
     // necessary to avoid modifying the original dict.
-    const _sourceMetadata: IaRawMetadata = sourceMetadata ? convertToRawMetadata(sourceMetadata) : {};
+    const sourceMetadataRaw: IaRawMetadata = sourceMetadata ? convertToRawMetadata(sourceMetadata) : {};
     const preparedMetadata: IaRawMetadata = {};
 
-    // Create indexedKeys counter dict. i.e.: {'subject': 3} -- subject
-    // (with the index removed) appears 3 times in the metadata dict.
-    const indexedKeys: Record<string, number> = {};
-    for (const entry of Object.entries(metadata)) {
-        const [key, val] = entry;
-        // Convert number values to strings into our new metadata array
-        _metadata[key] = `${val}`;
-        const [parsedKey, idx] = extractKeyAndIndex(key);
-        if (idx !== undefined) {
-            const cnt = indexedKeys[parsedKey];
-            indexedKeys[parsedKey] = cnt === undefined ?
-                // Initialize count.
-                // If key without index exists, already count it here
-                (_sourceMetadata[parsedKey] !== undefined ? 2 : 1) :
-                // Otherwise, increase counter
-                cnt + 1;
-        }
-    }
-
+    const [indexedKeys, metadataStringified] = createIndexedKeys(metadata, sourceMetadataRaw);
 
     // Initialize the values for all indexedKeys.
-    for (const key in indexedKeys) {
+    for (const [key, cnt] of Object.entries(indexedKeys)) {
         preparedMetadata[key] = [
             // Initialize the value in the preparedMetadata dict.
-            ...makeArray(_sourceMetadata[key] ?? []),
+            ...makeArray(sourceMetadataRaw[key] ?? []),
             // Fill the value of the preparedMetadata key with "" values
             // so all indexed items can be indexed in order.
-            ...(new Array(indexedKeys[key]! - 1).fill(""))
+            ...(new Array(cnt - 1).fill(""))
         ];
     }
 
     // Index all items which contain an index.
-    for (const key in _metadata) {
+    for (const key in metadataStringified) {
         const [parsedKey, idx] = extractKeyAndIndex(key);
 
         // Insert values from indexed keys into preparedMetadata dict.
         if (idx !== undefined && !insert) {
             if (idx < preparedMetadata[parsedKey]!.length) {
                 // This is how it should be
-                (preparedMetadata[parsedKey] as string[])[idx] = _metadata[key]!;
+                (preparedMetadata[parsedKey] as string[])[idx] = metadataStringified[key]!;
             } else {
                 // IDX exceeds array length?
                 // TODO
-                (preparedMetadata[parsedKey] as string[]).push(_metadata[key]!);
+                (preparedMetadata[parsedKey] as string[]).push(metadataStringified[key]!);
             }
-        } else if (appendList && _sourceMetadata[key] !== undefined) {
+        } else if (appendList && sourceMetadataRaw[key] !== undefined) {
             // If append is True, append value to sourceMetadata value.
 
             // TODO WTF
-        } else if (append && _sourceMetadata[key] !== undefined) {
-            preparedMetadata[key] = `${_sourceMetadata[key]} ${_metadata[key]}`;
-        } else if (insert && _sourceMetadata[parsedKey]) {
+        } else if (append && sourceMetadataRaw[key] !== undefined) {
+            preparedMetadata[key] = `${sourceMetadataRaw[key]} ${metadataStringified[key]}`;
+        } else if (insert && sourceMetadataRaw[parsedKey]) {
             const index = idx ?? 0;
-            const tempArray = makeArray(_sourceMetadata[parsedKey]!).splice(index, 0, _metadata[key]!);
+            const tempArray = makeArray(sourceMetadataRaw[parsedKey]!).splice(index, 0, metadataStringified[key]!);
             const insert_md: string[] = [];
 
             for (let _v of tempArray) {
@@ -102,7 +104,7 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
             }
             preparedMetadata[parsedKey] = insert_md;
         } else {
-            preparedMetadata[key] = _metadata[key]!;
+            preparedMetadata[key] = metadataStringified[key]!;
         }
     }
 
@@ -116,12 +118,12 @@ export function prepareMetadata<M extends IaBaseMetadataType, S extends IaBaseMe
         if (!_done.includes(key)) {
             const [parsedKey, kidx] = extractKeyAndIndex(key);
             let indexes: number[] = [];
-            for (let k in _metadata) {
+            for (let k in metadataStringified) {
                 if (!kidx) {
                     continue;
                 } else if (parsedKey !== key) {
                     continue;
-                } else if (_metadata[k] !== 'REMOVE_TAG') {
+                } else if (metadataStringified[k] !== 'REMOVE_TAG') {
                     continue;
                 } else {
                     indexes.push(kidx);

@@ -716,3 +716,11 @@ export type IaTopCollectionInfo = {
   title: string,
   item_count: `${number}`;
 };
+
+/**
+ * Response type for the identifierAvailable endpoint
+ */
+export type IaIdentifierAvailableResponse = {
+    identifier: string;
+    success: boolean;
+}

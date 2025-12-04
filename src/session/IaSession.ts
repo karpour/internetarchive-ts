@@ -29,7 +29,8 @@ import {
     IaSubmitTaskParams,
     IaCheckLimitApiResult,
     IaTaskSummary,
-    HttpMethod
+    HttpMethod,
+    IaIdentifierAvailableResponse
 } from "../types";
 import getUserAgent from "../util/getUserAgent";
 import { handleIaApiError } from "../util/handleIaApiError";
@@ -570,6 +571,30 @@ export class IaSession {
             throw await handleIaApiError({ response, responseBody: json });
         }
         return json.fields;
+    }
+
+    // TODO findUnique doesn't seem to change anything
+    /**
+     * Check identifier availability
+     * @param identifier Identifier
+     * @param findUnique 
+     * @returns 
+     */
+    public async checkIdentifierAvailable(identifier: string, findUnique: boolean = true): Promise<string> {
+        const url = `${this.url}/upload/app/upload_api.php`;
+        const form = new FormData();
+        form.append("name", "identifierAvailable");
+        form.append("identifier", identifier);
+        form.append("findUnique", findUnique ? "true" : "false");
+
+        const response = await this.post(url, { body: form });
+        const json = await response.json() as IaIdentifierAvailableResponse | IaApiJsonErrorResult;
+
+        if (!response.ok || isApiJsonErrorResult(json)) {
+            throw await handleIaApiError({ response, responseBody: json });
+        }
+
+        return json.identifier;
     }
 
     /**

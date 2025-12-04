@@ -13,7 +13,6 @@ import IaCatalogTask from "./IaCatalogTask";
 import {
     handleIaApiError,
     getApiResultValue,
-    arrayFromAsyncGenerator
 } from "../util";
 import { Readable } from "stream";
 import readline from "readline";
@@ -150,7 +149,7 @@ export class IaCatalog {
      * @returns A list of all tasks meeting all criteria.
      */
     public async getTasks(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): Promise<IaCatalogTask[]> {
-        return arrayFromAsyncGenerator(this.iterTasksNoLimit(params));
+        return Array.fromAsync(this.iterTasksNoLimit(params));
     }
 
     public async *iterTasksNoLimit(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): AsyncGenerator<IaCatalogTask> {

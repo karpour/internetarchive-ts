@@ -1,7 +1,6 @@
 import { IaValueError } from "../error";
 import { IaSession } from "../session/IaSession";
-import { IaBaseMetadataType, IaItemData, IaItemExtendedMetadata } from "../types";
-import { arrayFromAsyncGenerator } from "../util/arrayFromAsyncGenerator";
+import { IaBaseMetadataType, IaItemData } from "../types";
 import { IaItem } from "./IaItem";
 
 /** This class represents an archive.org collection. */
@@ -30,8 +29,7 @@ export class IaCollection<
     }
 
     public async getContents() {
-        // TODO can search_collection be string[]?
-        return this.doSearch('contents', this.metadata.search_collection as string ?? `collection:${this.identifier}`);
+        return this.doSearch('contents', this.metadata.search_collection ?? `collection:${this.identifier}`);
     }
 
     public async getSubcollections() {
@@ -41,7 +39,7 @@ export class IaCollection<
     protected async doSearch(name: string, query: string) {
         const searchResult = await this.session.searchAdvanced(query, { fields: ['identifier'] });
         this.searches[name] = searchResult;
-        const results = await arrayFromAsyncGenerator(searchResult.getResultsGenerator());
+        const results = await Array.fromAsync(searchResult.getResultsGenerator());
         if (name === "contents") {
             this.itemsCount = results.length;
         } else if (name === 'subcollections') {
