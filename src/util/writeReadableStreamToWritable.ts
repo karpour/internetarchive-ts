@@ -6,12 +6,8 @@ import { Writable } from "stream";
  * @param stream input stream
  * @param writable output stream
  */
-export async function writeReadableStreamToWritable(
-    stream: ReadableStream,
-    writable: Writable): Promise<void> {
+export async function writeReadableStreamToWritable(stream: ReadableStream, writable: Writable & { flush?: Function; }): Promise<void> {
     let reader = stream.getReader();
-    let flushable = writable as { flush?: Function; };
-
     try {
         while (true) {
             let { done, value } = await reader.read();
@@ -22,9 +18,7 @@ export async function writeReadableStreamToWritable(
             }
 
             writable.write(value);
-            if (typeof flushable.flush === "function") {
-                flushable.flush();
-            }
+            writable.flush?.();
         }
     } catch (error: unknown) {
         writable.destroy(error as Error);

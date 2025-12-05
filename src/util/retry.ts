@@ -15,7 +15,7 @@ export async function retry<T>(func: () => Promise<T>, maxRetries: number, coold
         try {
             return await func();
         } catch (err) {
-            log.error(err as any);
+            //log.error(err as any);
             log.warning(`Failed to execute function, retrying (${attempts}/${maxRetries})`);
             if (++attempts > maxRetries) throw err;
         }
@@ -24,10 +24,3 @@ export async function retry<T>(func: () => Promise<T>, maxRetries: number, coold
         }
     } while (true);
 }
-
-async function alwaysFail(): Promise<void> {
-    if (Math.random() < 0.8) throw new Error("failed");
-}
-
-log.info("Testing");
-retry(() => alwaysFail(), 5);

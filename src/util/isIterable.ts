@@ -3,9 +3,6 @@
  *
  * @returns
  */
-export function isIterable(input: any): input is Iterable<any> {
-    if (input === null || input === undefined) {
-        return false;
-    }
-    return typeof input[Symbol.iterator] === 'function';
+export function isIterable(input: unknown): input is Iterable<unknown> {
+    return Symbol.iterator in Object(input);
 }

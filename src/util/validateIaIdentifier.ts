@@ -2,7 +2,6 @@ import { IaInvalidIdentifierError } from "../error";
 
 const RegExp_IA_IDENTIFIER = /^[A-Za-z0-9\.][A-Za-z0-9-_\.]{2,79}$/;
 
-
 /**
  * Validate an Ia identifier
  * @param identifier Identifier to validate

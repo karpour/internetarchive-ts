@@ -1,5 +1,5 @@
 import { IaApiJsonErrorResult } from "../types";
 
-export function isApiJsonErrorResult(result: any): result is IaApiJsonErrorResult {
-    return result.error !== undefined;
+export function isApiJsonErrorResult(result: unknown): result is IaApiJsonErrorResult {
+    return Object(result).error !== undefined;
 }

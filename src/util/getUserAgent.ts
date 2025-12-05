@@ -1,21 +1,60 @@
 import { PACKAGE_VERSION } from "../PACKAGE_VERSION";
 
 /**
+ * @internal
  * Get runtime and version for creating a useragent string
  * @returns Tuple of runtime and optional version
  */
 export function getRuntime(): [runTime: string, version?: string] {
-    // TODO figure out which browser
-    if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
-        return ['Browser'];
-    } else if (typeof global !== 'undefined' && (global as any).Deno) {
-        return ['Deno', (global as any).Deno.version.deno];
-    } else if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-        return ['Node.js', process.version];
-    } else {
-        return ['UnknownRuntime'];
+    // Browser detection
+    if (typeof window !== "undefined" && typeof window.document !== "undefined") {
+        const nav = navigator as any;
+
+        // Use UA-CH if available (modern browsers)
+        if (nav.userAgentData?.brands?.length) {
+            const brand = nav.userAgentData.brands.find((b: any) =>
+                !/Not A Brand/i.test(b.brand)
+            );
+            if (brand) {
+                return [brand.brand, brand.version];
+            }
+        }
+
+        // Fallback to userAgent parsing
+        const ua = nav.userAgent || "";
+
+        // Very lightweight detection
+        if (/Edg\//.test(ua)) {
+            return ["Edge", ua.match(/Edg\/([\d.]+)/)?.[1]];
+        }
+        if (/Chrome\//.test(ua)) {
+            return ["Chrome", ua.match(/Chrome\/([\d.]+)/)?.[1]];
+        }
+        if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) {
+            return ["Safari", ua.match(/Version\/([\d.]+)/)?.[1]];
+        }
+        if (/Firefox\//.test(ua)) {
+            return ["Firefox", ua.match(/Firefox\/([\d.]+)/)?.[1]];
+        }
+
+        // Default fallback in browser context
+        return ["Browser"];
     }
+
+    // Deno
+    if (typeof global !== "undefined" && (global as any).Deno) {
+        return ["Deno", (global as any).Deno.version.deno];
+    }
+
+    // Node.js
+    if (typeof process !== "undefined" && process.versions?.node) {
+        return ["Node.js", process.version];
+    }
+
+    return ["UnknownRuntime"];
 }
+
+const runtimeTuple = getRuntime();
 
 /**
  * Creates a user agent string for this library
@@ -23,12 +62,12 @@ export function getRuntime(): [runTime: string, version?: string] {
  * @returns Generated user agent string. If the library runs in the browser, the browser user agent is returned
  */
 export default function getUserAgentString(accessKey?: string): string {
-    const [runTime, version] = getRuntime();
-    if (runTime !== 'Browser') {
+    const [runtime, version] = runtimeTuple;
+    if (runtime !== 'Browser') {
         const lang = Intl.DateTimeFormat().resolvedOptions().locale;
         const os = require("os");
-        return `internetarchive/${PACKAGE_VERSION} (${os.platform()} ${os.release()}; N; ${lang}${accessKey ? `; ${accessKey}` : ''}) ${runTime}${version ? `/${version}` : ''}`;
+        return `internetarchive/${PACKAGE_VERSION} (${os.platform()} ${os.release()}; N; ${lang}${accessKey ? `; ${accessKey}` : ''}) ${runtime}${version ? `/${version}` : ''}`;
     }
-    // todo
+    // TODO
     return window.navigator.userAgent;
 };

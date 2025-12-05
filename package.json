@@ -4,6 +4,7 @@
   "description": "Archive.org API wrapper written in Typescript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "scripts": {
     "test": "cross-env NODE_ENV=testing ts-mocha --timeout 1000 \"./src/**/*.spec.ts\"",
     "test:coverage": "nyc --reporter=html --reporter=text --reporter=text-summary npm test",
@@ -25,12 +26,23 @@
   },
   "devDependencies": {
     "@types/chai": "^4.3.3",
+    "@types/chai-as-promised": "^8.0.2",
     "@types/mocha": "^10.0.0",
     "@types/node": "^24.10.1",
     "chai": "^4.3.6",
+    "chai-as-promised": "^8.0.2",
     "cross-env": "^7.0.3",
     "nyc": "^15.1.0",
     "ts-mocha": "^10.0.0",
     "typedoc": "^0.27.6"
-  }
+  },
+  "mocha": {
+    "recursive": true,
+    "reporter": "spec",
+    "timeout": 5000,
+    "extension": ["js", "mjs"],
+    "spec": "src/**/*.spec.ts"
+  },
+  "mochaExplorer.files": "src/**/*.spec.ts",
+  "mochaExplorer.require": "ts-node/register"
 }
