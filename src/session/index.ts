@@ -1,3 +1,3 @@
-export * from "./IaSession";
-export * from "./getAuthConfig";
-export * from "./getConfigFilePath";
+export * from "./IaSession.js";
+export * from "./getAuthConfig.js";
+export * from "./getConfigFilePath.js";

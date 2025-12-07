@@ -1,6 +1,6 @@
-import { IaTypeError } from "../error";
-import { IaFileRequestTarget, IaPrepareFilesPatchParams } from "../types";
-import preparePatch from "./preparePatch";
+import { IaTypeError } from "../error/index.js";
+import { IaFileRequestTarget, IaPrepareFilesPatchParams } from "../types/index.js";
+import preparePatch from "./preparePatch.js";
 
 /**
  * Strips the "files/" prefix from a string

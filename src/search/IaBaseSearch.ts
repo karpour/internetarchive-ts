@@ -1,5 +1,5 @@
-import { IaItem } from "../item/IaItem";
-import IaSession from "../session/IaSession";
+import { IaItem } from "../item/IaItem.js";
+import IaSession from "../session/IaSession.js";
 
 export const IA_MIN_SEARCH_RESULT_COUNT = 100;
 export const IA_MAX_SEARCH_RESULT_COUNT = 10000;

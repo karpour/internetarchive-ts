@@ -1,4 +1,4 @@
-import { Optional, Prettify } from "./IaTypes";
+import { Optional, Prettify } from "./IaTypes.js";
 
 export type IaSearchResult<FieldNames extends readonly string[] | string[] = string[]> = Prettify<{
     responseHeader: {

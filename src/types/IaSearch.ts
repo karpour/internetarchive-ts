@@ -1,6 +1,6 @@
-import { IaSearchResultMetaItem } from "./IaItemMetadata";
-import { IaGetSessionParams } from "./IaParams";
-import { IaBaseMetadataType, IaQueryOutput, IaScope, IaSortOption, Prettify } from "./IaTypes";
+import { IaSearchResultMetaItem } from "./IaItemMetadata.js";
+import { IaGetSessionParams } from "./IaParams.js";
+import { IaBaseMetadataType, IaQueryOutput, IaScope, IaSortOption, Prettify } from "./IaTypes.js";
 
 export type IaFullTextSearchResult = {
     hits: {

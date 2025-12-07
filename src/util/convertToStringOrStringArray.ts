@@ -1,5 +1,5 @@
-import { IaTypeError } from "../error";
-import { IaMetadataValidFieldType, StringOrStringArray } from "../types";
+import { IaTypeError } from "../error/index.js";
+import { IaMetadataValidFieldType, StringOrStringArray } from "../types/index.js";
 
 /** 
  * @internal 

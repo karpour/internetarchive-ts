@@ -1,5 +1,5 @@
-import { getSession } from '../api';
-import { IaAuthConfig } from '../types';
+import { getSession } from '../api/index.js';
+import { IaAuthConfig } from '../types/index.js';
 
 async function main() {
     const config:IaAuthConfig = { 's3': { 'access': 'foo', 'secret': 'bar' } };

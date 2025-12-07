@@ -1,6 +1,6 @@
-import dateToYYYYMMDD from "../util/dateToYYYYMMDD";
-import { parseWaybackTimestamp } from "../util/parseWaybackTimestamp";
-import { getSnapshotMatches } from "../wayback";
+import dateToYYYYMMDD from "../util/dateToYYYYMMDD.js";
+import { parseWaybackTimestamp } from "../util/parseWaybackTimestamp.js";
+import { getSnapshotMatches } from "../wayback/index.js";
 
 async function main() {
     const query = process.argv[2] ?? 'http://www.archive.org';

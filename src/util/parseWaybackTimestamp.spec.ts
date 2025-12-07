@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { parseWaybackTimestamp } from "./parseWaybackTimestamp";
+import { parseWaybackTimestamp } from "./parseWaybackTimestamp.js";
 
 describe("parseWaybackTimestamp.ts", () => {
     it("parseWaybackTimestamp", () => {

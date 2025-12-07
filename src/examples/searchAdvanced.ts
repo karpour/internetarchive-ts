@@ -1,7 +1,7 @@
-import { getSession } from "../api";
-import { IaAuthConfig } from "../types";
-import { getCredentials } from "./getCredentials";
-import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
+import { getSession } from "../api/index.js";
+import { IaAuthConfig } from "../types/index.js";
+import { getCredentials } from "./getCredentials.js";
+import { IaAdvancedSearch } from "../search/IaAdvancedSearch.js";
 
 async function main() {
     /** Credentials read from "./.env.json" */

@@ -1,5 +1,5 @@
-import { IaBaseMetadataType, IaRawMetadata } from "../types";
-import { convertToStringOrStringArray } from "./convertToStringOrStringArray";
+import { IaBaseMetadataType, IaRawMetadata } from "../types/index.js";
+import { convertToStringOrStringArray } from "./convertToStringOrStringArray.js";
 
 export function convertToRawMetadata<T extends IaBaseMetadataType>(metadata: T): IaRawMetadata<T> {
     const rawMetadata: IaRawMetadata = {};

@@ -5,6 +5,6 @@
  * This module provides objects for interacting with the Archive.org
  * search engine.
  */
-export * from "./IaAdvancedSearch";
-export * from "./IaFullTextSearch";
-export * from "./IaSearch";
+export * from "./IaAdvancedSearch.js";
+export * from "./IaFullTextSearch.js";
+export * from "./IaSearch.js";

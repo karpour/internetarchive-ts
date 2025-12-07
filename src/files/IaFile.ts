@@ -1,17 +1,17 @@
 
-import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFileMetadataRaw, IaFileSourceMetadata } from "../types/IaFileMetadata";
-import { IaItem } from "../item/IaItem";
+import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFileMetadataRaw, IaFileSourceMetadata } from "../types/IaFileMetadata.js";
+import { IaItem } from "../item/IaItem.js";
 import fs, { mkdirSync, existsSync, statSync, unlinkSync, utimesSync } from "fs";
 import path from "path";
-import log from "../log";
-import { IaBaseFile } from "./IaBaseFile";
-import { IaFileDeleteParams, IaFileDownloadParams } from "../types/IaParams";
-import { handleIaApiError } from "../util/handleIaApiError";
+import log from "../log/index.js";
+import { IaBaseFile } from "./IaBaseFile.js";
+import { IaFileDeleteParams, IaFileDownloadParams } from "../types/IaParams.js";
+import { handleIaApiError } from "../util/handleIaApiError.js";
 import { Writable } from 'stream';
-import S3Request from "../request/S3Request";
-import { getMd5 } from "../util";
-import { IaBaseMetadataType } from "../types";
-import { writeReadableStreamToWritable } from "../util/writeReadableStreamToWritable";
+import S3Request from "../request/S3Request.js";
+import { getMd5 } from "../util/index.js";
+import { IaBaseMetadataType } from "../types/index.js";
+import { writeReadableStreamToWritable } from "../util/writeReadableStreamToWritable.js";
 
 function getTargetFile(target: string, defaultFilename: string): string {
     if (fs.existsSync(target)) {

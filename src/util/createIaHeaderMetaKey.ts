@@ -1,7 +1,7 @@
-import { IaMetaDataHeaderIndexedKey, IaMetaType } from "../types/IaTypes";
-import { replaceUnderScores } from "./replaceUnderScores";
-import { leftPad2 } from "./leftPad2";
-import { IaTypeError } from "../error";
+import { IaMetaDataHeaderIndexedKey, IaMetaType } from "../types/IaTypes.js";
+import { replaceUnderScores } from "./replaceUnderScores.js";
+import { leftPad2 } from "./leftPad2.js";
+import { IaTypeError } from "../error/index.js";
 
 /**
  * Creates a header key for modifying metadata via http header

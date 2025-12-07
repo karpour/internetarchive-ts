@@ -1,7 +1,7 @@
-import { IaValueError } from "../error";
-import { IaSession } from "../session/IaSession";
-import { IaBaseMetadataType, IaItemData } from "../types";
-import { IaItem } from "./IaItem";
+import { IaValueError } from "../error/index.js";
+import { IaSession } from "../session/IaSession.js";
+import { IaBaseMetadataType, IaItemData } from "../types/index.js";
+import { IaItem } from "./IaItem.js";
 
 /** This class represents an archive.org collection. */
 export class IaCollection<

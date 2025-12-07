@@ -1,9 +1,9 @@
-import { IaItemReview } from "./IaItemReview";
-import { IaItemBaseMetadata, IaItemExtendedMetadata, IaItemSourceMetadata } from "./IaItemMetadata";
-import { IaFilesXmlMetadata, IaFileBaseMetadata, IaFileSourceMetadata } from "./IaFileMetadata";
-import { IaSimplelistEntries, IaSimplelistEntry } from "./IaSimplelistEntry";
-import { IaBaseMetadataType, IaRawMetadata } from "./IaTypes";
-import { IaPageNumbersInfo } from "./IaPages";
+import { IaItemReview } from "./IaItemReview.js";
+import { IaItemBaseMetadata, IaItemExtendedMetadata, IaItemSourceMetadata } from "./IaItemMetadata.js";
+import { IaFilesXmlMetadata, IaFileBaseMetadata, IaFileSourceMetadata } from "./IaFileMetadata.js";
+import { IaSimplelistEntries, IaSimplelistEntry } from "./IaSimplelistEntry.js";
+import { IaBaseMetadataType, IaRawMetadata } from "./IaTypes.js";
+import { IaPageNumbersInfo } from "./IaPages.js";
 
 export type IaRawItemData = IaItemData<IaRawMetadata<IaItemBaseMetadata>, IaRawMetadata<IaFileBaseMetadata>>;
 

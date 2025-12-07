@@ -1,10 +1,10 @@
 import { createReadStream, statSync } from "fs";
 import path from "path";
 
-import log from "../log";
-import IaSession from "../session/IaSession";
-import IaCatalogTask from "../catalog/IaCatalogTask";
-import S3Request from "../request/S3Request";
+import log from "../log/index.js";
+import IaSession from "../session/IaSession.js";
+import IaCatalogTask from "../catalog/IaCatalogTask.js";
+import S3Request from "../request/S3Request.js";
 import {
     getMd5,
     lstrip,
@@ -12,7 +12,7 @@ import {
     recursiveFileCount,
     recursiveIterDirectoryWithKeys,
     sleepMs
-} from "../util";
+} from "../util/index.js";
 import {
     IaApiJsonResult,
     IaBaseMetadataType,
@@ -33,28 +33,28 @@ import {
     IaFixerOp,
     IaItemDeleteReviewParams,
     IaItemUrlType
-} from "../types";
-import { IaTaskPriority, IaTaskSummary } from "../types/IaTask";
-import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams, IaItemUploadFileParams, IaItemUploadParams } from "../types/IaParams";
-import { IaBaseItem } from "./IaBaseItem";
+} from "../types/index.js";
+import { IaTaskPriority, IaTaskSummary } from "../types/IaTask.js";
+import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams, IaItemUploadFileParams, IaItemUploadParams } from "../types/IaParams.js";
+import { IaBaseItem } from "./IaBaseItem.js";
 
-import { handleIaApiError } from "../util/handleIaApiError";
-import { patternsMatch } from "../util/patternsMatch";
-import { getFileSize } from "../util/getFileSize";
-import { normFilepath } from "../util/normFilePath";
-import { getApiResultValue } from "../util/getApiResultValue";
-import { readStreamToReadableStream } from "../util/readStreamToReadableStream";
+import { handleIaApiError } from "../util/handleIaApiError.js";
+import { patternsMatch } from "../util/patternsMatch.js";
+import { getFileSize } from "../util/getFileSize.js";
+import { normFilepath } from "../util/normFilePath.js";
+import { getApiResultValue } from "../util/getApiResultValue.js";
+import { readStreamToReadableStream } from "../util/readStreamToReadableStream.js";
 
-import { IaMetadataRequest } from "../request/IaMetadataRequest";
-import { IaFile } from "../files";
+import { IaMetadataRequest } from "../request/IaMetadataRequest.js";
+import { IaFile } from "../files/index.js";
 import {
     IaApiError,
     IaApiFileUploadError,
     IaApiServiceUnavailableError,
     IaApiSpamError,
     IaTypeError
-} from "../error";
-import { IaLongViewCountItem, IaShortViewCountItem } from "../types/IaViewCount";
+} from "../error/index.js";
+import { IaLongViewCountItem, IaShortViewCountItem } from "../types/IaViewCount.js";
 
 /** 
  * This class represents an archive.org item. Generally this class
@@ -92,8 +92,7 @@ export class IaItem<
 
     /** Item URL types */
     public readonly urls: IaItemUrls;
-    /** Session that this Instance uses to access the API */
-    public readonly session: IaSession;
+
 
     private getMd5: ((body: Blob | string | Buffer) => Promise<string>) = IaItem.getMd5;
 
@@ -119,8 +118,7 @@ export class IaItem<
         archiveSession: IaSession,
         itemData: IaItemData<ItemMetaType, ItemFileMetaType>,
     ) {
-        super(itemData);
-        this.session = archiveSession;
+        super(archiveSession, itemData);
         this.urls = this.makeUrls();
 
         if (this.metadata.title) {
@@ -378,6 +376,7 @@ export class IaItem<
         return json.value;
     }
 
+    // TODO return type
     /**
      * Delete a review from the item
      * @param username 
@@ -418,7 +417,7 @@ export class IaItem<
      * @param fileMetadata metadata for the given file.
      * @returns 
      */
-    public getFile(fileName: string, fileMetadata: IaFileSourceMetadata<ItemFileMetaType>): IaFile<ItemFileMetaType> {
+    public getFile(fileMetadata: IaFileSourceMetadata<ItemFileMetaType>): IaFile<ItemFileMetaType> {
         return new IaFile<ItemFileMetaType>(this, fileMetadata);
     }
 
@@ -558,7 +557,7 @@ export class IaItem<
 
 
         let gFiles!: IaFile[] | Generator<IaFile>;
-        if (globPattern) {
+        if (globPattern || excludePattern) {
             gFiles = this.getFiles({ globPattern, excludePattern, onTheFly });
         } else if (formats) {
             gFiles = this.getFiles({ formats, onTheFly });
@@ -919,7 +918,10 @@ export class IaItem<
      * 
      * const r = item.upload({name: 'remote-name.txt', fileData: '/path/to/local/file.txt'})
      * 
-     * @param files 
+     * @param files Single file or list of files to upload. 
+     *              Strings are assumed to be file paths. File objects can be supplied, which contain a name variable and a fileData variable.
+     *              The fileData variable can be either a string or a Buffer
+     *              
      * @param param1
      * @param param1.metadata
      * @param param1.headers
@@ -1066,4 +1068,4 @@ function getS3XmlText(arg0: string | undefined): string {
     throw new Error("Function not implemented.");
 }
 
-
+export default IaItem;

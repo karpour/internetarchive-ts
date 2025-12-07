@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { IaTypeError } from "../error";
-import { createIaHeaderMetaKey } from "./createIaHeaderMetaKey";
+import { IaTypeError } from "../error/index.js";
+import { createIaHeaderMetaKey } from "./createIaHeaderMetaKey.js";
 
 describe('createIaHeaderMetaKey.ts', () => {
     it('createIaHeaderMetaKey', async () => {

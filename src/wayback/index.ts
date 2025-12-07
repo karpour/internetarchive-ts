@@ -3,11 +3,11 @@
  * @see https://archive.org/developers/wayback-cdx-server.html
  */
 
-import { IaTypeError } from "../error";
-import log from "../log";
-import { Prettify } from "../types";
-import { dateToYYYYMMDDHHMMSS } from "../util/dateToYYYYMMDDHHMMSS";
-import { ArrayOfArraysWithHeaderRow, convertArrayOfArraysWithHeaderRow } from "./convertArrayOfArraysWithHeaderRow";
+import { IaTypeError } from "../error/index.js";
+import log from "../log/index.js";
+import { Prettify } from "../types/index.js";
+import { dateToYYYYMMDDHHMMSS } from "../util/dateToYYYYMMDDHHMMSS.js";
+import { ArrayOfArraysWithHeaderRow, convertArrayOfArraysWithHeaderRow } from "./convertArrayOfArraysWithHeaderRow.js";
 
 const WAYBACK_CDX_API_URL = "http://web.archive.org/cdx/search/cdx";
 const WAYBACK_API_URL = "https://web.archive.org";

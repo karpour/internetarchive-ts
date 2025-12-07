@@ -1,11 +1,11 @@
-import IaSession from "../session/IaSession";
-import { handleIaApiError } from "../util/handleIaApiError";
-import { IA_MAX_SEARCH_RESULT_COUNT, IaBaseSearch } from "./IaBaseSearch";
-import { IaItem } from "../item/IaItem";
-import { IaFullTextSearchConstructorParams, IaFullTextSearchParams, IaFullTextSearchResult, IaFullTextSearchResultHitItem } from "../types/IaSearch";
-import log from "../log";
-import { stripSingle } from "../util/stripSingle";
-import { IaValueError } from "../error";
+import IaSession from "../session/IaSession.js";
+import { handleIaApiError } from "../util/handleIaApiError.js";
+import { IA_MAX_SEARCH_RESULT_COUNT, IaBaseSearch } from "./IaBaseSearch.js";
+import { IaItem } from "../item/IaItem.js";
+import { IaFullTextSearchConstructorParams, IaFullTextSearchParams, IaFullTextSearchResult, IaFullTextSearchResultHitItem } from "../types/IaSearch.js";
+import log from "../log/index.js";
+import { stripSingle } from "../util/stripSingle.js";
+import { IaValueError } from "../error/index.js";
 
 /**
  * Version of the FTS API that this class is targeting

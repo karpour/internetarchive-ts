@@ -1,3 +1,3 @@
-export * from "./IaBaseItem";
-export * from "./IaCollection";
-export * from "./IaItem";
+export * from "./IaBaseItem.js";
+export * from "./IaCollection.js";
+export * from "./IaItem.js";

@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import deleteKeysFromObject from "./deleteKeysFromObject";
+import deleteKeysFromObject from "./deleteKeysFromObject.js";
 
 describe('deleteKeysFromObject.ts', () => {
     it('deleteKeysFromObject', async () => {

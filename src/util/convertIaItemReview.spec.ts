@@ -1,7 +1,7 @@
 import { expect } from 'chai';
-import { convertIaItemReview } from './convertIaItemReview';
-import { IaItemReview } from '../types';
-import { dateToYYYYMMDDHHMMSS } from './dateToYYYYMMDDHHMMSS';
+import { convertIaItemReview } from './convertIaItemReview.js';
+import { IaItemReview } from '../types/index.js';
+import { dateToYYYYMMDDHHMMSS } from './dateToYYYYMMDDHHMMSS.js';
 
 describe('convertIaItemReview.ts', () => {
     it('convertIaItemReview', async () => {

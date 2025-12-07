@@ -1,6 +1,6 @@
-import { IaBaseMetadataType, IaItemData, IaPreparePatchParams } from "../types";
-import { deleteKeysFromObject } from "../util/deleteKeysFromObject";
-import { prepareMetadata } from "./prepareMetadata";
+import { IaBaseMetadataType, IaItemData, IaPreparePatchParams } from "../types/index.js";
+import { deleteKeysFromObject } from "../util/deleteKeysFromObject.js";
+import { prepareMetadata } from "./prepareMetadata.js";
 import { createPatch } from "rfc6902";
 
 

@@ -1,8 +1,8 @@
 
 import { expect } from "chai";
-import { IaBaseMetadataType } from "../types";
-import { convertToRawMetadata } from "./convertToRawMetadata";
-import { IaTypeError } from "../error";
+import { IaBaseMetadataType } from "../types/index.js";
+import { convertToRawMetadata } from "./convertToRawMetadata.js";
+import { IaTypeError } from "../error/index.js";
 
 describe('convertToRawMetadata.ts', () => {
     it('convert raw metadata', async () => {

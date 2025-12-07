@@ -1,4 +1,4 @@
-import { getSession } from "../api";
+import { getSession } from "../api/index.js";
 
 async function main() {
     const session = getSession();

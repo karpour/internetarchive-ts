@@ -1,5 +1,5 @@
-import { IaTypeError } from "../error";
-import { LeftPad2 } from "../types";
+import { IaTypeError } from "../error/index.js";
+import { LeftPad2 } from "../types/index.js";
 
 export function leftPad2<N extends number>(num: N): LeftPad2<N> {
     if (Number.isNaN(num) || !Number.isInteger(num) || num < 0) {

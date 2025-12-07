@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import stableStringify from './stableStringify';
+import stableStringify from './stableStringify.js';
 
 describe('stableStringify.ts', () => {
     it('stableStringify', async () => {

@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { convertToStringOrStringArray } from "./convertToStringOrStringArray";
-import { IaTypeError } from "../error";
+import { convertToStringOrStringArray } from "./convertToStringOrStringArray.js";
+import { IaTypeError } from "../error/index.js";
 
 describe('convertToStringOrStringArray.ts', () => {
     it('convertToStringOrStringArray', async () => {

@@ -1,4 +1,4 @@
-import { IaTypeError } from "../error";
+import { IaTypeError } from "../error/index.js";
 
 /**
  * Removes all occurences of `charToStrip` from `str`

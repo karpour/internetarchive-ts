@@ -1,5 +1,5 @@
-import { IaBaseMetadataType, IaPreparePatchParams, IaRequestTarget, Prettify } from "../types";
-import preparePatch from "./preparePatch";
+import { IaBaseMetadataType, IaPreparePatchParams, IaRequestTarget, Prettify } from "../types/index.js";
+import preparePatch from "./preparePatch.js";
 
 export type IaPrepareTargetPatchParams = Prettify<IaPreparePatchParams & {
     target: IaRequestTarget,

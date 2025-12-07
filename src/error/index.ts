@@ -1,4 +1,4 @@
-import { Prettify } from "../types";
+import { Prettify } from "../types/index.js";
 
 export abstract class IaError extends Error { }
 

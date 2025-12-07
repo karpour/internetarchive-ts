@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { stripSingle } from './stripSingle';
+import { stripSingle } from './stripSingle.js';
 
 describe('stripSingle.ts', () => {
     it('stripSingle', async () => {

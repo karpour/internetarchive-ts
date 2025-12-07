@@ -1,7 +1,7 @@
 import fs from 'fs';
-import { makeArray } from './makeArray';
-import { getMd5 } from './getMd5';
-import { recursiveIterDirectory } from './recursiveIterDirectory';
+import { makeArray } from './makeArray.js';
+import { getMd5 } from './getMd5.js';
+import { recursiveIterDirectory } from './recursiveIterDirectory.js';
 
 
 export async function recursiveFileCount(files: string | string[], md5s?: string[]): Promise<number> {

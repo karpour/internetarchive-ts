@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { IaTypeError } from "../error";
-import { createS3AuthHeader } from "./createS3AuthHeader";
+import { IaTypeError } from "../error/index.js";
+import { createS3AuthHeader } from "./createS3AuthHeader.js";
 
 describe('createS3AuthHeader.ts', () => {
     it('createS3AuthHeader', async () => {

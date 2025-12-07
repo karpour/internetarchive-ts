@@ -1,7 +1,7 @@
-import { IaTypeError } from "../error";
-import { IaItem } from "../item/IaItem";
-import { IaBaseMetadataType, IaFileFormat, IaFileRotation, IaFileSource } from "../types";
-import { IaFileExtendedMetadata, IaFileSourceMetadata } from "../types/IaFileMetadata";
+import { IaTypeError } from "../error/index.js";
+import { IaItem } from "../item/IaItem.js";
+import { IaBaseMetadataType, IaFileFormat, IaFileRotation, IaFileSource } from "../types/index.js";
+import { IaFileExtendedMetadata, IaFileSourceMetadata } from "../types/IaFileMetadata.js";
 
 function convertBooleanString(boolString?: string | boolean): boolean | undefined {
     if (typeof (boolString) === 'boolean') return boolString;

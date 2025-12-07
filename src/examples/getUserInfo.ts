@@ -1,7 +1,7 @@
-import { getSession } from "../api";
-import { IaApiAuthenticationError } from "../error";
-import { IaAuthConfig } from "../types";
-import { getCredentials } from "./getCredentials";
+import { getSession } from "../api/index.js";
+import { IaApiAuthenticationError } from "../error/index.js";
+import { IaAuthConfig } from "../types/index.js";
+import { getCredentials } from "./getCredentials.js";
 
 async function main() {
     /** Credentials read from "./.env.json" */

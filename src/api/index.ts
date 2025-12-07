@@ -1,11 +1,11 @@
-import IaCatalogTask from "../catalog/IaCatalogTask";
-import { IaApiAuthenticationError } from "../error";
-import { IaFile } from "../files";
-import IaCollection from "../item/IaCollection";
-import { IaItem } from "../item/IaItem";
-import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
-import IaSession from "../session/IaSession";
-import { TODO } from "../todotype";
+import IaCatalogTask from "../catalog/IaCatalogTask.js";
+import { IaApiAuthenticationError } from "../error/index.js";
+import { IaFile } from "../files/index.js";
+import IaCollection from "../item/IaCollection.js";
+import { IaItem } from "../item/IaItem.js";
+import { IaAdvancedSearch } from "../search/IaAdvancedSearch.js";
+import IaSession from "../session/IaSession.js";
+import { TODO } from "../todotype.js";
 import {
     IaAuthConfig,
     IaGetFilesParams,
@@ -17,11 +17,17 @@ import {
     IaGetTasksParams,
     IaUserInfo,
     IaBaseMetadataType,
-} from "../types";
-import { IaSearchAdvancedParams } from "../types/IaSearch";
-import { IaShortViewcounts } from "../types/IaViewCount";
-import { createS3AuthHeader } from "../util/createS3AuthHeader";
-import { handleIaApiError } from "../util/handleIaApiError";
+    IaAnnouncementItem,
+    IaApiJsonResult,
+    IaMediaCounts,
+    IaTopCollectionInfo,
+    IaMediaCountsResponse,
+    IaTopCollectionsResponse,
+} from "../types/index.js";
+import { IaSearchAdvancedParams } from "../types/IaSearch.js";
+import { IaShortViewcounts } from "../types/IaViewCount.js";
+import { createS3AuthHeader } from "../util/createS3AuthHeader.js";
+import { handleIaApiError } from "../util/handleIaApiError.js";
 
 /**
  * Returns a new {@link IaSession} object. The {@link IaSession}
@@ -330,3 +336,32 @@ export async function getShortViewcounts<T extends readonly string[]>(identifier
     const archiveSession = await getSession();
     return archiveSession.getShortViewcounts(identifiers);
 };
+
+/**
+ * Get latest announcements from the archive.org blog (usually 3)
+ * @returns Array of announcement items
+*/
+export async function getAnnouncements(): Promise<IaAnnouncementItem[]> {
+    const archiveSession = await getSession();
+    return archiveSession.getAnnouncements();
+}
+
+/**
+ * Get media counts for all item categories except account
+ * @returns Object containing category name as keys, and counts as values
+*/
+export async function getMediaCounts(): Promise<IaMediaCounts> {
+    const archiveSession = await getSession();
+    return archiveSession.getMediaCounts();
+}
+
+/**
+ * Get top collections from the `collections` endpoint of the home page API
+ * @param count number of top collections to return
+ * @param page Page number
+ * @returns Array of up to `count` items of collection info
+ */
+export async function getTopCollections(count: number = 50, page: number = 1): Promise<IaTopCollectionInfo[]> {
+    const archiveSession = await getSession();
+    return archiveSession.getTopCollections();
+}

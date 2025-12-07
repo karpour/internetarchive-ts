@@ -1,4 +1,4 @@
-import { IaItemData, IaRawItemData } from "../types";
+import { IaItemData, IaRawItemData } from "../types/index.js";
 
 export const f:IaRawItemData = {
   "created": 1706796146,

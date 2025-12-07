@@ -1,5 +1,5 @@
 import { expect, use } from 'chai';
-import { retry } from './retry';
+import { retry } from './retry.js';
 
 
 describe('retry.ts', () => {

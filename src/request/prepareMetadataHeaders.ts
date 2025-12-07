@@ -1,6 +1,6 @@
-import { HttpHeaders, IaMetaDataHeaders, IaMetaType, IaRawMetadata } from "../types";
-import { needsQuote } from "../util/needsQuote";
-import { createIaHeaderMetaKey } from "../util/createIaHeaderMetaKey";
+import { HttpHeaders, IaMetaDataHeaders, IaMetaType, IaRawMetadata } from "../types/index.js";
+import { needsQuote } from "../util/needsQuote.js";
+import { createIaHeaderMetaKey } from "../util/createIaHeaderMetaKey.js";
 
 /**
  * Converts metadata into S3 compatible HTTP headers

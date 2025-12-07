@@ -1,17 +1,28 @@
-import IaCatalog from "../catalog/IaCatalog";
-import IaCatalogTask from "../catalog/IaCatalogTask";
-import { IaApiAuthenticationError, IaApiError, IaApiInvalidIdentifierError, IaApiItemNotFoundError, IaApiNotFoundError, IaApiUnauthorizedError, IaAuthenticationError, IaError, IaInvalidIdentifierError, IaTypeError } from "../error";
-import IaCollection from "../item/IaCollection";
-import { IaItem } from "../item/IaItem";
-import log from "../log";
-import { IaMetadataRequest } from "../request/IaMetadataRequest";
+import log from "../log/index.js";
+import IaAdvancedSearch from "../search/IaAdvancedSearch.js";
+import IaCatalog from "../catalog/IaCatalog.js";
+import IaCatalogTask from "../catalog/IaCatalogTask.js";
+import IaCollection from "../item/IaCollection.js";
+import IaCookieJar from "./IaCookieJar.js";
+import IaItem from "../item/IaItem.js";
+import {
+    IaApiAuthenticationError,
+    IaApiError,
+    IaApiInvalidIdentifierError,
+    IaApiItemNotFoundError,
+    IaInvalidIdentifierError
+} from "../error/index.js";
 import {
     HttpHeaders,
+    IaAdvancedSearchConstructorParams,
+    IaAnnouncementItem,
+    IaAnnouncementsResponse,
     IaApiGetRateLimitResult,
     IaApiJsonErrorResult,
     IaAuthConfig,
     IaBaseMetadataType,
     IaCheckIdentifierResponse,
+    IaCheckLimitApiResult,
     IaFileBaseMetadata,
     IaGetFieldsResult,
     IaGetTasksBasicParams,
@@ -19,28 +30,33 @@ import {
     IaHttpRequestDeleteParams,
     IaHttpRequestGetParams,
     IaHttpRequestPostParams,
+    IaIdentifierAvailableResponse,
     IaItemBaseMetadata,
     IaItemData,
     IaItemExtendedMetadata,
+    IaLongViewcounts,
+    IaMediaCounts,
+    IaMediaCountsResponse,
     IaRawMetadata,
-    IaAdvancedSearchConstructorParams,
-    IaTaskType,
-    IaUserInfo,
+    IaShortViewcounts,
     IaSubmitTaskParams,
-    IaCheckLimitApiResult,
     IaTaskSummary,
-    HttpMethod,
-    IaIdentifierAvailableResponse
-} from "../types";
-import getUserAgent from "../util/getUserAgent";
-import { handleIaApiError } from "../util/handleIaApiError";
-import { createS3AuthHeader } from "../util/createS3AuthHeader";
-import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
-import { IaLongViewcounts, IaShortViewcounts } from "../types/IaViewCount";
-import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult";
-import { TODO } from "../todotype";
-import { isValidIaIdentifier } from "../util/isValidIdentifier";
-import IaCookieJar from "./IaCookieJar";
+    IaTaskType,
+    IaTopCollectionInfo,
+    IaTopCollectionsResponse,
+    IaUserInfo
+} from "../types/index.js";
+import {
+    createS3AuthHeader,
+    getUserAgent,
+    handleIaApiError,
+    isApiJsonErrorResult,
+    isValidIaIdentifier,
+    retry,
+    urlWithParams
+} from "../util/index.js";
+
+import { TODO } from "../todotype.js";
 
 /** 
  * The {@link IaSession} class collects together useful 
@@ -62,16 +78,16 @@ export class IaSession {
     public readonly url: string;
     public readonly accessKey?: string;
     public readonly secretKey?: string;
+    public userEmail?: string;
     public readonly auth?: HttpHeaders;
+
     protected readonly secure: boolean;
     protected readonly config: IaAuthConfig;
     protected readonly catalog: IaCatalog;
     protected readonly cookies: IaCookieJar;
-    public userEmail?: string;
 
     /** HTTP Headers */
     public headers: HttpHeaders;
-
 
     /**
      * Initialize {@link IaSession} object with config.
@@ -92,9 +108,7 @@ export class IaSession {
         this.catalog = new IaCatalog(this);
 
         if (this.config.cookies) {
-            for (let [key, value] of Object.entries(this.config.cookies)) {
-                this.cookies.setCookie(key, value);
-            }
+            this.cookies.addCookies(this.config.cookies);
         }
 
         let userEmail = this.config.cookies?.['logged-in-user'];
@@ -177,6 +191,16 @@ export class IaSession {
         return json as T;
     }
 
+    /**
+     * Send a HTTP request. This method does not perform any error handling currently.
+     * @param request Request to send
+     * @returns Response
+     */
+    public async send(request: Request): Promise<Response> {
+        return fetch(request);
+    }
+
+
     // TODO test and implement
     /**
      * Private fetch wrapper with support for timeouts
@@ -184,27 +208,27 @@ export class IaSession {
      * @param params 
      * @param options 
      * @param timeoutMs 
-     * @returns 
+     * @returns fetch Response
+     * @throws
      */
-    private async fetch(url: string, method: HttpMethod, params: Record<string, string | number | boolean | undefined>, options: RequestInit, timeoutMs?: number) {
-        const urlObj = new URL(url);
-        if (params) {
-            for (const param of Object.entries(params)) {
-                const [key, value] = param;
-                if (value !== undefined) {
-                    urlObj.searchParams.set(key, `${value}`);
-                }
-            }
+    protected async fetch(url: string, options: RequestInit, timeoutMs?: number, retries: number = 0): Promise<Response> {
+        if (retries) {
+            /** Wrap function in {@link retry} retry if multiple retries are requested */
+            return retry(() => this.fetch(url, options, timeoutMs, retries), retries);
         }
+        log.verbose(`${options.method || "GET"} ${url} [retries=${retries}${timeoutMs && `, timeoutMs=${timeoutMs}`}]`);
 
         let id: ReturnType<typeof setTimeout> | undefined;
         if (timeoutMs) {
             const controller = new AbortController();
-            id = setTimeout(() => controller.abort(), timeoutMs);
+            id = setTimeout(() => {
+                log.verbose(`Aborted fetch request to "${url}" after ${timeoutMs}ms timeout`);
+                controller.abort();
+            }, timeoutMs);
             options.signal = controller.signal;
         }
         try {
-            const res = await fetch(urlObj.href, { method, ...options });
+            const res = await fetch(url, options);
             return res;
         } finally {
             clearTimeout(id);
@@ -228,25 +252,15 @@ export class IaSession {
         stream,
         timeout
     }: IaHttpRequestGetParams = {}): Promise<Response> {
-        // TODO handle stream
-        const urlObj = new URL(url);
-        if (params) {
-            for (const param of Object.entries(params)) {
-                const [key, value] = param;
-                if (value !== undefined) {
-                    urlObj.searchParams.set(key, `${value}`);
-                }
-            }
-        }
-        log.verbose(`GET ${urlObj.href}`);
-        return fetch(urlObj.href, {
+        const _url = urlWithParams(url, params);
+        return this.fetch(_url, {
             method: "GET",
             headers: {
                 ...this.headers,
                 ...headers,
                 ...(auth ?? this.auth)
-            }
-        });
+            },
+        }, timeout);
     }
 
     public async post(url: string, {
@@ -256,26 +270,15 @@ export class IaSession {
         body,
         json
     }: IaHttpRequestPostParams): Promise<Response> {
-        const urlObj = new URL(url);
-        if (params) {
-            for (const param of Object.entries(params)) {
-                const [key, value] = param;
-                if (value !== undefined) {
-                    urlObj.searchParams.set(key, `${value}`);
-                }
-            }
-        }
-
+        const _url = urlWithParams(url, params);
         let contentTypeHeader: HttpHeaders = {};
+
         if (json !== undefined) {
             body = JSON.stringify(json);
             contentTypeHeader = { 'Content-Type': 'application/json' };
         }
 
-        console.log(`POST ${urlObj.href}`);
-        console.log(body);
-        console.log({ ...this.headers, ...headers, ...contentTypeHeader, ...(auth ?? this.auth) });
-        return fetch(urlObj.href, {
+        return this.fetch(_url, {
             method: "POST",
             headers: { ...this.headers, ...headers, ...contentTypeHeader, ...(auth ?? this.auth) },
             body
@@ -289,15 +292,7 @@ export class IaSession {
         body,
         json
     }: IaHttpRequestDeleteParams): Promise<Response> {
-        const urlObj = new URL(url);
-        if (params) {
-            for (const param of Object.entries(params)) {
-                const [key, value] = param;
-                if (value !== undefined) {
-                    urlObj.searchParams.set(key, `${value}`);
-                }
-            }
-        }
+        const _url = urlWithParams(url, params);
 
         let contentTypeHeader: HttpHeaders = {};
         if (json !== undefined) {
@@ -305,21 +300,13 @@ export class IaSession {
             contentTypeHeader = { 'Content-Type': 'application/json' };
         }
 
-        return fetch(url, {
+        return this.fetch(_url, {
             method: "DELETE",
             headers: { ...this.headers, ...headers, ...contentTypeHeader, ...auth },
             body
         });
     }
 
-    /**
-     * Send a HTTP request. This method does not perform any error handling currently.
-     * @param request Request to send
-     * @returns Response
-     */
-    public async send(request: Request): Promise<Response> {
-        return fetch(request);
-    }
 
     /**
     * Search for items on Archive.org using the {@link https://archive.org/advancedsearch.php|Advanced search API}
@@ -501,7 +488,7 @@ export class IaSession {
      */
     public async getUserInfo(): Promise<IaUserInfo> {
         if (this.accessKey && this.secretKey) {
-            return this.getJson<IaUserInfo>(`https://s3.us.${this.host}`, { params: { check_auth: '1' } });
+            return this.getJson<IaUserInfo>(`${this.protocol}://s3.us.${this.host}`, { params: { check_auth: '1' } });
         } else {
             throw new IaApiAuthenticationError("Need auth for this method");
         }
@@ -577,8 +564,8 @@ export class IaSession {
     /**
      * Check identifier availability
      * @param identifier Identifier
-     * @param findUnique 
-     * @returns 
+     * @param findUnique TODO
+     * @returns `identifier` if identifier is available, otherwise a generated available identifier based on the input
      */
     public async checkIdentifierAvailable(identifier: string, findUnique: boolean = true): Promise<string> {
         const url = `${this.url}/upload/app/upload_api.php`;
@@ -644,6 +631,47 @@ export class IaSession {
         // TODO implement
 
         throw new Error("Not implemented");
+    }
+
+    /**
+     * Get latest announcements from the archive.org blog (usually 3)
+     * @returns Array of announcement items
+    */
+    public async getAnnouncements(): Promise<IaAnnouncementItem[]> {
+        const response = await this.get(`${this.url}/services/offshoot/home-page/announcements.php`);
+        const responseBody = await response.json() as IaAnnouncementsResponse;
+        if (!response.ok || !responseBody.success) {
+            throw handleIaApiError({ response, responseBody });
+        }
+        return responseBody.value.posts;
+    }
+
+    /**
+     * Get media counts for all item categories except account
+     * @returns Object containing category name as keys, and counts as values
+    */
+    public async getMediaCounts(): Promise<IaMediaCounts> {
+        const response = await this.get(`${this.url}/services/offshoot/home-page/mediacounts.php`);
+        const responseBody = await response.json() as IaMediaCountsResponse;
+        if (!response.ok || !responseBody.success) {
+            throw handleIaApiError({ response, responseBody });
+        }
+        return responseBody.value.counts;
+    }
+
+    /**
+     * Get top collections from the `collections` endpoint of the home page API
+     * @param count number of top collections to return
+     * @param page Page number
+     * @returns Array of up to `count` items of collection info
+     */
+    public async getTopCollections(count: number = 50, page: number = 1): Promise<IaTopCollectionInfo[]> {
+        const response = await this.get(`${this.url}/services/offshoot/home-page/collections.php?${new URLSearchParams({ page: `${page}`, count: `${count}` }).toString()}`);
+        const responseBody = await response.json() as IaTopCollectionsResponse;
+        if (!response.ok || !responseBody.success) {
+            throw handleIaApiError({ response, responseBody });
+        }
+        return responseBody.value.docs;
     }
 }
 

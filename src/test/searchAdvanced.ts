@@ -1,8 +1,8 @@
-import { getSession } from "../api";
-import { IaAggregatableField, IaAuthConfig } from "../types";
-import { getCredentials } from "../examples/getCredentials";
-import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
-import { sleepMs } from "../util";
+import { getSession } from "../api/index.js";
+import { IaAggregatableField, IaAuthConfig } from "../types/index.js";
+import { getCredentials } from "../examples/getCredentials.js";
+import { IaAdvancedSearch } from "../search/IaAdvancedSearch.js";
+import { sleepMs } from "../util/index.js";
 
 async function main() {
     /** Credentials read from "./.env.json" */

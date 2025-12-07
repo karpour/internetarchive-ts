@@ -1,5 +1,5 @@
-import { IaTypeError } from "../error";
-import { dateToYYYYMMDDHHMMSS } from "./dateToYYYYMMDDHHMMSS";
+import { IaTypeError } from "../error/index.js";
+import { dateToYYYYMMDDHHMMSS } from "./dateToYYYYMMDDHHMMSS.js";
 
 export function parseWaybackTimestamp(timestampString: string): Date {
     const RegExp_Wayback_Timestamp = /^(?<year>\d\d\d\d)(?<month>\d\d)(?<day>\d\d)(?<hour>\d\d)(?<minutes>\d\d)(?<seconds>\d\d)/;

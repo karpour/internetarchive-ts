@@ -1,4 +1,4 @@
-import { IaBaseMetadataType, IaMetaDataHeaders, Prettify } from "./IaTypes";
+import { IaBaseMetadataType, IaMetaDataHeaders, Prettify } from "./IaTypes.js";
 
 export type testmeta = {
     a: string;

@@ -1,29 +1,27 @@
-import { getAnnouncements, getMediacounts, getTopCollections } from "../services";
+import { getAnnouncements, getMediaCounts, getTopCollections } from "../api/index.js";
 
 async function main() {
     try {
         const announcements = await getAnnouncements();
         console.log(`Announcements:`);
-        announcements.forEach(a => {
-            console.log(`${a.title} - ${a.link}`);
-        });
+        for (const { title, link } of announcements) {
+            console.log(`${title} - ${link}`);
+        }
 
-        const mediacounts = await getMediacounts();
+        const mediacounts = await getMediaCounts();
         console.log(`\nMedia counts:`);
-        for (let entry of Object.entries(mediacounts)) {
-            console.log(`${entry[0]}: ${entry[1]}`);
+        for (const [mediaType, count] of Object.entries(mediacounts)) {
+            console.log(`${mediaType}: ${count}`);
         }
 
         const topCollections = await getTopCollections(10);
         console.log(`\nTop collections:`);
-        for (let entry of topCollections) {
-            console.log(`${entry.title} (${entry.item_count})`);
+        for (const { title, item_count } of topCollections) {
+            console.log(`${title} (${item_count})`);
         }
     } catch (err) {
-        console.log(err);
+        console.error(err);
     }
 }
-
-main();
 
 main();

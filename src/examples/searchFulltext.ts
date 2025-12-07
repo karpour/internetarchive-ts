@@ -1,10 +1,10 @@
-import { getSession } from "../api";
-import { IaAuthConfig } from "../types";
-import { IaApiItemNotFoundError, IaApiUnauthorizedError } from "../error";
-import { getCredentials } from "./getCredentials";
-import { IaAdvancedSearch } from "../search/IaAdvancedSearch";
-import { IaFullTextSearch } from "../search/IaFullTextSearch";
-import { stripSingle } from "../util/stripSingle";
+import { getSession } from "../api/index.js";
+import { IaAuthConfig } from "../types/index.js";
+import { IaApiItemNotFoundError, IaApiUnauthorizedError } from "../error/index.js";
+import { getCredentials } from "./getCredentials.js";
+import { IaAdvancedSearch } from "../search/IaAdvancedSearch.js";
+import { IaFullTextSearch } from "../search/IaFullTextSearch.js";
+import { stripSingle } from "../util/stripSingle.js";
 
 async function main() {
     /** Credentials read from "./.env.json" */

@@ -1,6 +1,6 @@
-import { IaApiAuthenticationError } from "../error";
-import { IaAuthConfig } from "../types";
-import { handleIaApiError } from "../util/handleIaApiError";
+import { IaApiAuthenticationError } from "../error/index.js";
+import { IaAuthConfig } from "../types/index.js";
+import { handleIaApiError } from "../util/handleIaApiError.js";
 
 /**
  *
@@ -9,9 +9,8 @@ import { handleIaApiError } from "../util/handleIaApiError";
  * @param host
  * @returns
  */
-
-export async function getAuthConfig(email: string, password: string, host: string = 'archive.org'): Promise<IaAuthConfig> {
-    const url = `https://${host}/services/xauthn/?op=login`;
+export async function getAuthConfig(email: string, password: string, host: string = 'archive.org', secure: boolean = true): Promise<IaAuthConfig> {
+    const url = `${secure ? "https" : "http"}://${host}/services/xauthn/?op=login`;
     const body = JSON.stringify({ email, password });
     const response = await fetch(url, {
         method: 'POST',
@@ -34,5 +33,6 @@ export async function getAuthConfig(email: string, password: string, host: strin
     if (!response.ok) {
         throw await handleIaApiError({ response, responseBody: json });
     }
+    console.log(response.headers);
     return json.values as IaAuthConfig;
 }

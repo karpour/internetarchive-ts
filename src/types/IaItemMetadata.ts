@@ -1,4 +1,4 @@
-import { IaMediaType, IaCollectionId, IaBaseMetadataType, Prettify, IaRawMetadata } from ".";
+import { IaMediaType, IaCollectionId, IaBaseMetadataType, Prettify, IaRawMetadata } from "./index.js";
 
 
 /**

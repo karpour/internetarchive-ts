@@ -1,5 +1,5 @@
-import { IaBaseMetadataType, IaRawFlattenedMetadataType, IaRawFlattenedMetadata } from "../types";
-import { IaTypeError } from "../error";
+import { IaBaseMetadataType, IaRawFlattenedMetadataType, IaRawFlattenedMetadata } from "../types/index.js";
+import { IaTypeError } from "../error/index.js";
 
 
 

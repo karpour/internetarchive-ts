@@ -1,14 +1,14 @@
-import { IaApiElasticSearchError, IaApiError, IaApiRangeError, IaTypeError } from "../error";
-import { IaItem } from "../item/IaItem";
-import IaSession from "../session/IaSession";
-import { TODO } from "../todotype";
-import { IaApiJsonErrorResult, IaSortOption } from "../types";
-import { handleIaApiError } from "../util/handleIaApiError";
-import { IaBaseSearch } from "./IaBaseSearch";
-import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult";
-import { IaAdvancedSearchConstructorParams, IaAdvancedSearchParams, IaAdvancedSearchResult, IaAggregatableField, IaUserAggs, IaUserAggsSearchParams } from "../types/IaSearch";
-import log from "../log";
-import { retry } from "../util/retry";
+import { IaApiElasticSearchError, IaApiError, IaApiRangeError, IaTypeError } from "../error/index.js";
+import { IaItem } from "../item/IaItem.js";
+import IaSession from "../session/IaSession.js";
+import { TODO } from "../todotype.js";
+import { IaApiJsonErrorResult, IaSortOption } from "../types/index.js";
+import { handleIaApiError } from "../util/handleIaApiError.js";
+import { IaBaseSearch } from "./IaBaseSearch.js";
+import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult.js";
+import { IaAdvancedSearchConstructorParams, IaAdvancedSearchParams, IaAdvancedSearchResult, IaAggregatableField, IaUserAggs, IaUserAggsSearchParams } from "../types/IaSearch.js";
+import log from "../log/index.js";
+import { retry } from "../util/retry.js";
 
 const RegExp_User_Aggs_Key = /^user_aggs__terms__field:(?<field>.*)__size:\d+$/;
 
@@ -242,3 +242,5 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
         return response.response.numFound;
     }
 }
+
+export default IaAdvancedSearch;

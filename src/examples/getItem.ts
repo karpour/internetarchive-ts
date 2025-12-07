@@ -1,4 +1,4 @@
-import { getItem } from "../api";
+import { getItem } from "../api/index.js";
 
 async function main() {
     const identifier = process.argv[2] ?? 'nasa';

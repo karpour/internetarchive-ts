@@ -1,11 +1,12 @@
-import { IaApiError, IaValueError } from "../error";
-import IaSession from "../session/IaSession";
-import { IaTaskColor, IaTaskMeta, IaTaskPriority } from "../types";
-import { handleIaApiError } from "../util/handleIaApiError";
-import IaCatalog from "./IaCatalog";
+import { IaApiError, IaValueError } from "../error/index.js";
+import IaSession from "../session/IaSession.js";
+import { IaTaskColor, IaTaskMeta, IaTaskPriority } from "../types/index.js";
+import { handleIaApiError } from "../util/handleIaApiError.js";
+import IaCatalog from "./IaCatalog.js";
 
 
 /**
+ * @internal
  * This class represents an Archive.org catalog task. 
  * It is primarily used by {@link IaCatalog}, and should not be used directly.
  */

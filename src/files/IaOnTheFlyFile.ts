@@ -1,5 +1,5 @@
-import { IaItem } from "../item/IaItem";
-import IaFile from "./IaFile";
+import { IaItem } from "../item/IaItem.js";
+import IaFile from "./IaFile.js";
 
 //export class IaOnTheFlyFile extends IaFile {
 //    /**

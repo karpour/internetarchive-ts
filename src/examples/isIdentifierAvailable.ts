@@ -1,4 +1,4 @@
-import { isIdentifierAvailable } from '../api';
+import { isIdentifierAvailable } from '../api/index.js';
 
 async function main() {
     const identifier = process.argv[2] ?? 'nasa';

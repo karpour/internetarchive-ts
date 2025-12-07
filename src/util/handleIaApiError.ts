@@ -10,8 +10,8 @@ import {
     IaApiScopeUnavailableError,
     IaApiElasticSearchError,
     IaApiAuthenticationError
-} from "../error";
-import { IaApiJsonResult } from "../types";
+} from "../error/index.js";
+import { IaApiJsonResult } from "../types/index.js";
 
 export type IaHandleApiErrorParams = {
     response: Response,

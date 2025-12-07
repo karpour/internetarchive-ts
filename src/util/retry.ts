@@ -1,5 +1,5 @@
-import log from "../log";
-import { sleepMs } from "./sleepMs";
+import log from "../log/index.js";
+import { sleepMs } from "./index.js";
 
 /**
  * Retries an async function up to a specified a number of times
@@ -24,3 +24,5 @@ export async function retry<T>(func: () => Promise<T>, maxRetries: number, coold
         }
     } while (true);
 }
+
+export default retry;

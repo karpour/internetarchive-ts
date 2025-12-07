@@ -1,8 +1,8 @@
-import IaRequest from "./IaRequest";
-import { S3RequestConstructorParams } from "../types";
-import { prepareMetadata } from "./prepareMetadata";
-import { PACKAGE_VERSION } from "../PACKAGE_VERSION";
-import { prepareMetadataHeaders } from "./prepareMetadataHeaders";
+import IaRequest from "./IaRequest.js";
+import { S3RequestConstructorParams } from "../types/index.js";
+import { prepareMetadata } from "./prepareMetadata.js";
+import { PACKAGE_VERSION } from "../PACKAGE_VERSION.js";
+import { prepareMetadataHeaders } from "./prepareMetadataHeaders.js";
 
 export class S3Request extends IaRequest {
     public constructor(url: string, {

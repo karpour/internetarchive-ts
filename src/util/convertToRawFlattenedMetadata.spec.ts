@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { convertToRawFlattenedMetadata } from "./convertToRawFlattenedMetadata";
-import { IaBaseMetadataType } from "../types";
-import { IaTypeError } from "../error";
+import { convertToRawFlattenedMetadata } from "./convertToRawFlattenedMetadata.js";
+import { IaBaseMetadataType } from "../types/index.js";
+import { IaTypeError } from "../error/index.js";
 
 describe("convertToRawFlattenedMetadata.ts", () => {
     it("convert primitive values to string", () => {

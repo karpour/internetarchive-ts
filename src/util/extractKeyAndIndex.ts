@@ -1,5 +1,5 @@
-import { IaTypeError } from "../error";
-import { isValidMetadataKey } from "./isValidMetadataKey";
+import { IaTypeError } from "../error/index.js";
+import { isValidMetadataKey } from "./isValidMetadataKey.js";
 
 /** A string in the format `keyname[idx]` */
 export type KeyWithIndex<K extends string = string, I extends number = number> = `${K}[${I}]`;

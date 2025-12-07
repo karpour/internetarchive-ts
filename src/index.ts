@@ -7,18 +7,17 @@
  */
 
 
-export * from "./api";
-export * from "./catalog";
-export * from "./error";
-export * from "./files";
-export * from "./item";
-export * from "./log";
-export * from "./request";
-export * from "./search";
-export * from "./session";
-export * from "./types";
-export * from "./services";
-export * from "./wayback";
+export * from "./api/index.js";
+export * from "./catalog/index.js";
+export * from "./error/index.js";
+export * from "./files/index.js";
+export * from "./item/index.js";
+export * from "./log/index.js";
+export * from "./request/index.js";
+export * from "./search/index.js";
+export * from "./session/index.js";
+export * from "./types/index.js";
+export * from "./wayback/index.js";
 //export * from "./util";
 
-export { isValidIaIdentifier } from "./util/isValidIdentifier";
+export { isValidIaIdentifier as isValidIaIdentifier } from "./util/isValidIaIdentifier.js";

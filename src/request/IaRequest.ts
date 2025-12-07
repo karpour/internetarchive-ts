@@ -3,7 +3,7 @@
  * @file A base class for Internet Archive Requests
  */
 
-import { IaRequestConstructorParams } from "../types/IaParams";
+import { IaRequestConstructorParams } from "../types/IaParams.js";
 
 /**
  * A base class for Internet Archive Requests

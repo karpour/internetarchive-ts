@@ -1,9 +1,9 @@
-import log from "../log";
-import { IaBaseMetadataType, IaFileRequestTarget, IaMetadataRequestConstructorParams, IaMetadataRequestPrepareBodyParams, IaPatchData } from "../types";
-import IaRequest from "./IaRequest";
-import { prepareFilesPatch } from "./prepareFilesPatch";
-import preparePatch from "./preparePatch";
-import { prepareTargetPatch } from "./prepareTargetPatch";
+import log from "../log/index.js";
+import { IaBaseMetadataType, IaFileRequestTarget, IaMetadataRequestConstructorParams, IaMetadataRequestPrepareBodyParams, IaPatchData } from "../types/index.js";
+import IaRequest from "./IaRequest.js";
+import { prepareFilesPatch } from "./prepareFilesPatch.js";
+import preparePatch from "./preparePatch.js";
+import { prepareTargetPatch } from "./prepareTargetPatch.js";
 
 export class IaMetadataRequest extends IaRequest {
     public constructor(url: string, params: IaMetadataRequestConstructorParams) {

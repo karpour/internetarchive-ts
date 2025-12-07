@@ -5,7 +5,7 @@
 
 
 
-import { IaTaskPriority, IaTaskSummary, IaTaskType } from "./IaTask";
+import { IaTaskPriority, IaTaskSummary, IaTaskType } from "./IaTask.js";
 
 // Utility types
 
@@ -428,6 +428,9 @@ export type IaAuthConfig = {
      */
     'secure'?: boolean;
   };
+  email?: string,
+  itemname?: string,
+  screenname?: string,
 };
 
 export type IaAuthConfigSectionName = keyof IaAuthConfig;
@@ -701,11 +704,16 @@ export type IaAnnouncementItem = {
   link: string;
 };
 
+export type IaAnnouncementsResponse = IaApiJsonResult<{ posts: IaAnnouncementItem[]; }>;
+export type IaMediaCountsResponse = IaApiJsonResult<{ counts: IaMediaCounts; }>;
+export type IaTopCollectionsResponse = IaApiJsonResult<{ docs: IaTopCollectionInfo[]; }>;
+
+
 /**
 * Counts for each media category, exluding accounts
 * Gets returned by {@link getMediacounts}
 */
-export type IaMediacounts = Record<Exclude<IaMediaType, 'account'>, number>;
+export type IaMediaCounts = Record<Exclude<IaMediaType, 'account'>, number>;
 
 /**
 * Info for top IA collection

@@ -1,4 +1,4 @@
-import { Prettify } from "./IaTypes";
+import { Prettify } from "./IaTypes.js";
 
 /**
 * This type represents the return value of the TODO api endpoint

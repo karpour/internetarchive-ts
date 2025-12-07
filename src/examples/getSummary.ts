@@ -1,8 +1,8 @@
-import { getSession } from "../api";
-import { IaAuthConfig } from "../types";
-import { IaApiItemNotFoundError } from "../error";
-import { getCredentials } from "./getCredentials";
-import IaCatalog from "../catalog/IaCatalog";
+import { getSession } from "../api/index.js";
+import { IaAuthConfig } from "../types/index.js";
+import { IaApiItemNotFoundError } from "../error/index.js";
+import { getCredentials } from "./getCredentials.js";
+import IaCatalog from "../catalog/IaCatalog.js";
 import { setEngine } from "crypto";
 
 const USAGE = "Usage: node getSummary.js <identifier>";

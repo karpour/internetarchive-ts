@@ -1,4 +1,4 @@
-import log from "../log";
+import log from "../log/index.js";
 import { existsSync } from "fs";
 import path, { isAbsolute } from "path";
 import { homedir } from "os";
@@ -28,8 +28,7 @@ export function getConfigFilePath(configFile?: string): { configFilePath: string
         candidates.push(xdgConfigFile);
         candidates.push(path.join(homedir(), '.config', 'ia.ini'));
         candidates.push(path.join(homedir(), '.ia'));
-        if (candidates.length > 0) {
-            for (let candidate of candidates) {
+            for (const candidate of candidates) {
                 log.verbose(`Checking for config file at path "${candidate}"`);
                 if (existsSync(candidate)) {
                     log.verbose(`Found config file at "${candidate}"`);
@@ -37,7 +36,6 @@ export function getConfigFilePath(configFile?: string): { configFilePath: string
                     break;
                 }
             }
-        }
         if (!configFilePath) {
             configFilePath = process.env['IA_CONFIG_FILE'] ?? xdgConfigFile;
         }
@@ -47,3 +45,5 @@ export function getConfigFilePath(configFile?: string): { configFilePath: string
     }
     return { configFilePath, isXdg };
 }
+
+console.log(getConfigFilePath())

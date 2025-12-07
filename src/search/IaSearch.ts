@@ -1,9 +1,9 @@
-import { IaItem } from "../item/IaItem";
-import log from "../log";
-import IaSession from "../session/IaSession";
-import { IaSearchResultMetaItem, IaSortOption } from "../types";
-import { IaScrapeSearchParams, IaScrapeSearchConstructorParams, IaScrapeSearchResult, SearchFields } from "../types/IaSearch";
-import { IaBaseSearch, IA_MAX_SEARCH_RESULT_COUNT, IA_MIN_SEARCH_RESULT_COUNT } from "./IaBaseSearch";
+import { IaItem } from "../item/IaItem.js";
+import log from "../log/index.js";
+import IaSession from "../session/IaSession.js";
+import { IaSearchResultMetaItem, IaSortOption } from "../types/index.js";
+import { IaScrapeSearchParams, IaScrapeSearchConstructorParams, IaScrapeSearchResult, SearchFields } from "../types/IaSearch.js";
+import { IaBaseSearch, IA_MAX_SEARCH_RESULT_COUNT, IA_MIN_SEARCH_RESULT_COUNT } from "./IaBaseSearch.js";
 
 /**
  * This class represents an archive.org item search 

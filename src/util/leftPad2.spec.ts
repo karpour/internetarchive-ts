@@ -1,7 +1,7 @@
 import { expect } from 'chai';
-import { getMd5 } from './getMd5';
-import { leftPad2 } from './leftPad2';
-import { IaTypeError } from '../error';
+import { getMd5 } from './getMd5.js';
+import { leftPad2 } from './leftPad2.js';
+import { IaTypeError } from '../error/index.js';
 
 const TEXT_FILE_PATH = './testdata/test.txt';
 const MD5 = '6620a05883a0fda6b569b71c8b209846';

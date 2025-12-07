@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { IaTypeError } from "../error";
-import { createBasicAuthHeader } from "./createBasicAuthHeader";
+import { IaTypeError } from "../error/index.js";
+import { createBasicAuthHeader } from "./createBasicAuthHeader.js";
 
 describe('createBasicAuthHeader.ts', () => {
     it('createBasicAuthHeader', async () => {

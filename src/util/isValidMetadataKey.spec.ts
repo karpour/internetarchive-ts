@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { isValidMetadataKey } from "./isValidMetadataKey";
+import { isValidMetadataKey } from "./isValidMetadataKey.js";
 
 describe('isValidMetadataKey.ts', () => {
     it('isValidMetadataKey', async () => {

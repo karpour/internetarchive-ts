@@ -1,6 +1,6 @@
-import { IaApiJsonResult } from "../types";
-import { handleIaApiError } from "./handleIaApiError";
-import { IaApiError } from "../error";
+import { IaApiJsonResult } from "../types/index.js";
+import { handleIaApiError } from "./handleIaApiError.js";
+import { IaApiError } from "../error/index.js";
 
 export async function getApiResultValue<T>(response: Response): Promise<T> {
     const json = await response.json() as Partial<IaApiJsonResult<T>>;

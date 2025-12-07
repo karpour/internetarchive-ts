@@ -1,5 +1,5 @@
-import { IaTypeError } from "../error";
-import { Prettify } from "../types";
+import { IaTypeError } from "../error/index.js";
+import { Prettify } from "../types/index.js";
 
 export type S3AuthHeader<AccessKey extends string = string, SecretKey extends string = string> = Prettify<{
     Authorization: `LOW ${AccessKey}:${SecretKey}`;

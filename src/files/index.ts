@@ -24,5 +24,5 @@ internetarchive-ts/files
 :license: AGPL 3, see LICENSE for more details.
 */
 
-export * from './IaFile'
-export * from './IaOnTheFlyFile'
+export * from './IaFile.js'
+export * from './IaOnTheFlyFile.js'

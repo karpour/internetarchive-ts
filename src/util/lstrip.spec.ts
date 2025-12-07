@@ -1,6 +1,6 @@
 import { expect } from 'chai';
-import { IaTypeError } from '../error';
-import { lstrip } from './lstrip';
+import { IaTypeError } from '../error/index.js';
+import { lstrip } from './lstrip.js';
 
 describe('lstrip.ts', () => {
     it('lstrip', async () => {

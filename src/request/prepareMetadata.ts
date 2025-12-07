@@ -1,6 +1,6 @@
-import { IaBaseMetadataType, IaRawMetadata } from "../types";
-import { extractKeyAndIndex, makeArray } from "../util";
-import { convertToRawMetadata } from "../util/convertToRawMetadata";
+import { IaBaseMetadataType, IaRawMetadata } from "../types/index.js";
+import { extractKeyAndIndex, makeArray } from "../util/index.js";
+import { convertToRawMetadata } from "../util/convertToRawMetadata.js";
 
 
 type IaPrepareMetadataParams<M extends IaBaseMetadataType, S extends IaBaseMetadataType> = {

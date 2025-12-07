@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { createIndexedKeys } from "./prepareMetadata";
+import { createIndexedKeys } from "./prepareMetadata.js";
 
 describe("prepareMetadata.ts", () => {
 

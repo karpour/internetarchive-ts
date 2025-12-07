@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { BinaryLike, createHash } from "crypto";
-import { IaTypeError } from '../error';
+import { IaTypeError } from '../error/index.js';
 
 /**
  * Generates md5 hash for the specified input data

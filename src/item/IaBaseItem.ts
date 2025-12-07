@@ -1,8 +1,9 @@
-import { IaItemData, ItemDataKey } from "../types/IaItemData";
-import { IaSimplelistEntry } from "../types/IaSimplelistEntry";
-import { IaBaseMetadataType, IaItemReview } from "../types";
+import { IaItemData, ItemDataKey } from "../types/IaItemData.js";
+import { IaSimplelistEntry } from "../types/IaSimplelistEntry.js";
+import { IaBaseMetadataType, IaItemReview } from "../types/index.js";
 import { createHash } from "crypto";
-import stableStringify from "../util/stableStringify";
+import stableStringify from "../util/stableStringify.js";
+import { IaSession } from "../session/index.js";
 
 /** Metadata keys to exclude when making hash calculation */
 const EXCLUDED_ITEM_DATA_KEYS: ItemDataKey[] = ['workable_servers', 'server'];
@@ -14,7 +15,6 @@ export abstract class IaBaseItem<
     ItemMetaType extends IaBaseMetadataType = IaBaseMetadataType,
     ItemFileMetaType extends IaBaseMetadataType = IaBaseMetadataType
 > implements IaItemData<ItemMetaType, ItemFileMetaType> {
-
     protected exists: boolean = false;
     //protected readonly _collection:IaCollection[] = []
 
@@ -102,10 +102,9 @@ export abstract class IaBaseItem<
         return this.itemData.reviews ?? [];
     }
 
-    public constructor(public itemData: IaItemData<ItemMetaType, ItemFileMetaType>) {
-        this.load();
+    public constructor(public readonly session: IaSession, public itemData: IaItemData<ItemMetaType, ItemFileMetaType>) {
+        this.load(itemData);
     }
-
 
     public get identifier(): IaItemData<ItemMetaType, ItemFileMetaType>['metadata']['identifier'] {
         return this.metadata.identifier;
@@ -131,9 +130,8 @@ export abstract class IaBaseItem<
      * Get thumbnail URL for this item
      * @returns URL
      */
-
     public getImgUrl(): string {
-        return `https://archive.org/services/img/${this.identifier}`;
+        return `${this.session.url}/services/img/${this.identifier}`;
     }
 
     /**

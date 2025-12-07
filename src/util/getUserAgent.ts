@@ -1,4 +1,5 @@
-import { PACKAGE_VERSION } from "../PACKAGE_VERSION";
+import { PACKAGE_VERSION } from "../PACKAGE_VERSION.js";
+import os from "os";
 
 /**
  * @internal
@@ -8,7 +9,7 @@ import { PACKAGE_VERSION } from "../PACKAGE_VERSION";
 export function getRuntime(): [runTime: string, version?: string] {
     // Browser detection
     if (typeof window !== "undefined" && typeof window.document !== "undefined") {
-        const nav = navigator as any;
+        /*const nav = navigator as any;
 
         // Use UA-CH if available (modern browsers)
         if (nav.userAgentData?.brands?.length) {
@@ -36,7 +37,7 @@ export function getRuntime(): [runTime: string, version?: string] {
         if (/Firefox\//.test(ua)) {
             return ["Firefox", ua.match(/Firefox\/([\d.]+)/)?.[1]];
         }
-
+        */
         // Default fallback in browser context
         return ["Browser"];
     }
@@ -61,13 +62,14 @@ const runtimeTuple = getRuntime();
  * @param accessKey Optional access key
  * @returns Generated user agent string. If the library runs in the browser, the browser user agent is returned
  */
-export default function getUserAgentString(accessKey?: string): string {
+export function getUserAgent(accessKey?: string): string {
     const [runtime, version] = runtimeTuple;
     if (runtime !== 'Browser') {
         const lang = Intl.DateTimeFormat().resolvedOptions().locale;
-        const os = require("os");
         return `internetarchive/${PACKAGE_VERSION} (${os.platform()} ${os.release()}; N; ${lang}${accessKey ? `; ${accessKey}` : ''}) ${runtime}${version ? `/${version}` : ''}`;
     }
-    // TODO
+    // TODO should we always return the package UA?
     return window.navigator.userAgent;
 };
+
+export default getUserAgent;

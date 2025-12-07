@@ -1,4 +1,4 @@
-import { IaBaseMetadataType, IaFileFormat, IaFileRotation, IaFileSource, IaRawMetadata, Optional, Prettify, IA_FILE_FORMATS } from ".";
+import { IaBaseMetadataType, IaFileFormat, IaFileRotation, IaFileSource, IaRawMetadata, Optional, Prettify, IA_FILE_FORMATS } from "./index.js";
 
 
 export type IaFileMetadataRaw<T extends IaFileBaseMetadata = IaFileBaseMetadata> = IaRawMetadata<T>;

@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
-import { getSession } from "../api";
-import { IaSessionParams, IaAuthConfig } from "../types";
+import { getSession } from "../api/index.js";
+import { IaSessionParams, IaAuthConfig } from "../types/index.js";
 
 const credentials = JSON.parse(readFileSync(".env.json") as any) as IaSessionParams;
 

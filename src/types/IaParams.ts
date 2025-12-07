@@ -1,7 +1,7 @@
 import { Writable } from "stream";
-import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaSortOption, IaTaskPriority, IaTaskRequestHttpHeaders, IaTaskType, Prettify } from ".";
-import IaSession from "../session/IaSession";
-import { TODO } from "../todotype";
+import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaSortOption, IaTaskPriority, IaTaskRequestHttpHeaders, IaTaskType, Prettify } from "./index.js";
+import IaSession from "../session/IaSession.js";
+import { TODO } from "../todotype.js";
 
 export type IaSessionParams = {
     /** IA-S3 accessKey to use when making the given request. */

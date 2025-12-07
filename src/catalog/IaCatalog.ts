@@ -7,16 +7,15 @@ import {
     IaSubmitTaskParams,
     IaTaskSummary,
     IaTaskType
-} from "../types";
-import IaSession from "../session/IaSession";
-import IaCatalogTask from "./IaCatalogTask";
+} from "../types/index.js";
+import IaSession from "../session/IaSession.js";
+import IaCatalogTask from "./IaCatalogTask.js";
 import {
     handleIaApiError,
     getApiResultValue,
-} from "../util";
+} from "../util/index.js";
 import { Readable } from "stream";
 import readline from "readline";
-import { TODO } from "../todotype";
 
 export function getSortByDate(task: IaCatalogTask): Date {
     if (task.category === 'summary') {

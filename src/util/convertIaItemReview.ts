@@ -1,5 +1,5 @@
-import { parseIaUtcDate } from "./parseIaUtcDate";
-import { IaItemReview, IaItemReviewRating, IaItemReviewParsed } from "../types/IaItemReview";
+import { parseIaUtcDate } from "./parseIaUtcDate.js";
+import { IaItemReview, IaItemReviewRating, IaItemReviewParsed } from "../types/IaItemReview.js";
 
 /**
  * Returns a review object where stars are converted to a number and dates are converted to Date objects

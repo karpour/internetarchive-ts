@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { extractKeyAndIndex } from "./extractKeyAndIndex";
-import { IaTypeError } from "../error";
+import { extractKeyAndIndex } from "./extractKeyAndIndex.js";
+import { IaTypeError } from "../error/index.js";
 
 describe('extractKeyAndIndex.ts', () => {
     it('extractKeyAndIndex', async () => {

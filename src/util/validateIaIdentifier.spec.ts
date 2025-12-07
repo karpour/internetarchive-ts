@@ -1,6 +1,6 @@
 import { expect } from 'chai';
-import { validateIaIdentifier } from './validateIaIdentifier';
-import { IaTypeError } from '../error';
+import { validateIaIdentifier } from './validateIaIdentifier.js';
+import { IaTypeError } from '../error/index.js';
 
 describe('validateIaIdentifier.ts', () => {
     it('validateIaIdentifier', async () => {

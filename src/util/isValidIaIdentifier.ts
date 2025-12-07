@@ -1,4 +1,4 @@
-import { validateIaIdentifier } from "./validateIaIdentifier";
+import { validateIaIdentifier } from "./validateIaIdentifier.js";
 
 /**
  * Check whether a string is a valid Internet Archive Identifier
@@ -13,3 +13,5 @@ export function isValidIaIdentifier(identifier: string): boolean {
     }
     return true;
 }
+
+export default isValidIaIdentifier;

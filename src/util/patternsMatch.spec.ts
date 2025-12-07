@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { patternMatch, patternsMatch } from "./patternsMatch";
+import { patternMatch, patternsMatch } from "./patternsMatch.js";
 
 describe("patternMatch.ts", () => {
     it("patternMatch", () => {

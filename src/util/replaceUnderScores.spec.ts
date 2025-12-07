@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { replaceUnderScores } from './replaceUnderScores';
+import { replaceUnderScores } from './replaceUnderScores.js';
 
 describe('replaceUnderScores.ts', () => {
     it('replaceUnderScores', async () => {

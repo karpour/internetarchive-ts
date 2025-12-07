@@ -9,6 +9,7 @@
     "test": "cross-env NODE_ENV=testing ts-mocha --timeout 1000 \"./src/**/*.spec.ts\"",
     "test:coverage": "nyc --reporter=html --reporter=text --reporter=text-summary npm test",
     "clean": "rm -rf ./lib",
+    "fix-esm-import-path": "fix-esm-import-path ./src/",
     "build": "npm run clean && tsc",
     "doc": "typedoc && cp ./internet-archive-ts-logo.svg ./doc"
   },
@@ -32,15 +33,19 @@
     "chai": "^4.3.6",
     "chai-as-promised": "^8.0.2",
     "cross-env": "^7.0.3",
+    "fix-esm-import-path": "^1.10.3",
     "nyc": "^15.1.0",
     "ts-mocha": "^10.0.0",
-    "typedoc": "^0.27.6"
+    "typedoc": "^0.28.15"
   },
   "mocha": {
     "recursive": true,
     "reporter": "spec",
     "timeout": 5000,
-    "extension": ["js", "mjs"],
+    "extension": [
+      "js",
+      "mjs"
+    ],
     "spec": "src/**/*.spec.ts"
   },
   "mochaExplorer.files": "src/**/*.spec.ts",

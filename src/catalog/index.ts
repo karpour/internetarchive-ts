@@ -2,6 +2,7 @@
  * Catalog Module
  */
 
-// Imports
-export * from "./IaCatalog";
-export * from "./IaCatalogTask";
+export * from "./IaCatalog.js";
+
+/** @internal */
+export * from "./IaCatalogTask.js";
