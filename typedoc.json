@@ -1,27 +1,19 @@
 {
     "$schema": "https://typedoc.org/schema.json",
     "entryPoints": [
-        "./src/api/index.ts",
-        "./src/session/index.ts",
-        "./src/catalog/index.ts",
-        "./src/error/index.ts",
-        "./src/files/index.ts",
-        "./src/item/index.ts",
-        "./src/log/index.ts",
-        "./src/request/index.ts",
-        "./src/search/index.ts",
-        "./src/types/index.ts",
+        "./src/index.ts",
     ],
-    "entryPointStrategy": "resolve",
+    "entryPointStrategy": "expand",
     //"excludeExternals": true,
     //"excludePrivate": true,
     //"excludeProtected": true,
     "hideGenerator": true,
     "includeVersion": true,
+    "useTsLinkResolution": true,
     "disableSources": false,
     "out": "doc",
     "categorizeByGroup": true,
-    "defaultCategory": "Module",
+    "defaultCategory": "",
     "requiredToBeDocumented": [
         // "Project",
         // "Module",
@@ -55,5 +47,12 @@
         // TypeDoc creates reference reflections if a symbol is exported from a package with multiple names. Most projects
         // won't have any of these, and they just render as a link to the canonical name.
         //    "Reference",
-    ]
+    ],
+    "navigation": {
+        "includeCategories": false,
+        "includeGroups": true,
+        "includeFolders": false,
+        "compactFolders": true,
+        "excludeReferences": true
+    },
 }

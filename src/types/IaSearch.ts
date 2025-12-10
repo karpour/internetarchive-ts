@@ -188,98 +188,9 @@ export type IaScrapeSearchResult<Fields extends string> = {
 export type SearchFields<Fields extends readonly string[] | undefined> = (Fields extends readonly string[] ? Fields[number] : 'identifer') | 'identifier';
 
 
-// TODO remove this
 /**
- * These fields can not be aggregated in a call to {@link IaAdvancedSearch.aggregate}
+ * List of fields that can be aggregated
  */
-export const IA_NON_AGGREGATABLE_FIELDS = [
-    'access_restricted_item',
-    'access_restricted',
-    'aspect_ratio',
-    'audio_codec',
-    'audio_sample_rate',
-    'backup_location',
-    'betterpdf',
-    'boxid',
-    'btih',
-    'camera',
-    'ccnum',
-    'closed_captioning',
-    'collectionid',
-    'color',
-    'condition',
-    'coverleaf',
-    'creator',
-    'curation',
-    'description',
-    'external_identifier',
-    'firstfiledate',
-    'format',
-    'frames_per_second',
-    'hidden',
-    'identifier_ark',
-    'identifier-access',
-    'identifier-ark',
-    'identifier',
-    'issn',
-    'language',
-    'lastfiledate',
-    'lccn',
-    'neverindex',
-    'next_item',
-    'noindex',
-    'notes',
-    'numeric_id',
-    'oclc_id',
-    'ocr_detected_lang_conf',
-    'ocr_detected_lang',
-    'ocr_detected_script_conf',
-    'ocr_detected_script',
-    'ocr_module_version',
-    'ocr_parameters',
-    'ocr',
-    'openlibrary_author',
-    'openlibrary_subject',
-    'openlibrary',
-    'operator',
-    'page_progression',
-    'pick',
-    'possible_copyright_status',
-    'ppi',
-    'previous_item',
-    'proddate',
-    'publisher',
-    'repub_state',
-    'republisher_date',
-    'republisher_operator',
-    'republisher_time',
-    'republisher',
-    'runtime',
-    'scandate',
-    'scanfee',
-    'scanner',
-    'scanningcenter',
-    'search_collection',
-    'segments',
-    'sound',
-    'source_pixel_height',
-    'source_pixel_width',
-    'source',
-    'sponsor',
-    'sponsordate',
-    'start_localtime',
-    'start_time',
-    'stop_time',
-    'title',
-    'tuner',
-    'updated',
-    'updater',
-    'utc_offset',
-    'video_codec',
-    'viruscheck',
-    'volume',
-] as const;
-
 export const IA_AGGREGATABLE_FIELDS = [
     'mediatype',
     'addeddate',
@@ -305,7 +216,10 @@ export const IA_AGGREGATABLE_FIELDS = [
     'year'
 ] as const;
 
-export type IaAggregatableField = typeof IA_AGGREGATABLE_FIELDS[number];
+/**
+ * Type that includes all fields that can be aggregated for use in {@link IaAdvancedSearch | advanced search}
+ */
+export type IaAggregatableField = Prettify<typeof IA_AGGREGATABLE_FIELDS[number]>;
 
 export type IaUserAggs<T extends IaAggregatableField[]> = {
     [key in T[number]]: IaUserAggsItem;

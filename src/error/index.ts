@@ -14,9 +14,6 @@ export class IaItemLocateError extends IaError {
 
 export class IaInvalidIdentifierError extends IaTypeError { }
 
-export class IaAuthenticationError extends IaError { }
-
-
 // API Errors
 
 export type IaApiErrorOptions = Prettify<ErrorOptions & {

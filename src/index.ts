@@ -17,7 +17,7 @@ export * from "./request/index.js";
 export * from "./search/index.js";
 export * from "./session/index.js";
 export * from "./types/index.js";
-export * from "./wayback/index.js";
+export * from "./wayback/WaybackMachine.js";
 //export * from "./util";
 
 export { isValidIaIdentifier as isValidIaIdentifier } from "./util/isValidIaIdentifier.js";

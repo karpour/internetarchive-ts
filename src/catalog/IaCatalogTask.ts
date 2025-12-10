@@ -6,7 +6,6 @@ import IaCatalog from "./IaCatalog.js";
 
 
 /**
- * @internal
  * This class represents an Archive.org catalog task. 
  * It is primarily used by {@link IaCatalog}, and should not be used directly.
  */
@@ -85,7 +84,7 @@ export class IaCatalogTask implements IaTaskMeta {
      */
     public async taskLog(): Promise<string> {
         if (!this.task_id) {
-            throw new IaValueError('task_id is None');
+            throw new IaValueError('task_id is undefined');
         }
         return IaCatalogTask.getTaskLog(this.task_id, this.session);
     }
@@ -95,7 +94,7 @@ export class IaCatalogTask implements IaTaskMeta {
      * @param taskId The task id for the task log you'd like to fetch.
      * @param session The ArchiveSession
      * @returns 
-     * @throws {IaApiError}
+     * @throws {@link IaApiError}
      */
     public static async getTaskLog(
         taskId: number,

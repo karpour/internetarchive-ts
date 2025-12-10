@@ -1,21 +1,30 @@
-import { IaBaseMetadataType, IaFileFormat, IaFileRotation, IaFileSource, IaRawMetadata, Optional, Prettify, IA_FILE_FORMATS } from "./index.js";
+import { IaBaseMetadataType, IaFileFormat, IaFileRotation, IaFileSource, IaRawMetadata, Prettify, IA_FILE_FORMATS } from "./index.js";
 
 
 export type IaFileMetadataRaw<T extends IaFileBaseMetadata = IaFileBaseMetadata> = IaRawMetadata<T>;
 
-export type IaFilesXmlMetadata = Omit<Optional<IaFileExtendedMetadata, 'mtime' | 'size'>, 'name'> & { name: `${string}_files.xml`; };
-
+/**
+ * Metadata type for `<identifier>_files.xml` files
+ * 
+ * These differ from regular metadata by not necessarily having a `mtime` and `size` field
+ */
+export type IaFilesXmlMetadata =
+    { [K in keyof IaFileExtendedMetadata]:
+        (K extends 'name' ?
+            `${string}_files.xml` :
+            (K extends 'mtime' | 'size' ?
+                IaFileExtendedMetadata[K] | undefined :
+                IaFileExtendedMetadata[K])) };
 
 export type IaFileBasicMetadata<NameType extends string = string> = {
     /** Path to file name */
     readonly name: NameType;
+
     /** 
-     * Indicates the type (format) of file. See tab "File Formats" for examples
-     * 
-     * @see {@link IA_FILE_FORMATS}
+     * Indicates the type (format) of file. See tab {@link IA_FILE_FORMATS | File Formats} for examples
      */
     readonly format: IaFileFormat;
-    
+
     /** 
      * Cryptographic hash used to verify contents of file. 32-length hex digest
      * Defined by: IA software
@@ -105,7 +114,7 @@ export type IaFileExtendedMetadata = IaFileBaseMetadata & IaFileDefinedByIaMetad
     /** Bit Rate */
     bitrate?: string;
 
-    /** Similar to {@link IaFileExtendedMetadata.creator}. This is a common tag used in audio files. */
+    /** Similar to `creator`. This is a common tag used in audio files. */
     artist?: string;
     /**  */
     genre?: string;
@@ -1445,5 +1454,5 @@ export type IaFileExtendedMetadata = IaFileBaseMetadata & IaFileDefinedByIaMetad
     volume?: string;
 };
 
-export type IaFileMetadataField = keyof IaFileExtendedMetadata;
+export type IaFileMetadataField = Prettify<keyof (IaFileBasicMetadata & IaFileDefinedByIaMetadata)>;
 

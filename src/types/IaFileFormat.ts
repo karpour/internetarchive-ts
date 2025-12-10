@@ -1,5 +1,7 @@
 
-/** Incomplete list of file formats used in IA Items */
+/** 
+ * Incomplete list of file formats used in IA Items 
+ */
 export const IA_FILE_FORMATS = [
     "Unknown",
     "3GP Audio",
@@ -347,4 +349,8 @@ export const IA_FILE_FORMATS = [
     "Zotero RDF"
 ] as const;
 
-export type IaFileFormat = typeof IA_FILE_FORMATS[number] | string;
+
+/**
+ * Type containing common IA file formats.
+ */
+export type IaFileFormat = typeof IA_FILE_FORMATS[number] | (string & {});

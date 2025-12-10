@@ -6,7 +6,7 @@ import preparePatch from "./preparePatch.js";
  * Strips the "files/" prefix from a string
  * @param target string that starts with "files/"
  * @returns String without prefix
- * @throws {IaTypeError}
+ * @throws {@link IaTypeError}
  */
 export function getFilenameFromTarget<T extends string>(target: IaFileRequestTarget<T>): T {
     if (!target.startsWith("files/")) throw new IaTypeError(`target does not start with "files/": "${target}"`);
@@ -17,7 +17,7 @@ export function getFilenameFromTarget<T extends string>(target: IaFileRequestTar
  * 
  * @param param0 
  * @returns 
- * @throws {IaTypeError}
+ * @throws {@link IaTypeError}
  */
 export function prepareFilesPatch({
     metadata,

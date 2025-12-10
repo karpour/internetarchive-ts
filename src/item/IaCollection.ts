@@ -1,6 +1,7 @@
 import { IaValueError } from "../error/index.js";
 import { IaSession } from "../session/IaSession.js";
 import { IaBaseMetadataType, IaItemData } from "../types/index.js";
+import { arrayFromAsyncGenerator } from "../util/index.js";
 import { IaItem } from "./IaItem.js";
 
 /** This class represents an archive.org collection. */
@@ -39,7 +40,7 @@ export class IaCollection<
     protected async doSearch(name: string, query: string) {
         const searchResult = await this.session.searchAdvanced(query, { fields: ['identifier'] });
         this.searches[name] = searchResult;
-        const results = await Array.fromAsync(searchResult.getResultsGenerator());
+        const results = await arrayFromAsyncGenerator(searchResult.getResultsGenerator());
         if (name === "contents") {
             this.itemsCount = results.length;
         } else if (name === 'subcollections') {

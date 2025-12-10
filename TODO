@@ -1,0 +1,4 @@
+- [ ] Provide native function for handling MARC
+- [ ] Downloading files
+- [ ] Wayback machine code
+- [ ] Create hybrid ESM/CJS package (probably not needed as everything moves to ESM, and node can handle ESM/CJS better)

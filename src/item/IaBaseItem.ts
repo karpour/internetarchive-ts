@@ -144,7 +144,7 @@ export abstract class IaBaseItem<
     }
 
     /**
-     * Create hash of this item based on the stringified metadata object, excluding keys defined in {@link EXCLUDED_ITEM_DATA_KEYS}
+     * Create hash of this item based on the stringified metadata object.
      * @returns MD5 hash as string
      */
     public hash(): string {

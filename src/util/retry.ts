@@ -7,10 +7,10 @@ import { sleepMs } from "./index.js";
  * @param maxRetries Maximum number of retries
  * @param cooldown optional cooldown between retries in ms
  * @returns result of the function if the original try or any of the retries succeeds
- * @throws {Error} Error of the last failed function call, if none of the retries is successful 
+ * @throws {@link Error} Error of the last failed function call, if none of the retries is successful 
  */
 export async function retry<T>(func: () => Promise<T>, maxRetries: number, cooldown: number = 0): Promise<T> {
-    let attempts: number = 1;
+    let attempts: number = 0;
     do {
         try {
             return await func();

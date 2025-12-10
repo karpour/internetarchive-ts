@@ -13,6 +13,7 @@ export type IaSessionParams = {
     secretKey?: undefined;
 };*/
 
+
 export type IaGetSessionParams = {
     /** Optional archiveSession object. If not defined, one will be created internally */
     archiveSession?: IaSession,
@@ -35,7 +36,7 @@ export type IaItemGetFilesParams = {
     onTheFly?: boolean;
 };
 
-export type IaGetFilesParams = IaItemGetFilesParams & IaGetSessionParams;
+export type IaGetFilesParams = Prettify<IaItemGetFilesParams & IaGetSessionParams>;
 
 
 // Delete Item
@@ -46,7 +47,7 @@ export type IaFileDeleteParams = {
     cascadeDelete?: any;
     retries?: number;
     headers?: HttpHeaders;
-} & IaSessionParams;
+};
 
 export type IaDeleteItemParams = IaFileDeleteParams & IaGetFilesParams;
 
@@ -85,7 +86,7 @@ export type IaHttpRequestParams = {
     timeout?: number;
 };
 
-export type IaHttpRequestGetParams = Prettify<IaHttpRequestParams & { stream?: boolean; }>;
+export type IaHttpRequestGetParams = Prettify<IaHttpRequestParams>;
 export type IaHttpRequestPostParams = IaHttpRequestParams & ({ body?: BodyInit; json?: undefined; } | { body?: undefined; json: Record<string, any>; });
 export type IaHttpRequestDeleteParams = IaHttpRequestPostParams;
 
@@ -199,7 +200,7 @@ export type IaRequestConstructorParams = Prettify<{
 }>;
 
 /**
- * Params for the {@link Catalog.submitTask} method
+ * Params for the {@link IaCatalog.submitTask} method
  */
 export type IaSubmitTaskParams = {
     /** Identifier */

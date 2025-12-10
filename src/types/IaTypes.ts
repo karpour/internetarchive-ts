@@ -5,6 +5,7 @@
 
 
 
+import { getMediaCounts } from "../api/index.js";
 import { IaTaskPriority, IaTaskSummary, IaTaskType } from "./IaTask.js";
 
 // Utility types
@@ -504,6 +505,10 @@ export type IaCheckIdentifierResponse = {
   message: string;
 };
 
+export type IaDeleteReviewResponse = {
+  task_id: number;
+};
+
 // Types to Flatten arrays in items
 
 /** 
@@ -564,7 +569,7 @@ export type IaMultiMetadata = {
 };
 
 
-export type IaItemUrls = { [urlKey in IaItemUrlType]: string; };
+export type IaItemUrls = Prettify<{ [urlKey in IaItemUrlType]: string; }>;
 
 //export type IaCollectionUrls = { [urlKey in (IaItemUrlType | IaItemTabUrlType)]: urlKey extends IaItemUrlType ? string : string | undefined; };
 
@@ -711,7 +716,6 @@ export type IaTopCollectionsResponse = IaApiJsonResult<{ docs: IaTopCollectionIn
 
 /**
 * Counts for each media category, exluding accounts
-* Gets returned by {@link getMediacounts}
 */
 export type IaMediaCounts = Record<Exclude<IaMediaType, 'account'>, number>;
 
@@ -729,6 +733,6 @@ export type IaTopCollectionInfo = {
  * Response type for the identifierAvailable endpoint
  */
 export type IaIdentifierAvailableResponse = {
-    identifier: string;
-    success: boolean;
-}
+  identifier: string;
+  success: boolean;
+};

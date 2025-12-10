@@ -10,7 +10,7 @@ export type BasicAuthHeader = Prettify<{
  * @param accessKey Access key
  * @param secretKey Secret key
  * @returns Basic auth header object
- * @throws IaTypeError
+ * @throws {@link IaTypeError}
  */
 export function createBasicAuthHeader(accessKey: string, secretKey: string): BasicAuthHeader {
     if (!accessKey) throw new IaTypeError(`Invalid accessKey`);

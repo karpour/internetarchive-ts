@@ -6,6 +6,7 @@ import IaSession from "../session/IaSession.js";
 import IaCatalogTask from "../catalog/IaCatalogTask.js";
 import S3Request from "../request/S3Request.js";
 import {
+    arrayFromAsyncGenerator,
     getMd5,
     lstrip,
     makeArray,
@@ -32,7 +33,8 @@ import {
     IA_ITEM_URL_TYPES,
     IaFixerOp,
     IaItemDeleteReviewParams,
-    IaItemUrlType
+    IaItemUrlType,
+    IaDeleteReviewResponse
 } from "../types/index.js";
 import { IaTaskPriority, IaTaskSummary } from "../types/IaTask.js";
 import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams, IaItemUploadFileParams, IaItemUploadParams } from "../types/IaParams.js";
@@ -185,7 +187,7 @@ export class IaItem<
      * @returns A list of completed catalog tasks for the item.
      */
     public async getTaskHistory(params?: IaGetTasksBasicParams): Promise<IaCatalogTask[]> {
-        return Array.fromAsync(this.session.iterTaskHistory(this.identifier, params));
+        return arrayFromAsyncGenerator(this.session.iterTaskHistory(this.identifier, params));
     }
 
     /**
@@ -194,7 +196,7 @@ export class IaItem<
      * @returns A list of pending catalog tasks for the item.
      */
     public async getCatalogTasks(params?: IaGetTasksBasicParams): Promise<IaCatalogTask[]> {
-        return Array.fromAsync(this.session.iterCatalogTasks(this.identifier, params));
+        return arrayFromAsyncGenerator(this.session.iterCatalogTasks(this.identifier, params));
     }
 
     /**
@@ -357,9 +359,9 @@ export class IaItem<
      * Retrieves the currently authenticated user's review (if existing) for the this item.
      * An item can only have one review for each user. If there is no review, this method returns undefined.
      * @returns The review, or undefined if there is no review
-     * @throws {IaApiError} If unexpected HTTP response is returned
-     * @throws {IaApiUnauthorizedError} If the user does not have permissions for this call or is not authenticated
-     * @throws {IaApiNotFoundError} If there are no reviews by the user that is making this request
+     * @throws {@link IaApiError} If unexpected HTTP response is returned
+     * @throws {@link IaApiUnauthorizedError} If the user does not have permissions for this call or is not authenticated
+     * @throws {@link IaApiNotFoundError} If there are no reviews by the user that is making this request
      */
     public async getReview(): Promise<IaItemReview | undefined> {
         const url = `${this.session.url}/services/reviews.php`;
@@ -376,22 +378,24 @@ export class IaItem<
         return json.value;
     }
 
-    // TODO return type
     /**
      * Delete a review from the item
+     * 
+     * @see https://archive.org/developers/reviews.html#deleting-a-review
+     * 
      * @param username 
      * @param screenname 
      * @param itemname 
      * @returns 
      */
-    public async deleteReview(data: IaItemDeleteReviewParams): Promise<any> {
+    public async deleteReview(data: IaItemDeleteReviewParams): Promise<IaDeleteReviewResponse> {
         const url = `${this.session.url}/services/reviews.php`;
         const params = { identifier: this.identifier };
         const response = await this.session.delete(url, { params, json: data });
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
-        return getApiResultValue<any>(response);
+        return getApiResultValue<IaDeleteReviewResponse>(response);
     }
 
     /**
@@ -413,12 +417,18 @@ export class IaItem<
 
     /**
      * Get a {@link IaFile} object for the named file.
-     * @param fileName 
-     * @param fileMetadata metadata for the given file.
+     * @param file File name or file metadata for the given file.
      * @returns 
      */
-    public getFile(fileMetadata: IaFileSourceMetadata<ItemFileMetaType>): IaFile<ItemFileMetaType> {
-        return new IaFile<ItemFileMetaType>(this, fileMetadata);
+    public getFile(file: string | IaFileSourceMetadata<ItemFileMetaType>): IaFile<ItemFileMetaType> | undefined {
+        if (typeof (file) === "string") {
+            let foundFile = this.itemData.files.find(f => f.name === file);
+            if (!foundFile) {
+                return undefined;
+            }
+            file = foundFile;
+        }
+        return new IaFile<ItemFileMetaType>(this, file);
     }
 
     /**
@@ -792,7 +802,7 @@ export class IaItem<
             }
         }
 
-        const baseUrl = `${this.session.protocol}//s3.us.archive.org/${this.identifier}`;
+        const baseUrl = `${this.session.protocol}//s3.us.${this.session.host}/${this.identifier}`;
         const url = `${baseUrl}/${encodeURIComponent(lstrip(normFilepath(key), "/"))}`;
 
         // Skip based on checksum.

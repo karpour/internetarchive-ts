@@ -5,7 +5,7 @@ const RegExp_IA_IDENTIFIER = /^[A-Za-z0-9\.][A-Za-z0-9-_\.]{2,79}$/;
 /**
  * Validate an Ia identifier
  * @param identifier Identifier to validate
- * @throws {IaInvalidIdentifierError} if identifier is invalid
+ * @throws {@link IaInvalidIdentifierError} if identifier is invalid
  * @returns true if identifier is valid
  */
 export function validateIaIdentifier(identifier: string): true {

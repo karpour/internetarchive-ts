@@ -5,7 +5,7 @@ import { IaMetadataValidFieldType, StringOrStringArray } from "../types/index.js
  * @internal 
  * 
  * 
- * @throws Type error
+ * @throws {@link IaTypeError}
 */
 export function convertToStringOrStringArray<T extends IaMetadataValidFieldType | IaMetadataValidFieldType[]>(value: T): StringOrStringArray<T> {
     switch (typeof value) {

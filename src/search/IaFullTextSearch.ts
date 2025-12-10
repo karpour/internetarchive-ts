@@ -34,7 +34,7 @@ export class IaFullTextSearch extends IaBaseSearch<IaFullTextSearchResultHitItem
      * @param param2.limit Maximum amount of results to return. By default all results will be returned
      * @param param2.scope Scope `"standard"` or `"all"` (default: `"standard"`)
      * @param param2.size Number of results to return per API call (default: `10`)
-     * @throws {IaValueError}
+     * @throws {@link IaValueError}
      */
     public constructor(
         session: IaSession,
@@ -72,8 +72,8 @@ export class IaFullTextSearch extends IaBaseSearch<IaFullTextSearchResultHitItem
      * If `limit` is not set, all results will be returned, which may
      * require a lot of slow requests to be made to fetch all results.
      * @returns AsyncGenerator which yields one Full Text Search result at a time. 
-     * @throws {IaApiError}
-     * @throws {IaApiRangeError}
+     * @throws {@link IaApiError}
+     * @throws {@link IaApiRangeError}
      */
     public async *getResultsGenerator(): AsyncGenerator<IaFullTextSearchResultHitItem> {
         let from = 0;
@@ -112,7 +112,7 @@ export class IaFullTextSearch extends IaBaseSearch<IaFullTextSearchResultHitItem
     /**
      * Fetches number of results for the search
      * @returns Number of results found
-     * @throws {IaApiError}
+     * @throws {@link IaApiError}
      */
     protected async fetchNumFound(): Promise<number> {
         const params: IaFullTextSearchParams = {
@@ -132,7 +132,7 @@ export class IaFullTextSearch extends IaBaseSearch<IaFullTextSearchResultHitItem
      * @returns object with aggregations for
      *          `"top-collection"`, `"top-mediatype"`, `"top-year"`, 
      *          `"top-subject"`, `"top-languages"` and `"top-creator"`.
-     * @throws {IaApiError}
+     * @throws {@link IaApiError}
      */
     public async getAggregations(): Promise<IaFullTextSearchResult['aggregations']> {
         const params: IaFullTextSearchParams = {
@@ -149,7 +149,7 @@ export class IaFullTextSearch extends IaBaseSearch<IaFullTextSearchResultHitItem
 
     /**
      * @returns Generator which yields Items that match the full text query
-     * @throws {IaApiError}
+     * @throws {@link IaApiError}
      */
     public async *getItemsGenerator(): AsyncGenerator<IaItem> {
         const generator = this.getResultsGenerator();

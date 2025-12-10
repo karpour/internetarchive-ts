@@ -1,17 +1,23 @@
-
-import { IaFileBaseMetadata, IaFileExtendedMetadata, IaFileMetadataRaw, IaFileSourceMetadata } from "../types/IaFileMetadata.js";
-import { IaItem } from "../item/IaItem.js";
-import fs, { mkdirSync, existsSync, statSync, unlinkSync, utimesSync } from "fs";
 import path from "path";
-import log from "../log/index.js";
-import { IaBaseFile } from "./IaBaseFile.js";
-import { IaFileDeleteParams, IaFileDownloadParams } from "../types/IaParams.js";
-import { handleIaApiError } from "../util/handleIaApiError.js";
+import fs, { mkdirSync, statSync, unlinkSync, utimesSync } from "fs";
 import { Writable } from 'stream';
+import log from "../log/index.js";
+
 import S3Request from "../request/S3Request.js";
-import { getMd5 } from "../util/index.js";
-import { IaBaseMetadataType } from "../types/index.js";
-import { writeReadableStreamToWritable } from "../util/writeReadableStreamToWritable.js";
+import { IaFileExtendedMetadata, IaFileSourceMetadata } from "../types/IaFileMetadata.js";
+import { IaItem } from "../item/IaItem.js";
+import { IaBaseFile } from "./IaBaseFile.js";
+import {
+    getMd5,
+    writeReadableStreamToWritable,
+    handleIaApiError,
+    retry
+} from "../util/index.js";
+import {
+    IaBaseMetadataType,
+    IaFileDeleteParams,
+    IaFileDownloadParams
+} from "../types/index.js";
 
 function getTargetFile(target: string, defaultFilename: string): string {
     if (fs.existsSync(target)) {
@@ -41,17 +47,17 @@ function getTargetFile(target: string, defaultFilename: string): string {
  * You can use this class to access the file metadata.
  * 
  * ```typescript
- * import {IaItem, IaFile} from 'internetarchive';
- * let item = internetarchive.Item('stairs');
- * let file = internetarchive.File(item, 'stairs.avi');
- * console.log(`${f.format}, ${f.size}`);
- * // ('Cinepack', '3786730')
+ * const item = await getItem('stairs');
+ * const file = item.getFile('stairs.avi');
+ * if (file) {
+ *     console.log(`${file.format}, ${file.size}`); // Cinepack, 3786730
+ * }
  * ```
  * 
  * Or to download a file:
  * 
  * ```typescript
- * file.download()
+ * file.download();
  * ```
  * 
  * This class also uses IA's S3-like interface to delete a file
@@ -62,7 +68,7 @@ function getTargetFile(target: string, defaultFilename: string): string {
  * file.delete();
  * ```
  * 
- * You can retrieve S3 keys here: https://archive.org/account/s3.php
+ * You can retrieve S3 keys {@link https://archive.org/account/s3.php | here}.
  * 
  */
 export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetadata> extends IaBaseFile<IaFileMeta> {
@@ -85,21 +91,16 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
 
     /**
      * Download the file into the current working directory.
-     * @param filePath Download file to the given filePath.
-     * @param param1.verbose Turn on verbose output.
-     * @param param1.ignoreExisting Overwrite local files if they already exist.
-     * @param param1.checksum Skip downloading file based on checksum.
-     * @param param1.destdir The directory to download files to.
-     * @param param1.retries The number of times to retry on failed requests. (default:`2`)
-     * @param param1.ignoreErrors Don't fail if a single file fails to download, continue to download other files.
-     * @param param1.fileobj Write data to the given file-like object (e.g. sys.stdout).
-     * @param param1.returnResponses Rather than downloading files to disk, return a list of response objects.
-     * @param param1.noChangeTimestamp If True, leave the time stamp as the current time instead of changing it to that given in the original archive.
-     * @param param1.params URL parameters to send with download request (e.g. `cnt=0`).
-     * @param param1.chunkSize 
-     * @param param1.stdout Print contents of file to stdout instead of downloading to file.
-     * @param param1.ors (optional) Append a newline or $ORS to the end of file. This is mainly intended to be used internally with `stdout`.
-     * @param param1.timeout 
+     * @param param0.ignoreExisting Overwrite local files if they already exist.
+     * @param param0.checksum Skip downloading file based on checksum.
+     * @param param0.target The directory/file or Writeable to download the to.
+     * @param param0.retries The number of times to retry on failed requests. (default:`2`)
+     * @param param0.returnResponses Rather than downloading files to disk, return a list of response objects.
+     * @param param0.noChangeTimestamp If True, leave the time stamp as the current time instead of changing it to that given in the original archive.
+     * @param param0.params URL parameters to send with download request (e.g. `cnt=0`).
+     * @param param0.chunkSize 
+     * @param param0.ors (optional) Append a newline or $ORS to the end of file. This is mainly intended to be used internally with `stdout`.
+     * @param param0.timeout 
      * 
      * @returns true if file was successfully downloaded.
      */
@@ -153,12 +154,7 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
             let targetWritable: Writable | undefined = undefined;
             try {
 
-                const response = await this.item.session.get(this.url,
-                    {
-                        stream: true,
-                        timeout,
-                        params
-                    });
+                const response = await this.item.session.get(this.url, { timeout, params });
 
                 if (!response.ok) {
                     throw await handleIaApiError({ response });
@@ -169,28 +165,28 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
                 }
 
                 // If no targetWritable is supplied, write to file
-                targetWritable = getWriteable();
+                targetWritable ??= getWriteable();
 
                 await writeReadableStreamToWritable(response.body!, targetWritable);
 
                 if (ors) {
-                    targetWritable.write(process.env.ORS ?? "\n");
+                    targetWritable.write(process?.env?.ORS ?? "\n");
                 }
-
-                targetWritable.end();
                 continue;
             } catch (err: any) {
                 log.error(`Error downloading file "${targetPath}": ${err.message}`);
-                try {
+                /*try {
                     targetPath && unlinkSync(targetPath);
-                    targetWritable?.end();
                 } catch (err: any) {
-                }
+                    log.error(`Could not unlink file "${targetPath}"`)
+                }*/
                 if (ignoreErrors) {
                     return false;
                 } else {
                     throw err;
                 }
+            } finally {
+                targetWritable?.end();
             }
         } while (errCount < retries);
 
@@ -210,15 +206,17 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
      * Note: Some files -- such as `<itemname>_meta.xml` -- can not be deleted.
      * @param param0 
      * @param param0.cascadeDelete Delete all files associated with the specified file, including upstream derivatives and the original.
-     * @param param0.maxRetries The number of times to retry on failed requests.
+     * @param param0.retries The number of times to retry on failed requests.
      * @param param0.headers URL parameters to send with download request
      * @returns 
      */
     public async delete({
         cascadeDelete,
-        retries = 2,
+        retries = 0,
         headers = {},
     }: IaFileDeleteParams): Promise<Response> {
+        if (retries) return retry(() => this.delete({ cascadeDelete, headers }), retries);
+
         const url = `${this.item.session.protocol}//s3.us.archive.org/${this.identifier}/${encodeURIComponent(this.name)}`;
 
         const request = new S3Request(url, {

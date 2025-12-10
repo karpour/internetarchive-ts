@@ -128,8 +128,8 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
      * If `limit` is not set, all results will be returned, which may
      * require a lot of slow requests to be made to fetch all results.
      * @returns AsyncGenerator which yields one search result at a time. 
-     * @throws {IaApiError}
-     * @throws {IaApiRangeError}
+     * @throws {@link IaApiError}
+     * @throws {@link IaApiRangeError}
      */
     public async *getResultsGenerator(): AsyncGenerator<TODO> {
         /** Counter for results */
@@ -171,9 +171,9 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
      * @returns Record where the keys are the requested fields and 
      *          the values are object containing the corresponding aggregations
      * @template AggFields Array of fields to aggregate
-     * @throws {IaApiError}
-     * @throws {IaTypeError}
-     * @throws {IaApiElasticSearchError}
+     * @throws {@link IaApiError}
+     * @throws {@link IaTypeError}
+     * @throws {@link IaApiElasticSearchError}
      */
     public async getAggregations<const AggFields extends IaAggregatableField[]>(aggFields: AggFields, aggsSize?: number): Promise<IaUserAggs<AggFields>> {
         if (!aggFields || aggFields.length === 0) {

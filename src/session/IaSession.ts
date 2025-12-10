@@ -1,16 +1,21 @@
 import log from "../log/index.js";
 import IaAdvancedSearch from "../search/IaAdvancedSearch.js";
-import IaCatalog from "../catalog/IaCatalog.js";
-import IaCatalogTask from "../catalog/IaCatalogTask.js";
-import IaCollection from "../item/IaCollection.js";
+import {
+    IaCatalog,
+    IaCatalogTask
+} from "../catalog/index.js";
 import IaCookieJar from "./IaCookieJar.js";
-import IaItem from "../item/IaItem.js";
+import {
+    IaItem,
+    IaCollection
+} from "../item/index.js";
 import {
     IaApiAuthenticationError,
     IaApiError,
     IaApiInvalidIdentifierError,
     IaApiItemNotFoundError,
-    IaInvalidIdentifierError
+    IaInvalidIdentifierError,
+    IaTypeError
 } from "../error/index.js";
 import {
     HttpHeaders,
@@ -44,7 +49,8 @@ import {
     IaTaskType,
     IaTopCollectionInfo,
     IaTopCollectionsResponse,
-    IaUserInfo
+    IaUserInfo,
+    Prettify
 } from "../types/index.js";
 import {
     createS3AuthHeader,
@@ -152,8 +158,8 @@ export class IaSession {
     /**
      * Get an Item's metadata from the {@link http://blog.archive.org/2013/07/04/metadata-api/ | Metadata API}
      * @param identifier Globally unique Archive.org identifier.
-     * @throws {IaApiError}
-     * @throws {IaApiItemNotFoundError} If the item does not exist
+     * @throws {@link IaApiError}
+     * @throws {@link IaApiItemNotFoundError} If the item does not exist
      */
     public async getMetadata
         <ItemMetaType extends IaItemBaseMetadata = IaItemExtendedMetadata,
@@ -177,7 +183,7 @@ export class IaSession {
      * @param params 
      * @returns Promise that resolved with the JSON body
      * @typeParam T - Expected return type from a successful response
-     * @throws {IaApiError} - {@link IaApiError} If response has a non-200 status or an `"error"` field.
+     * @throws {@link IaApiError} - {@link IaApiError} If response has a non-200 status or an `"error"` field.
      */
     public async getJson<T extends {}>(url: string, params: IaHttpRequestGetParams = {}): Promise<T> {
         const response = await this.get(url, params);
@@ -212,11 +218,16 @@ export class IaSession {
      * @throws
      */
     protected async fetch(url: string, options: RequestInit, timeoutMs?: number, retries: number = 0): Promise<Response> {
-        if (retries) {
+        if (retries > 0) {
+            if (!Number.isInteger(retries)) throw new IaTypeError(`Argument "retries" is not a positive integer: ${retries}`);
             /** Wrap function in {@link retry} retry if multiple retries are requested */
-            return retry(() => this.fetch(url, options, timeoutMs, retries), retries);
+            return retry(() => this.fetch(url, options, timeoutMs, 0), retries);
         }
-        log.verbose(`${options.method || "GET"} ${url} [retries=${retries}${timeoutMs && `, timeoutMs=${timeoutMs}`}]`);
+        const info = [];
+        if (retries) info.push(`retries=${retries}`);
+        if (timeoutMs) info.push(`timeoutMs=${timeoutMs}`);
+        const infoText = info.length ? ` [${info.join(', ')}]` : '';
+        log.verbose(`${options.method || "GET"} ${url}${infoText}`);
 
         let id: ReturnType<typeof setTimeout> | undefined;
         if (timeoutMs) {
@@ -249,7 +260,6 @@ export class IaSession {
         params,
         auth,
         headers,
-        stream,
         timeout
     }: IaHttpRequestGetParams = {}): Promise<Response> {
         const _url = urlWithParams(url, params);
@@ -307,11 +317,10 @@ export class IaSession {
         });
     }
 
-
     /**
     * Search for items on Archive.org using the {@link https://archive.org/advancedsearch.php|Advanced search API}
     * @param query The Archive.org search query to yield results for. Refer to {@link https://archive.org/advancedsearch.php#raw} for help formatting your query.
-    * @param params
+    * @param params Params
     * @param params.fields Fields to include in the results. If not supplied, a standard set of fields will be returned.
     *        Regardless of which fields are supplied, the `"identifier"` field will always be included.
     * @param params.sorts Up to 3 sort options
@@ -345,7 +354,7 @@ export class IaSession {
      * @param identifier Optional identifier 
      * @param accessKey Optional access key
      * @returns API Limits response
-     * @throws {IaApiError}
+     * @throws {@link IaApiError}
      */
     public async checkLimits(identifier?: string, accessKey?: string): Promise<IaCheckLimitApiResult> {
         const url = `${this.protocol}//s3.us.${this.host}`;
@@ -361,7 +370,7 @@ export class IaSession {
      * Returns rate limit for specified task type
      * @param cmd Task type
      * @returns Rate limit object
-     * @throws {IaApiError}
+     * @throws {@link IaApiError}
      */
     public getTasksApiRateLimit<T extends IaTaskType>(cmd: IaTaskType = 'derive.php'): Promise<IaApiGetRateLimitResult<T>> {
         return this.catalog.getRateLimit(cmd);
@@ -459,11 +468,11 @@ export class IaSession {
     /**
      * Get a list of all tasks meeting all criteria.
      * The list is ordered by submission time.
-     * @param getTaskParams params
+     * @param params params
      * @returns A set of all tasks meeting all criteria.
      */
-    public getTasks(getTaskParams: Omit<IaGetTasksParams, 'limit' | 'summary'>): Promise<IaCatalogTask[]> {
-        return this.catalog.getTasks(getTaskParams);
+    public getTasks(params: Prettify<Omit<IaGetTasksParams, 'limit' | 'summary'>>): Promise<IaCatalogTask[]> {
+        return this.catalog.getTasks(params);
     };
 
     /**
@@ -484,7 +493,7 @@ export class IaSession {
     /**
      * Get user info
      * @returns User info for currently logged in user
-     * @throws {IaApiAuthenticationError}
+     * @throws {@link IaApiAuthenticationError}
      */
     public async getUserInfo(): Promise<IaUserInfo> {
         if (this.accessKey && this.secretKey) {
@@ -497,7 +506,7 @@ export class IaSession {
     /**
      * Get e-mail address of the logged in user of this session
      * @returns e-mail address
-     * @throws {IaApiAuthenticationError}
+     * @throws {@link IaApiAuthenticationError}
      */
     public async getUserEmail(): Promise<string> {
         if (!this.userEmail) {
@@ -518,8 +527,8 @@ export class IaSession {
     /**
     * Check if the item identifier is available for creating a new item.
     * @returns true if identifier is available, or false if it is not available.
-    * @throws {IaApiError}
-    * @throws {IaApiInvalidIdentifierError}
+    * @throws {@link IaApiError}
+    * @throws {@link IaApiInvalidIdentifierError}
     */
     public async isIdentifierAvailable(identifier: string): Promise<boolean> {
         const url = `${this.url}/services/check_identifier.php`;
@@ -547,8 +556,8 @@ export class IaSession {
      * 
      * @see {@link https://web.archive.org/web/20230327211907/https://archive.org/services/swagger/?url=%2Fservices%2Fsearch%2Fv1%2Fswagger.yaml#!/meta/get_fields}
      * @returns list of fields that can be requested
-     * @throws {IaApiScopeUnavailableError} If scope is now available to the current user
-     * @throws {IaApiError}
+     * @throws {@link IaApiScopeUnavailableError} If scope is now available to the current user
+     * @throws {@link IaApiError}
      */
     public async getRequestableFields(): Promise<string[]> {
         const url = `${this.url}/services/search/v1/fields`;
@@ -593,8 +602,8 @@ export class IaSession {
      * 
      * @param identifiers Identifiers to get view counts for
      * @returns View counts object
-     * @throws {IaApiUnauthorizedError}
-     * @throws {IaApiError}
+     * @throws {@link IaApiUnauthorizedError}
+     * @throws {@link IaApiError}
     */
     public getShortViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaShortViewcounts<T[number]>> {
         return this.getJson(`${this.protocol}//be-api.us.${this.host}/views/v1/short/${identifiers.map(encodeURIComponent).join(',')}`);
@@ -611,8 +620,8 @@ export class IaSession {
      * 
      * @param identifiers Identifiers to get view counts for
      * @returns Detailed View counts object
-     * @throws {IaApiUnauthorizedError}
-     * @throws {IaApiError}
+     * @throws {@link IaApiUnauthorizedError}
+     * @throws {@link IaApiError}
     */
     public getLongViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaLongViewcounts<T[number]>> {
         return this.getJson(`${this.protocol}//be-api.us.${this.host}/views/v1/long/${identifiers.map(encodeURIComponent).join(',')}`);

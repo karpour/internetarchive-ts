@@ -1,3 +1,13 @@
+/**
+ * @groupDescription Advanced Use
+ * These functions are available for...
+ * @showCategories
+ * @module
+ * @group API
+ */
+
+
+
 import IaCatalogTask from "../catalog/IaCatalogTask.js";
 import { IaApiAuthenticationError } from "../error/index.js";
 import { IaFile } from "../files/index.js";
@@ -18,14 +28,11 @@ import {
     IaUserInfo,
     IaBaseMetadataType,
     IaAnnouncementItem,
-    IaApiJsonResult,
     IaMediaCounts,
     IaTopCollectionInfo,
-    IaMediaCountsResponse,
-    IaTopCollectionsResponse,
+    IaSearchAdvancedParams,
+    IaShortViewcounts
 } from "../types/index.js";
-import { IaSearchAdvancedParams } from "../types/IaSearch.js";
-import { IaShortViewcounts } from "../types/IaViewCount.js";
 import { createS3AuthHeader } from "../util/createS3AuthHeader.js";
 import { handleIaApiError } from "../util/handleIaApiError.js";
 
@@ -47,6 +54,7 @@ import { handleIaApiError } from "../util/handleIaApiError.js";
  * // nasa: success
  * s.getTasks({taskIds:[31643513]})[0].server
  * 
+ * @group API
  * @param config A dictionary used to configure your session.
  * @param debug To be passed on to this session's method calls.
  * @returns a new {@link IaSession} object
@@ -67,7 +75,6 @@ export function getSession(config?: IaAuthConfig, debug: boolean = false): IaSes
  * @param param1 
  * @param param1.config - Session configuration.
  * @param param1.archiveSession - An {@link IaSession} object.
- * @param param1.debug - To be passed on to getSession(). 
  * @returns The Item that fits the criteria.
  */
 export function getItem<
@@ -195,7 +202,7 @@ export function downloadFiles(identifier: string, params: IaItemDownloadParams &
  * @param params.accessKey IA-S3 accessKey to use when making the given request.
  * @param params.secretKey IA-S3 secretKey to use when making the given request.
  * @param params.getItemKwargs
- * @throws API Error {@link IaApiError}
+ * @throws {@link IaApiError}
  * @returns 
  */
 export async function deleteFiles(identifier: string, params: IaDeleteItemParams): Promise<Response[]> {
@@ -287,8 +294,8 @@ export function getUsername(accessKey: string, secretKey: string): Promise<strin
  * Returns details about an Archive.org user given an IA-S3 key pair.
  * @param accessKey IA-S3 accessKey to use when making the given request.
  * @param secretKey IA-S3 secretKey to use when making the given request.
- * @throws {IaApiError}
- * @throws {IaApiAuthenticationError}
+ * @throws {@link IaApiError}
+ * @throws {@link IaApiAuthenticationError}
  * @returns Archive.org use info.
  */
 export async function getUserInfo(accessKey: string, secretKey: string): Promise<IaUserInfo> {
@@ -312,8 +319,8 @@ export async function getUserInfo(accessKey: string, secretKey: string): Promise
 /**
 * Check if the item identifier is available for creating a new item.
 * @returns true if identifier is available, or false if it is not available.
-* @throws {IaApiError}
-* @throws {IaApiInvalidIdentifierError}
+* @throws {@link IaApiError}
+* @throws {@link IaApiInvalidIdentifierError}
 */
 export async function isIdentifierAvailable(identifier: string, params?: IaGetSessionParams): Promise<boolean> {
     const archiveSession = params?.archiveSession ?? await getSession(params?.config, false);
@@ -329,8 +336,8 @@ export async function isIdentifierAvailable(identifier: string, params?: IaGetSe
  * 
  * @param identifiers Identifiers to get view counts for
  * @returns View counts object
- * @throws {IaApiUnauthorizedError}
- * @throws {IaApiError}
+ * @throws {@link IaApiUnauthorizedError}
+ * @throws {@link IaApiError}
 */
 export async function getShortViewcounts<T extends readonly string[]>(identifiers: T): Promise<IaShortViewcounts<T[number]>> {
     const archiveSession = await getSession();

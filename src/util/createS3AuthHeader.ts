@@ -10,7 +10,7 @@ export type S3AuthHeader<AccessKey extends string = string, SecretKey extends st
  * @param accessKey Access key
  * @param secretKey Secret key
  * @returns Auth header
- * @throws IaTypeError
+ * @throws {@link IaTypeError}
  */
 export function createS3AuthHeader<A extends string, S extends string>(accessKey: A, secretKey: S): S3AuthHeader<A, S> {
     if (!accessKey) throw new IaTypeError(`Invalid accessKey`);

@@ -6,17 +6,26 @@ import {
     IaSubmitTaskData,
     IaSubmitTaskParams,
     IaTaskSummary,
-    IaTaskType
+    IaTaskType,
+    Prettify
 } from "../types/index.js";
 import IaSession from "../session/IaSession.js";
 import IaCatalogTask from "./IaCatalogTask.js";
 import {
     handleIaApiError,
     getApiResultValue,
+    arrayFromAsyncGenerator,
 } from "../util/index.js";
 import { Readable } from "stream";
 import readline from "readline";
-
+import { IaApiError } from "../error/index.js";
+/**
+ * @internal
+ * Get sort by date for a task
+ * 
+ * @param task Task
+ * @returns Sort-by date
+ */
 export function getSortByDate(task: IaCatalogTask): Date {
     if (task.category === 'summary') {
         return new Date();
@@ -59,12 +68,11 @@ export class IaCatalog {
      * Make a GET request to the {@link https://archive.org/services/docs/api/tasks.html | Tasks API}
      * @param params Query parameters
      * @returns Response
-     * @throws {IaApiBadRequestError}
-     * @throws {IaApiUnauthorizedError}
-     * @throws {IaApiNotFoundError}
-     * @throws {IaApiMethodNotAllowedError}
-     * @throws {IaApiTooManyRequestsError}
-     * @throws {IaApiError}
+     * @throws {@link IaApiBadRequestError}
+     * @throws {@link IaApiUnauthorizedError}
+     * @throws {@link IaApiNotFoundError}
+     * @throws {@link IaApiMethodNotAllowedError}
+     * @throws {@link IaApiTooManyRequestsError}
      */
     protected async makeTasksRequest<T extends IaApiGetTasksResult | IaApiGetRateLimitResult<IaTaskType>>(params: IaGetTasksParams = {}): Promise<T> {
         const response = await this.session.get(this.url, { params });
@@ -81,9 +89,9 @@ export class IaCatalog {
      * @param identifier Item identifier. Both `'*'` (asterisk) and `'%'` (percentage sign) may be used as wildcard characters within criteria that accept them.
      * @param params Query parameters
      * @returns the total counts of catalog tasks meeting all criteria
-     * @throws {IaApiError}
+     * @throws {@link IaApiError}
      */
-    public async getSummary(identifier: string, params: Omit<IaGetTasksBasicParams, 'summary' | 'history' | 'catalog' | 'identifier'> = {}): Promise<IaTaskSummary> {
+    public async getSummary(identifier: string, params: Prettify<Omit<IaGetTasksBasicParams, 'summary' | 'history' | 'catalog' | 'identifier'>> = {}): Promise<IaTaskSummary> {
         const getTaskParams: IaGetTasksParams = {
             ...params,
             summary: 1,
@@ -117,8 +125,8 @@ export class IaCatalog {
      * Returns rate limit for specified task type
      * @param cmd Task type
      * @returns Rate limit object
-     * @throws {IaApiError}
-     * @throws {IaApiUnauthorizedError}
+     * @throws {@link IaApiError}
+     * @throws {@link IaApiUnauthorizedError}
      */
     public async getRateLimit<T extends IaTaskType>(cmd: IaTaskType = 'derive.php'): Promise<IaApiGetRateLimitResult<T>> {
         const params = { rate_limits: 1, cmd };
@@ -126,7 +134,6 @@ export class IaCatalog {
         return result;
     }
 
-    // TODO change to submittime_gt, etc...
     /**
      * Get a list of all tasks meeting all criteria. 
      * The list is ordered by submission time.
@@ -147,11 +154,15 @@ export class IaCatalog {
      * @param params.identifier The item identifier, if provided, will return tasks for only this item filtered by other criteria provided in params.
      * @returns A list of all tasks meeting all criteria.
      */
-    public async getTasks(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): Promise<IaCatalogTask[]> {
-        return Array.fromAsync(this.iterTasksNoLimit(params));
+    public async getTasks(params: Prettify<Omit<IaGetTasksParams, 'limit' | 'summary'>> = {}): Promise<IaCatalogTask[]> {
+        return arrayFromAsyncGenerator(this.iterTasksNoLimit(params));
     }
 
-    public async *iterTasksNoLimit(params: Omit<IaGetTasksParams, 'limit' | 'summary'> = {}): AsyncGenerator<IaCatalogTask> {
+    /**
+     * Create iterator that iterates over all catalog tasks
+     * @param params Params
+     */
+    public async *iterTasksNoLimit(params: Prettify<Omit<IaGetTasksParams, 'limit' | 'summary'>> = {}): AsyncGenerator<IaCatalogTask> {
         const getTasksParams: IaGetTasksParams = {
             catalog: 1,
             history: 1,
