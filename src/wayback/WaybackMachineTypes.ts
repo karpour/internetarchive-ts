@@ -3,10 +3,27 @@ import { Prettify } from "../types/index.js";
 export type WaybackUserStatusResponse = {
     available: number,
     processing: number;
+    daily_captures: number,
+    daily_captures_limit: number;
 };
 
 export type WaybackSystemStatusResponse = {
+    recent_captures: number,
     status: string;
+    queues: {
+        'spn2-captures': number,
+        'spn2-captures-misc': number,
+        'spn2-outlinks': number,
+        'spn2-outlinks-misc': number,
+        'spn2-api': number,
+        'spn2-api-misc': number,
+        'spn2-api-outlinks': number,
+        'spn2-api-outlinks-misc': number,
+        'spn2-high-fidelity': number,
+        'spn2-vip': number,
+        'spn2-vip-outlinks': number,
+        'spn2-screenshots': number;
+    };
 };
 
 export type WaybackSavePageResult = {
@@ -236,11 +253,15 @@ export type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
     matchType?: WaybackCdxMatchType;
     /**
      * Return the first n results. Use -N to return the last n results
+     * 
+     * @example 10 // return the first 10 results.
+     * @example -10 // return the last 10 results. The query may be slow as it begins reading from the beginning of the search space and skips all but last N results.
+     * 
      * @see {@link https://archive.org/developers/wayback-cdx-server.html#query-result-limits}
      */
     limit?: number;
     /**
-     * The offset= M param can be used in conjunction with limit to ‘skip’ the first M records. This allows for a simple way to scroll through the results.
+     * The offset= M param can be used in conjunction with limit to skip the first M records. This allows for a simple way to scroll through the results.
      * However, the offset/limit model does not scale well to large querties since the CDX server must read and skip through the number of results specified by offset, so the CDX server begins reading at the beginning every time.
      * @see {@link https://archive.org/developers/wayback-cdx-server.html#query-result-limits}
      */
@@ -256,8 +277,25 @@ export type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
      * @see {@link https://archive.org/developers/wayback-cdx-server.html#query-result-limits}
      */
     fastLatest?: true;
-    from?: number;
-    to?: number;
+    /**
+     * Filter by date. If defined, query will return items from the specified date NS later.
+     * Can be either a Date object or a 14-digit archive timestamp in the format yyyyMMddhhmmss
+     */
+    from?: string | Date;
+    /**
+     * Filter by date. If defined, query will return items up until the specified date.
+     * Can be either a Date object or a 14-digit archive timestamp in the format yyyyMMddhhmmss
+     */
+    to?: string | Date;
+    /**
+     * It is possible to filter on a specific field or the entire CDX line (which is space delimited). Filtering by specific field is often simpler. Any number of filter params of the following form may be specified: filter=[!]field:regex may be specified.
+     * Optional: `!` before the query inverts the match, that is, will return results that do NOT match the regex.
+     * 
+     * @example
+     * "!statuscode:200" // Returns all items with a statuscode that is not 200
+     * 
+     * @see {@link https://github.com/internetarchive/wayback/tree/master/wayback-cdx-server#filtering}
+     */
     filter?: WaybackCdxFilter | WaybackCdxFilter[];
     /**
      * It is possible to track how many CDX lines were skipped due to Filtering
@@ -274,6 +312,11 @@ export type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
      */
     showSkipCount?: true;
     lastSkipTimestamp?: true;
+    /**
+     * List of fields to return, must be of type {@link WaybackCdxField}
+     * 
+     * If not defined, all fields are returned.
+     */
     fl?: T;
     /**
      * Page number
@@ -281,7 +324,6 @@ export type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
      * @see {@link https://archive.org/developers/wayback-cdx-server.html#pagination-api}
      */
     page?: number;
-
     /**
      * It is possible to adjust the page size to a smaller value than the 
      * default by setting the pageSize=P where 1 <= P <= default page size.
@@ -292,7 +334,6 @@ export type WaybackCdxOptions<T extends WaybackCdxField[] | undefined> = {
      * This is a special query that will return a single number indicating the number of pages
      */
     showNumPages?: boolean;
-
     /**
      * It is also possible to have the CDX server return the raw secondary index, by specifying showPagedIndex=true. 
      * This query returns the secondary index instead of the CDX results and may be subject to access restrictions.

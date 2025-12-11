@@ -45,4 +45,6 @@ export * from "./urlWithParams.js";
 export * from "./writeReadableStreamToWritable.js";
 export * from "./dateToYYYYMMDD.js";
 export * from "./dateToYYYYMMDDHHMMSS.js";
+export * from "./validateIaTimestamp.js";
+export * from "./createSearchParams.js";
 export * from "./dateToIaTimestamp.js";

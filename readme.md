@@ -16,6 +16,28 @@ The code is partially based on the Internet Archive Python API client and contai
 - 100% unit tested (WIP)
 - Integration tests (WIP)
 
+### Strong typing
+
+Strong types are used to enjoy a good developer experience. Return types are dependent on the input, for example when fields to return are supplied.
+
+Example:
+
+```typescript
+const result = await waybackMachine.getSnapshotMatches("https://twitter.com/internetarchive/", {
+    limit: 10
+});
+const digest = matches[0].digest; // OK
+```
+
+```typescript
+const result = await waybackMachine.getSnapshotMatches("https://twitter.com/internetarchive/", {
+    fl: ["urlkey", "mimetype", "statuscode", "timestamp"],
+    limit: 10
+});
+const digest = matches[0].digest;
+// Property 'digest' does not exist on type '{ urlkey: string; timestamp: string; mimetype: string; statuscode: string; }'
+```
+
 ## Credentials
 
 This API uses S3 API credentials for authentication. You can obtain them [here](https://archive.org/account/s3.php)
@@ -37,7 +59,7 @@ console.log(`Date: ${item.created}`);
 ## Unit tests
 
 ```bash
-npm test
+npm run test:unit
 ```
 
 ## Referenced Documentation
@@ -49,4 +71,5 @@ npm test
 
 ## Dependencies
 
-- [rfc6902]() - for generating JSON Patches
+- [rfc6902](https://github.com/chbrown/rfc6902) - for generating JSON Patches
+- [minimatch](https://github.com/isaacs/minimatch) - for parsing globs

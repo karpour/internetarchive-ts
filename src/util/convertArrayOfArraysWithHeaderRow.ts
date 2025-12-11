@@ -1,7 +1,7 @@
 
 
-export type ArrayOfArraysWithHeaderRow<T = string> = [
-    T[],
+export type ArrayOfArraysWithHeaderRow<T extends string[]> = [
+    T,
     ...string[][]
 ];
 
@@ -20,21 +20,21 @@ export type ArrayOfArraysWithHeaderRow<T = string> = [
  * @param array Array to process
  * @returns 
  */
-export function convertArrayOfArraysWithHeaderRow<T extends string>(array: ArrayOfArraysWithHeaderRow<T>): Record<T, string>[] {
-    const returnObj: Record<T, string>[] = [];
+export function convertArrayOfArraysWithHeaderRow<T extends string[]>(array: ArrayOfArraysWithHeaderRow<T>): Record<T[number], string>[] {
+    const returnObj: Record<T[number], string>[] = [];
 
-    if (array.length == 0) throw new Error(`Empty array`);
-    const header: T[] = array.shift()! as T[];
+    if (array.length == 0) return [];
+    const header: T = array.shift()! as T;
     const len = header.length;
 
     for (const entry of array) {
-        const temp: Partial<Record<T, string>> = {};
+        const temp: Partial<Record<T[number], string>> = {};
         if (entry.length !== header.length) throw new Error(`Array entry ${JSON.stringify(entry)} has wrong length (should be ${len})`);
         for (let i = 0; i < header.length; i++) {
-            const index: T = header[i]!;
+            const index: T[number] = header[i]! as T[number];
             temp[index] = entry[i]!;
         }
-        returnObj.push(temp as Record<T, string>);
+        returnObj.push(temp as Record<T[number], string>);
     }
     return returnObj;
 }

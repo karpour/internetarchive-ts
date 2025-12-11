@@ -17,7 +17,7 @@ async function main() {
         console.log(metadata);
     } catch (err) {
         if (err instanceof IaApiItemNotFoundError) {
-            console.error(`Item "${identifier} not found`);
+            console.error(`Item "${identifier}" not found`);
         } else {
             console.error(err);
         }

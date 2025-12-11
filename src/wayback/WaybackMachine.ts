@@ -6,17 +6,40 @@
 import log from "../log/index.js";
 import IaCookieJar from "../session/IaCookieJar.js";
 import { HttpHeaders, IaAuthConfig, Prettify } from "../types/index.js";
-import { createS3AuthHeader, dateToIaTimestamp, handleIaApiError, makeArray, sleepMs, urlWithParams } from "../util/index.js";
+import {
+    createS3AuthHeader,
+    dateToIaTimestamp,
+    handleIaApiError,
+    sleepMs,
+    urlWithParams,
+    createSearchParams,
+    validateIaTimestamp
+} from "../util/index.js";
 import { ArrayOfArraysWithHeaderRow, convertArrayOfArraysWithHeaderRow } from "../util/convertArrayOfArraysWithHeaderRow.js";
-import { createSearchParams } from "../util/createSearchParams.js";
-import { WaybackSaveOptions, WaybackSavePageResult, WaybackJobStatusResponse, WaybackSystemStatusResponse, WaybackUserStatusResponse, WaybackAvailabilityData, WaybackCdxField, WaybackCdxOptions, WaybackSnapshotResponse, WaybackGetAvailabilityResponse, WaybackCdxOptionsWithResume, WaybackCdxOptionsWithoutResume } from "./WaybackMachineTypes.js";
-import { validateIaTimestamp } from "../util/validateIaTimestamp.js";
+import {
+    WaybackSaveOptions,
+    WaybackSavePageResult,
+    WaybackJobStatusResponse,
+    WaybackSystemStatusResponse,
+    WaybackUserStatusResponse,
+    WaybackAvailabilityData,
+    WaybackCdxField,
+    WaybackCdxOptions,
+    WaybackSnapshotResponse,
+    WaybackGetAvailabilityResponse,
+    WaybackCdxOptionsWithResume,
+    WaybackCdxOptionsWithoutResume
+} from "./WaybackMachineTypes.js";
 
+/**
+ * This class provides access to the {@link https://web.archive.org | WaybackMachine} 
+ * using the {@link https://github.com/internetarchive/wayback/tree/master/wayback-cdx-server | Wayback CDX API}
+ */
 export class WaybackMachine {
+    protected readonly cookies: IaCookieJar;
     public readonly host: string;
     public readonly protocol: string;
     public readonly url: string;
-    protected readonly cookies: IaCookieJar;
     public readonly accessKey?: string;
     public readonly secretKey?: string;
     public readonly auth?: HttpHeaders;
@@ -74,6 +97,7 @@ export class WaybackMachine {
         if (options.targetUsername) urlSearchParams.append("target_username", options.targetUsername);
         if (options.targetPassword) urlSearchParams.append("target_password", options.targetPassword);
 
+        console.log(`Fetch ${this.url}/save`);
         const response = await fetch(`${this.url}/save`, {
             method: "POST",
             headers: {
@@ -91,19 +115,23 @@ export class WaybackMachine {
         return response.json();
     }
 
+    /**
+     * A
+     * @param jobId 
+     * @returns 
+     */
     public async getJobStatus(jobId: string): Promise<WaybackJobStatusResponse> {
         const urlSearchParams: URLSearchParams = new URLSearchParams({ jobId });
         const response = await fetch(`${this.url}/save/status`, {
             method: "POST",
             headers: {
                 "Accept": "application/json",
-                //"Authorization": `LOW ${accessKey}:${secretKey}`,
-                "Content-Type": "application/x-www-form-urlencoded"
+                "Content-Type": "application/x-www-form-urlencoded",
+                ...this.auth
             },
             body: urlSearchParams.toString()
         });
         return response.json();
-
     }
 
     public async getSystemStatus(): Promise<WaybackSystemStatusResponse> {
@@ -121,13 +149,14 @@ export class WaybackMachine {
      * @returns 
      */
     public async getUserStatus(): Promise<WaybackUserStatusResponse> {
-        const _url = urlWithParams(`${this.url}/save/status/system`, { _t: `${new Date().getTime()}}` });
+        const _url = urlWithParams(`${this.url}/save/status/user`, { _t: `${new Date().getTime()}` });
         const response = await fetch(_url, {
             headers: {
                 "Accept": "application/json",
                 ...this.auth
             }
         });
+        //console.log(_url);
         if (response.status !== 200) {
             throw await handleIaApiError({ response });
         }
@@ -153,6 +182,7 @@ export class WaybackMachine {
             }
         }
         const _url = urlWithParams(`${this.url.replace("web.", "")}/wayback/available`, params);
+        console.log(_url);
         const response = await fetch(_url);
         if (response.status !== 200) {
             throw await handleIaApiError({ response });
@@ -164,8 +194,18 @@ export class WaybackMachine {
 
     /**
      * Get snapshot matches for given url
+     * 
      * @see {@link https://archive.org/developers/wayback-cdx-server.html}
      * @see {@link https://github.com/internetarchive/wayback/tree/master/wayback-cdx-server#basic-usage}
+     * 
+     * @example
+     * // Get matches from 2020-01-01 to 2020-01-11, collapsed to one match per day
+     * const matches = await waybackMachine.getSnapshotMatches("https://twitter.com/internetarchive/", {
+     *      collapse: "timestamp:8", // Return one match per day
+     *      from: new Date("2020-01-01"),
+     *      to: new Date("2020-01-11")
+     * });
+     * 
      * @param url url to search snapshots for. Can contain `*` wildcards
      * @param options Options
      * @returns Results as an array of result objects
@@ -183,13 +223,18 @@ export class WaybackMachine {
         }
 
         /** Search params object that forms the arguments for the API call */
-        const searchParams = createSearchParams({ ...options, url, output: "json" });
+        //const searchParams = createSearchParams({ ...options, url, output: "json" });
 
-        const _url = urlWithParams(`${this.url}/cdx/search/cdx`, { ...options, url, output: "json" });
-        log.verbose(`${this.url}/cdx/search/cdx?${searchParams.toString()}`);
+        const opts = { ...options };
+        if (opts?.from && opts.from instanceof Date) opts.from = dateToIaTimestamp(opts.from);
+        if (opts?.to && opts.to instanceof Date) opts.to = dateToIaTimestamp(opts.to);
+
+        const _url = urlWithParams(`${this.url}/cdx/search/cdx`, { ...opts, url, output: "json" });
+        log.verbose(_url);
 
         // TODO make this use the session get method
-        const matches: ArrayOfArraysWithHeaderRow = await fetch(`${this.url}/cdx/search/cdx?${searchParams.toString()}`,).then(response => response.json());
+        const matches: ArrayOfArraysWithHeaderRow<T extends WaybackCdxField[] ? T : WaybackCdxField[]> = await fetch(_url).then(response => response.json());
+        //console.log(matches);
 
         if (options?.showResumeKey) {
             let resumeKey: string | undefined = undefined;

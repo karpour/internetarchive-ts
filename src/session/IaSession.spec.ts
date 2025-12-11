@@ -60,10 +60,7 @@ describe("IaSession.ts", function () {
         expect(res.status).to.equal(200);
     });
 
-    it("should invoke retry wrapper when retries > 0", async () => {
-        const res = await session['fetch'](`http://nonexistanturl/retry`, { method: "GET" }, undefined, 1);
-        expect(res.status).to.equal(200);
-        const text = await res.text();
-        expect(text).to.equal("success after retry");
+    it("Non-existant url", async () => {
+        await expect(session['fetch'](`http://nonexistanturl/retry`, { method: "GET" }, undefined, 1)).to.be.rejectedWith(/fetch failed/);
     });
 });

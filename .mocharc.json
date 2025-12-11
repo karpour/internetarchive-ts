@@ -1,0 +1,7 @@
+{
+    "extension": [
+        "ts"
+    ],
+    "reporter": "spec",
+    "loader": "ts-node/esm"
+}

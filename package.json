@@ -6,14 +6,13 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "cross-env NODE_ENV=testing ts-mocha --timeout 1000 \"./src/**/*.spec.ts\"",
-    "test2": "ts-mocha -n loader=ts-node/esm -p ./tsconfig.json ./src/**/*.spec.ts",
-    "test3": "mocha --require ts-node/register --require test/setup.ts",
-    "test:coverage": "nyc --reporter=html --reporter=text --reporter=text-summary npm test",
-    "clean": "rm -rf ./lib",
-    "fix-esm-import-path": "fix-esm-import-path ./src/",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "cross-env NODE_ENV=testing ts-mocha \"src/**/*.spec.ts\"",
+    "test:integration": "cross-env NODE_ENV=testing ts-mocha \"src/**/*.integration.test.ts\"",
+    "test:coverage": "c8 --reporter=lcov --reporter=text --reporter=text-summary npm run test:unit",
+    "clean": "rm -rf ./dist",
     "build": "npm run clean && tsc",
-    "doc": "typedoc && cp ./internet-archive-ts-logo.svg ./doc"
+    "doc": "typedoc && cp ./internet-archive-ts-logo.svg ./doc && touch doc/.nojekyll"
   },
   "keywords": [
     "archive.org",
@@ -33,27 +32,14 @@
     "@types/express": "^5.0.6",
     "@types/mocha": "^10.0.0",
     "@types/node": "^24.10.1",
+    "c8": "^10.1.3",
     "chai": "^4.3.6",
     "chai-as-promised": "^8.0.2",
     "cross-env": "^7.0.3",
     "express": "^5.2.1",
-    "fix-esm-import-path": "^1.10.3",
     "mocha": "^11.7.5",
-    "nyc": "^15.1.0",
     "ts-mocha": "^11.1.0",
     "ts-node": "^10.9.2",
     "typedoc": "^0.28.15"
-  },
-  "mocha": {
-    "recursive": true,
-    "reporter": "spec",
-    "timeout": 5000,
-    "extension": [
-      "js",
-      "mjs"
-    ],
-    "spec": "src/**/*.spec.ts"
-  },
-  "mochaExplorer.files": "src/**/*.spec.ts",
-  "mochaExplorer.require": "ts-node/register"
+  }
 }

@@ -3,3 +3,4 @@ dist/
 reference/
 .env.json
 ia.json
+.vscode/
