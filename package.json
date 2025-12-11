@@ -12,7 +12,7 @@
     "test:coverage": "c8 --reporter=lcov --reporter=text --reporter=text-summary npm run test:unit",
     "clean": "rm -rf ./dist",
     "build": "npm run clean && tsc",
-    "doc": "typedoc && cp ./internet-archive-ts-logo.svg ./doc && touch doc/.nojekyll"
+    "doc": "typedoc && cp ./internet-archive-ts-logo.svg ./docs && touch docs/.nojekyll"
   },
   "keywords": [
     "archive.org",

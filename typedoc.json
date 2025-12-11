@@ -11,7 +11,7 @@
     "includeVersion": true,
     "useTsLinkResolution": true,
     "disableSources": false,
-    "out": "doc",
+    "out": "docs",
     "categorizeByGroup": true,
     "defaultCategory": "",
     "requiredToBeDocumented": [
