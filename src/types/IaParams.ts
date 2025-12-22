@@ -1,6 +1,22 @@
 import { Writable } from "stream";
-import { HttpHeaders, HttpMethod, HttpParams, IaAuthConfig, IaBaseMetadataType, IaFileBaseMetadata, IaFileRequestTarget, IaFilesXmlMetadata, IaItemData, IaMultiMetadata, IaQueryOutput, IaRequestTarget, IaSortOption, IaTaskPriority, IaTaskRequestHttpHeaders, IaTaskType, Prettify } from "./index.js";
 import IaSession from "../session/IaSession.js";
+import {
+    HttpHeaders,
+    HttpMethod,
+    HttpParams,
+    IaAuthConfig,
+    IaBaseMetadataType,
+    IaFileBaseMetadata,
+    IaFileRequestTarget,
+    IaFilesXmlMetadata,
+    IaItemData,
+    IaMultiMetadata,
+    IaRequestTarget,
+    IaTaskPriority,
+    IaTaskRequestHttpHeaders,
+    IaTaskType,
+    Prettify
+} from "./index.js";
 import { TODO } from "../todotype.js";
 
 export type IaSessionParams = {
@@ -39,7 +55,6 @@ export type IaItemGetFilesParams = {
 export type IaGetFilesParams = Prettify<IaItemGetFilesParams & IaGetSessionParams>;
 
 
-// Delete Item
 
 // Delete File
 
@@ -49,7 +64,8 @@ export type IaFileDeleteParams = {
     headers?: HttpHeaders;
 };
 
-export type IaDeleteItemParams = IaFileDeleteParams & IaGetFilesParams;
+// Delete Item
+export type IaItemDeleteParams = Prettify<IaFileDeleteParams & IaGetFilesParams>;
 
 
 export type MetadataRequestConstructorParams = {
@@ -81,7 +97,6 @@ export type IaModifyMetadataParams = IaItemModifyMetadataParams & IaGetSessionPa
 
 export type IaHttpRequestParams = {
     params?: Record<string, string | number | boolean | undefined>,
-    auth?: HttpHeaders,
     headers?: HttpHeaders;
     timeout?: number;
 };
@@ -96,7 +111,6 @@ export type IaItemUploadParams<M extends IaBaseMetadataType = IaBaseMetadataType
     metadata?: M,
     headers?: HttpHeaders,
     queueDerive: boolean,
-    verbose: boolean,
     verify: boolean,
     checksum: boolean,
     deleteLocalFiles: boolean,
@@ -149,21 +163,19 @@ export type IaItemDownloadParams = {
 
 export type IaFileDownloadParams = {
     /** Overwrite local files if they already exist. */
-    ignoreExisting: boolean;
+    ignoreExisting?: boolean;
     /** Skip downloading file based on checksum. */
-    checksum: boolean;
-    /** The directory to download files to. */
-    destdir?: any;
+    checksum?: boolean;
     /** The number of times to retry on failed requests. */
-    retries: number;
+    retries?: number;
     /** Don't fail if a single file fails to download, continue to download other files. */
-    ignoreErrors: boolean;
+    ignoreErrors?: boolean;
     /** Write data to the given file-like object (e.g. sys.stdout). */
-    target: Writable | string;
+    target?: Writable | string;
     /** Rather than downloading files to disk, return a list of response objects. */
-    returnResponses: boolean;
+    returnResponses?: boolean;
     /** If True, leave the time stamp as the current time instead of changing it to that given in the original archive. */
-    noChangeTimestamp: boolean;
+    noChangeTimestamp?: boolean;
     /** URL parameters to send with download request (e.g. `cnt=0`). */
     params?: HttpParams;
     /** */
@@ -171,11 +183,8 @@ export type IaFileDownloadParams = {
     /** (optional) Append a newline or `$ORS` to the end of file. This is mainly intended to be used internally with `stdout`. */
     ors?: boolean;
     /**  */
-    timeout: number;
+    timeout?: number;
 };
-
-
-
 
 export type S3RequestConstructorParams = Prettify<{
     metadata?: IaBaseMetadataType,

@@ -2,11 +2,11 @@ import { IaApiElasticSearchError, IaApiError, IaApiRangeError, IaTypeError } fro
 import { IaItem } from "../item/IaItem.js";
 import IaSession from "../session/IaSession.js";
 import { TODO } from "../todotype.js";
-import { IaApiJsonErrorResult, IaSortOption } from "../types/index.js";
+import { IaApiJsonErrorResult, IaSearchResultMetaItem, IaSortOption } from "../types/index.js";
 import { handleIaApiError } from "../util/handleIaApiError.js";
 import { IaBaseSearch } from "./IaBaseSearch.js";
 import { isApiJsonErrorResult } from "../util/isApiJsonErrorResult.js";
-import { IaAdvancedSearchConstructorParams, IaAdvancedSearchParams, IaAdvancedSearchResult, IaAggregatableField, IaUserAggs, IaUserAggsSearchParams } from "../types/IaSearch.js";
+import { IaAdvancedSearchConstructorParams, IaAdvancedSearchParams, IaAdvancedSearchResult, IaAggregatableField, IaDefaultAdvancedSearchResultItem, IaUserAggs, IaUserAggsSearchParams } from "../types/IaSearch.js";
 import log from "../log/index.js";
 import { retry } from "../util/retry.js";
 
@@ -74,7 +74,7 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
             q: this.query,
             output: 'json',
             rows: rows ?? 100,
-            scope
+            ...(scope ? { scope } : undefined)
         };
         this.maxRetries = maxRetries;
         // Initialize params.
@@ -104,17 +104,17 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
      * @param page Page number
      * @returns Search Result object
      */
-    public async getResults(page?: number): Promise<IaAdvancedSearchResult> {
+    public async getResults(page?: number): Promise<IaAdvancedSearchResult<Fields>> {
         const response = await retry(() => this.session.get(this.url, {
             params: {
                 ...this.params,
-                page
+                ...(page ? { page } : undefined)
             }
         }), this.maxRetries);
         if (!response.ok) {
             throw await handleIaApiError({ response });
         }
-        const json = await response.json() as IaAdvancedSearchResult | IaApiJsonErrorResult;
+        const json = await response.json() as IaAdvancedSearchResult<Fields> | IaApiJsonErrorResult;
         if (isApiJsonErrorResult(json)) {
             throw new IaApiError(json.error, { response });
         }
@@ -131,14 +131,14 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
      * @throws {@link IaApiError}
      * @throws {@link IaApiRangeError}
      */
-    public async *getResultsGenerator(): AsyncGenerator<TODO> {
+    public async *getResultsGenerator(): AsyncGenerator<Fields extends readonly string[] ? IaSearchResultMetaItem<Fields[number] & "identifier"> : IaDefaultAdvancedSearchResultItem> {
         /** Counter for results */
         let resultsYielded = 0;
         let page = 1;
         let limit: number | undefined = this.limit;
 
         do {
-            log.verbose(`Fetching results ${resultsYielded}-${resultsYielded + this.params.rows!} of ${limit}`);
+            log.verbose(`Fetching results ${resultsYielded}-${resultsYielded + this.params.rows!}${limit ? ` of ${limit}` : ''}`);
 
             const response = await this.getResults(page);
             this.numFound = response.response.numFound;
@@ -149,7 +149,7 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
                 break;
             }
             for (const doc of response.response.docs) {
-                yield doc;
+                yield doc as Fields extends readonly string[] ? IaSearchResultMetaItem<Fields[number] & "identifier"> : IaDefaultAdvancedSearchResultItem;
                 resultsYielded++;
                 if (resultsYielded >= limit) break;
             }
@@ -236,7 +236,6 @@ export class IaAdvancedSearch<const Fields extends string[] | undefined> extends
         const params: IaAdvancedSearchParams = {
             ...this.params,
             rows: 0,
-            page: undefined,
         };
         const response = await this.session.getJson<IaAdvancedSearchResult>(this.url, { params });
         return response.response.numFound;

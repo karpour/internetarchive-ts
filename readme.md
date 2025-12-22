@@ -1,24 +1,25 @@
 
 
-# ![Logo](./internet-archive-ts-logo.svg) Internet Archive Typescript API client
+# ![](./internet-archive-ts-logo.svg) Internet Archive Typescript API client
 
 **This is a work-in-progress verion and not fully functional.**
 
-This API is intended to serve as a base for server-, desktop- and web-applications and offers both ways to easily fetch, create and update items from the Internet Archive as well as access the full functionality of all APIs offered by archive.org, including the WaybackMachine.
+This API is intended to serve as a base for server-, desktop- and web-applications and offers functions to easily fetch, create and update items in the Internet Archive as well as access the full functionality of all APIs offered by archive.org, including the WaybackMachine.
 The code is partially based on the Internet Archive Python API client and contains all features of the python package, however no cli is included. For an out-of-the-box cli tool, please use the python package.
 
 ## Features
 
 - Strongly typed methods
+- Fully [documented with examples](https://karpour.github.io/internetarchive-ts)
 - Fine-grained error handling
 - Convenience functions
-- Works both in node.js and browser
+- Works both in node.js and browsers
 - 100% unit tested (WIP)
 - Integration tests (WIP)
 
 ### Strong typing
 
-Strong types are used to enjoy a good developer experience. Return types are dependent on the input, for example when fields to return are supplied.
+Strong types are used to enable a good developer experience. Return types are dependent on the input, for example when fields to return are supplied.
 
 Example:
 
@@ -37,6 +38,10 @@ const result = await waybackMachine.getSnapshotMatches("https://twitter.com/inte
 const digest = matches[0].digest;
 // Property 'digest' does not exist on type '{ urlkey: string; timestamp: string; mimetype: string; statuscode: string; }'
 ```
+
+## Documentation
+
+The API docs are located [here](https://karpour.github.io/internetarchive-ts).
 
 ## Credentials
 

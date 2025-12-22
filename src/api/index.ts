@@ -22,7 +22,7 @@ import {
     IaItemExtendedMetadata,
     IaModifyMetadataParams,
     IaItemDownloadParams,
-    IaDeleteItemParams,
+    IaItemDeleteParams,
     IaGetSessionParams,
     IaGetTasksParams,
     IaUserInfo,
@@ -155,6 +155,7 @@ export function modifyMetadata(identifier: string, metadata: IaItemExtendedMetad
  * 
  * @returns A list of Requests if debug else a list of Responses.
  */
+// TODO implement
 //export function uploadFiles(identifier: string, files: IaFileObject | IaFileObject[] | string | string[], params: IaUploadParams): Promise<Request[] | Response[]> {
 //    return getItem(identifier, params)
 //        .then(item => item.upload(files, params));
@@ -205,7 +206,7 @@ export function downloadFiles(identifier: string, params: IaItemDownloadParams &
  * @throws {@link IaApiError}
  * @returns 
  */
-export async function deleteFiles(identifier: string, params: IaDeleteItemParams): Promise<Response[]> {
+export async function deleteFiles(identifier: string, params: IaItemDeleteParams): Promise<Response[]> {
     const iaFiles = await getFiles(identifier, params);
 
     const responses: Response[] = [];

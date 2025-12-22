@@ -67,7 +67,7 @@ export type IaGetFieldsResult = {
     fields: string[];
 };
 
-type IaBaseSearchParams = {
+export type IaBaseSearchParams = {
     maxRetries?: number;
     limit?: number;
 };
@@ -94,6 +94,9 @@ export type IaSearchAdvancedParams<F extends string[] | undefined> = Prettify<Ia
 
 
 export type IaScrapeSearchParams = {
+    /**
+     * Query string
+     */
     q: string,
     /**
      * The scope of the query. 
@@ -145,14 +148,41 @@ export type IaAdvancedSearchParams = {
      * @max 10000
      */
     size?: number,
+    /**
+     * 
+     */
     from?: number,
+    /**
+     * 
+     */
     total_only?: boolean,
+    /**
+     * 
+     */
     cursor?: string,
+    /**
+     * 
+     */
     scroll?: boolean,
+    /**
+     * 
+     */
     page?: number,
+    /**
+     * 
+     */
     rows?: number,
+    /**
+     * 
+     */
     output?: IaQueryOutput,
+    /**
+     * 
+     */
     [key: `sort[${number | string}]`]: string,
+    /**
+     * 
+     */
     [key: `fl[${number | string}]`]: string,
 };
 
@@ -283,7 +313,7 @@ export type IaAdvancedSearchResult<F extends readonly string[] | undefined = und
         numFound: number,
         start: number,
         docs: (F extends readonly string[] ?
-            IaSearchResultMetaItem<F[number]>[] :
+            IaSearchResultMetaItem<F[number] | "identifier">[] :
             IaDefaultAdvancedSearchResultItem[]);
     } & (U extends readonly string[] ? {
         aggregations: {

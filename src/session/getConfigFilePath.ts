@@ -3,8 +3,6 @@ import { existsSync } from "fs";
 import path, { isAbsolute } from "path";
 import { homedir } from "os";
 
-
-
 export function getConfigFilePath(configFile?: string): { configFilePath: string; isXdg: boolean; } {
     let configFilePath = configFile;
 
@@ -45,5 +43,3 @@ export function getConfigFilePath(configFile?: string): { configFilePath: string
     }
     return { configFilePath, isXdg };
 }
-
-console.log(getConfigFilePath())

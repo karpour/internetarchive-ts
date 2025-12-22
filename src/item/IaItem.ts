@@ -2,9 +2,12 @@ import { createReadStream, statSync } from "fs";
 import path from "path";
 
 import log from "../log/index.js";
-import IaSession from "../session/IaSession.js";
-import IaCatalogTask from "../catalog/IaCatalogTask.js";
-import S3Request from "../request/S3Request.js";
+import { IaSession } from "../session/index.js";
+import { IaCatalogTask } from "../catalog/index.js";
+import { S3Request } from "../request/index.js";
+import { IaBaseItem } from "./IaBaseItem.js";
+import { IaFile } from "../files/index.js";
+import { IaMetadataRequest } from "../request/IaMetadataRequest.js";
 import {
     arrayFromAsyncGenerator,
     getMd5,
@@ -34,21 +37,25 @@ import {
     IaFixerOp,
     IaItemDeleteReviewParams,
     IaItemUrlType,
-    IaDeleteReviewResponse
+    IaDeleteReviewResponse,
+    IaTaskPriority,
+    IaTaskSummary,
+    IaItemDownloadParams,
+    IaItemGetFilesParams,
+    IaItemModifyMetadataParams,
+    IaItemUploadFileParams,
+    IaItemUploadParams,
+    IaLongViewCountItem,
+    IaShortViewCountItem
 } from "../types/index.js";
-import { IaTaskPriority, IaTaskSummary } from "../types/IaTask.js";
-import { IaItemDownloadParams, IaItemGetFilesParams, IaItemModifyMetadataParams, IaItemUploadFileParams, IaItemUploadParams } from "../types/IaParams.js";
-import { IaBaseItem } from "./IaBaseItem.js";
-
-import { handleIaApiError } from "../util/handleIaApiError.js";
-import { patternsMatch } from "../util/patternsMatch.js";
-import { getFileSize } from "../util/getFileSize.js";
-import { normFilepath } from "../util/normFilePath.js";
-import { getApiResultValue } from "../util/getApiResultValue.js";
-import { readStreamToReadableStream } from "../util/readStreamToReadableStream.js";
-
-import { IaMetadataRequest } from "../request/IaMetadataRequest.js";
-import { IaFile } from "../files/index.js";
+import {
+    handleIaApiError,
+    patternsMatch,
+    getFileSize,
+    normFilepath,
+    getApiResultValue,
+    readStreamToReadableStream
+} from "../util/index.js";
 import {
     IaApiError,
     IaApiFileUploadError,
@@ -56,7 +63,6 @@ import {
     IaApiSpamError,
     IaTypeError
 } from "../error/index.js";
-import { IaLongViewCountItem, IaShortViewCountItem } from "../types/IaViewCount.js";
 
 /** 
  * This class represents an archive.org item. Generally this class
@@ -475,7 +481,7 @@ export class IaItem<
             }
         } else {
             for (let f of itemFiles) {
-                const format = typeof f.format === "string" && f.format;
+                const format = (typeof f.format === "string") && f.format;
                 if (files.includes(f.name)) {
                     yield new IaFile<ItemFileMetaType>(this, f);
                 } else if (format && formats.includes(format)) {
@@ -604,7 +610,6 @@ export class IaItem<
             const response = await file.download({
                 ignoreExisting,
                 checksum,
-                destdir,
                 retries,
                 ignoreErrors,
                 target,
@@ -763,7 +768,6 @@ export class IaItem<
             fileMetadata,
             headers = {},
             queueDerive = false,
-            verbose = false,
             verify = false,
             checksum = false,
             retries = 0,
@@ -954,7 +958,6 @@ export class IaItem<
         accessKey,
         secretKey,
         queueDerive = true,
-        verbose = false,
         verify = false,
         checksum = false,
         deleteLocalFiles = false,
@@ -1024,7 +1027,6 @@ export class IaItem<
                         accessKey,
                         secretKey,
                         queueDerive,
-                        verbose,
                         verify,
                         checksum,
                         deleteLocalFiles,
@@ -1058,7 +1060,6 @@ export class IaItem<
                     accessKey,
                     secretKey,
                     queueDerive,
-                    verbose,
                     verify,
                     checksum,
                     deleteLocalFiles,

@@ -5,14 +5,13 @@
     ],
     "entryPointStrategy": "expand",
     //"excludeExternals": true,
-    //"excludePrivate": true,
+    "excludePrivate": true,
     //"excludeProtected": true,
     "hideGenerator": true,
     "includeVersion": true,
-    "useTsLinkResolution": true,
+    //"useTsLinkResolution": true,
     "disableSources": false,
     "out": "docs",
-    "categorizeByGroup": true,
     "defaultCategory": "",
     "requiredToBeDocumented": [
         // "Project",
@@ -32,7 +31,7 @@
         // data on the signature. This might be improved someday, so you probably shouldn't set this directly.
         //    "CallSignature",
         // Index signature { [k: string]: string } "properties"
-        //    "IndexSignature",
+        "IndexSignature",
         // Equivalent to Constructor due to the same implementation detail as CallSignature
         //    "ConstructorSignature",
         // "Parameter",
@@ -51,8 +50,17 @@
     "navigation": {
         "includeCategories": false,
         "includeGroups": true,
-        "includeFolders": false,
-        "compactFolders": true,
+        "includeFolders": true,
+        "compactFolders": false,
         "excludeReferences": true
     },
+    "categorizeByGroup": false,
+    "externalSymbolLinkMappings": {
+        "typescript": {
+            "String.localeCompare": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare"
+        }
+    },
+    "projectDocuments": [
+      //  "src/.docs/*.md"
+    ]
 }

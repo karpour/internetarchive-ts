@@ -65,9 +65,8 @@ import {
 import { TODO } from "../todotype.js";
 
 /** 
- * The {@link IaSession} class collects together useful 
- * functionality from `internetarchive` as well as important
- * data such as configuration information and credentials.
+ * The {@link IaSession} is the main class for interacting with
+ * Internet Archive API endpoints. (WaybackMachine endpoints are in the {@link WaybackMachine} class)
  * 
  * It is recommended to use an instance of this class to access 
  * Internet Archive API endpoints.
@@ -136,10 +135,12 @@ export class IaSession {
     }
 
     /**
-     * A method for creating an {@link IaItem} and {@link IaCollection} objects.
+     * A method for retrieving {@link IaItem} and {@link IaCollection} objects.
      * @param identifier A globally unique Archive.org identifier.
      * @param itemMetadata A metadata dict used to initialize the Item or Collection object. 
      *      Metadata will automatically be retrieved from Archive.org if nothing is provided.
+     * @typeParam ItemMetaType - Optional restrictive Metadata type
+     * @typeParam ItemFileMetaType - Optional restrictive file Metadata type
      * @returns 
      */
     public async getItem<
@@ -191,6 +192,7 @@ export class IaSession {
             throw new IaApiError(`Content type of response is expected to be application/json, actual type is "${response.headers.get('content-type')}"`, { response });
         }
         const json = await response.json() as T | IaApiJsonErrorResult;
+        if (typeof json !== "object") throw new IaApiError("Response type is not valid", { response, responseBody: json });
         if (!response.ok || isApiJsonErrorResult(json)) {
             throw await handleIaApiError({ response, responseBody: json });
         }
@@ -234,7 +236,7 @@ export class IaSession {
             const controller = new AbortController();
             id = setTimeout(() => {
                 log.verbose(`Aborted fetch request to "${url}" after ${timeoutMs}ms timeout`);
-                controller.abort();
+                controller.abort(`Aborted fetch request to "${url}" after ${timeoutMs}ms timeout`);
             }, timeoutMs);
             options.signal = controller.signal;
         }
@@ -258,7 +260,6 @@ export class IaSession {
      */
     public async get(url: string, {
         params,
-        auth,
         headers,
         timeout
     }: IaHttpRequestGetParams = {}): Promise<Response> {
@@ -268,14 +269,13 @@ export class IaSession {
             headers: {
                 ...this.headers,
                 ...headers,
-                ...(auth ?? this.auth)
+                ...this.auth
             },
         }, timeout);
     }
 
     public async post(url: string, {
         params,
-        auth,
         headers,
         body,
         json
@@ -290,14 +290,13 @@ export class IaSession {
 
         return this.fetch(_url, {
             method: "POST",
-            headers: { ...this.headers, ...headers, ...contentTypeHeader, ...(auth ?? this.auth) },
+            headers: { ...this.headers, ...headers, ...contentTypeHeader, ...this.auth },
             body
         });
     }
 
     public async delete(url: string, {
         params,
-        auth,
         headers,
         body,
         json
@@ -312,7 +311,7 @@ export class IaSession {
 
         return this.fetch(_url, {
             method: "DELETE",
-            headers: { ...this.headers, ...headers, ...contentTypeHeader, ...auth },
+            headers: { ...this.headers, ...headers, ...contentTypeHeader, ...this.auth },
             body
         });
     }
@@ -329,7 +328,7 @@ export class IaSession {
     * @param params.limit Maximum number of retries for each API call (default: `5`)
     * @returns A Search object, yielding search results.
     */
-    public searchAdvanced<F extends string[] | undefined>(query: string, params: IaAdvancedSearchConstructorParams<F>): IaAdvancedSearch<F> {
+    public searchAdvanced<F extends string[] | undefined>(query: string, params: IaAdvancedSearchConstructorParams<F> = {}): IaAdvancedSearch<F> {
         return new IaAdvancedSearch(this, query, params);
     }
 
@@ -499,7 +498,7 @@ export class IaSession {
         if (this.accessKey && this.secretKey) {
             return this.getJson<IaUserInfo>(`${this.protocol}://s3.us.${this.host}`, { params: { check_auth: '1' } });
         } else {
-            throw new IaApiAuthenticationError("Need auth for this method");
+            throw new IaApiAuthenticationError("This method needs authorization, create an IaSession with authentication parameters");
         }
     }
 

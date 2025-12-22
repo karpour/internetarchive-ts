@@ -78,41 +78,9 @@ type IaNeverUndefinedSearchResultFields =
 
 type IaSearchItemValue<KEY extends string> = KEY extends IaNumberSearchResultFields ? number : string | string[] | number;
 
-
-type IaSearchField = typeof IA_SEARCH_FIELDS[number];
-
-
-export const fields = ["aa", "bbb", "item_size"] as const;
+export type IaSearchField = typeof IA_SEARCH_FIELDS[number];
 
 export type IaSearchResponseItem<FieldNames extends readonly string[] | string[] = string[]> = Prettify<
     { [key in Exclude<FieldNames[number],IaNeverUndefinedSearchResultFields>]?: IaSearchItemValue<key> } &
     { [key in Extract<FieldNames[number],IaNeverUndefinedSearchResultFields>]: IaSearchItemValue<key> } &
     {}>;
-
-type test = IaSearchResponseItem<typeof fields>;
-
-function getP<FieldNames extends readonly string[]>(fieldnames: FieldNames): IaSearchResponseItem<FieldNames> {
-    return {} as IaSearchResponseItem<FieldNames>;
-}
-
-
-const a = getP(IA_SEARCH_FIELDS);
-
-type A = "a" | "b" | "week";
-type B = "week";
-
-type MyType<A extends string, B extends string> = {
-    [key in Exclude<A, B>]?: IaSearchItemValue<key>;
-} & {
-        [key in Extract<A, B>]: IaSearchItemValue<key>
-    };
-
-
-
-type ResultType = MyType<A, B>;
-// What i want:
-type ExpectedResultType = {
-    a?: string;
-    b: string;
-    c?: string;
-};

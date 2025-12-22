@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { IaSessionParams } from "../types/index.js";
 
-export const CREDENTIALS_PATH = ".env.json";
+export const CREDENTIALS_PATH = "ia.json";
 export function getCredentials(): IaSessionParams {
     try {
         return JSON.parse(readFileSync(CREDENTIALS_PATH) as any) as IaSessionParams;

@@ -11,7 +11,6 @@ export abstract class IaBaseSearch<ResultType> {
     public toString() {
         return `${this.constructor.name}(query=${this.query})`;
     }
-    public abstract getResultsGenerator(): AsyncGenerator<ResultType>;
     public abstract getItemsGenerator(): AsyncGenerator<IaItem>;
     protected abstract fetchNumFound(): Promise<number>;
 

@@ -8,6 +8,7 @@ import { Writable } from "stream";
  */
 export async function writeReadableStreamToWritable(stream: ReadableStream, writable: Writable & { flush?: Function; }): Promise<void> {
     let reader = stream.getReader();
+    let downloaded = 0;
     try {
         while (true) {
             let { done, value } = await reader.read();
@@ -17,8 +18,11 @@ export async function writeReadableStreamToWritable(stream: ReadableStream, writ
                 break;
             }
 
+            downloaded += value.byteLength;
+            //console.log(`${Math.round(downloaded/1024)/1024}MB`);
+
             writable.write(value);
-            writable.flush?.();
+
         }
     } catch (error: unknown) {
         writable.destroy(error as Error);

@@ -16,11 +16,19 @@ export class IaInvalidIdentifierError extends IaTypeError { }
 
 // API Errors
 
-export type IaApiErrorOptions = Prettify<ErrorOptions & {
+/**
+ * Error options for IA Error classes
+ */
+export type IaApiErrorOptions = {
+    /** Error cause */
+    cause?: string;
+    /** Request that caused the erroneous response */
     request?: Request,
+    /** Response, if available */
     response?: Response;
+    /** Response body, if available */
     responseBody?: any;
-}>;
+};
 
 export type IaApiErrorOptionsWithStatus<Status extends number = number> =
     Prettify<ErrorOptions & (IaApiErrorOptions & { status: Status; }) | (Exclude<IaApiErrorOptions, 'response'> & { status?: Status; })>;
@@ -42,7 +50,7 @@ export class IaApiError<Status extends number = number> extends IaError {
     }
 }
 
-export class IaApiRangeError<Status extends number = number> extends IaApiError<Status>{
+export class IaApiRangeError<Status extends number = number> extends IaApiError<Status> {
     public constructor(message: string = "Range Error", options: IaApiErrorOptions) {
         super(message, { ...options });
     }
@@ -104,12 +112,12 @@ export class IaApiNotFoundError extends IaApiError<404> {
 /**
  * Indicates that an Item does not exist on the Internet Archve
  */
-export class IaApiItemNotFoundError<Status extends number = number> extends IaApiError<Status>  { }
+export class IaApiItemNotFoundError<Status extends number = number> extends IaApiError<Status> { }
 
 /**
  * Returned if the client invoked the microservice with a method the service does not support.
  */
-export class IaApiMethodNotAllowedError extends IaApiError<405>  {
+export class IaApiMethodNotAllowedError extends IaApiError<405> {
     public constructor(message: string = "Not found", options: IaApiErrorOptions) {
         super(message, { ...options, status: 405 });
     }

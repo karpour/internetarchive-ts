@@ -28,9 +28,14 @@ export type IaItemBaseMetadata = {
 } & IaBaseMetadataType;
 
 export type IaSearchResultMetaItem<F extends string> = {
-    [key in F]: key extends keyof IaItemBaseMetadata ? IaItemBaseMetadata[key] : string | string[]
+    [key in (F | "identifier")]: key extends keyof IaItemBaseMetadata ? IaItemBaseMetadata[key] : string | string[]
 };
 
+
+const a:IaSearchResultMetaItem<["abc"][number]> = {
+    abc: 1,
+    identifier: "aaa"
+}
 
 export type IaItemExtendedMetadata = IaItemBaseMetadata & {
     // Optional fields

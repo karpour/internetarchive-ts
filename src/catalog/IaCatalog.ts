@@ -1,3 +1,6 @@
+/**
+ */
+
 import {
     IaApiGetRateLimitResult,
     IaApiGetTasksResult,
@@ -9,16 +12,16 @@ import {
     IaTaskType,
     Prettify
 } from "../types/index.js";
-import IaSession from "../session/IaSession.js";
+import { IaSession } from "../session/index.js";
 import IaCatalogTask from "./IaCatalogTask.js";
 import {
-    handleIaApiError,
-    getApiResultValue,
     arrayFromAsyncGenerator,
 } from "../util/index.js";
 import { Readable } from "stream";
 import readline from "readline";
 import { IaApiError } from "../error/index.js";
+
+
 /**
  * @internal
  * Get sort by date for a task
@@ -34,6 +37,7 @@ export function getSortByDate(task: IaCatalogTask): Date {
 }
 
 /**
+ * 
  * This class represents the Archive.org catalog.
  * You can use this class to access and submit tasks from the catalog.
  * 
@@ -49,6 +53,9 @@ export function getSortByDate(task: IaCatalogTask): Date {
  * const s = getSession();
  * const c = new Catalog(s);
  * let tasks = c.getTasks('nasa');
+ * 
+ * @category Catalog
+ * 
  */
 export class IaCatalog {
     protected readonly url: string;
@@ -75,12 +82,13 @@ export class IaCatalog {
      * @throws {@link IaApiTooManyRequestsError}
      */
     protected async makeTasksRequest<T extends IaApiGetTasksResult | IaApiGetRateLimitResult<IaTaskType>>(params: IaGetTasksParams = {}): Promise<T> {
-        const response = await this.session.get(this.url, { params });
+        return this.session.getJson<T>(this.url, { params });
+        /*const response = await this.session.get(this.url, { params });
         if (response.ok) {
             return getApiResultValue<T>(response);
         } else {
             throw await handleIaApiError({ response });
-        }
+        }*/
     }
 
     /**
@@ -171,6 +179,7 @@ export class IaCatalog {
             limit: 0
         };
         const response = await this.session.get(this.url, { params: getTasksParams });
+        if(!response.body) throw new IaApiError(`Response body missing`)
 
         const rl = readline.createInterface({
             input: Readable.fromWeb(response.body as any),

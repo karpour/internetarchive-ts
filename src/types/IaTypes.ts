@@ -400,7 +400,7 @@ export type IaGetTasksParams = Prettify<IaGetTasksBasicParams & {
 
 
 /**
- * Auth config object, which is used when 
+ * Auth config
  */
 export type IaAuthConfig = {
   s3?: {
@@ -594,7 +594,10 @@ export type IaApiGetRateLimitResult<T extends IaTaskType> = Prettify<{
   tasks_blocked_by_offline: number;
 }>;
 
-/** See {@link https://archive.org/developers/tasks.html#wait-admin-and-run-states} */
+/**
+ * All possible IA Task colors 
+ * See {@link https://archive.org/developers/tasks.html#wait-admin-and-run-states} 
+ */
 export const IA_TASK_COLORS = [
   /** 0: Queued (green) */
   "green",

@@ -366,6 +366,8 @@ export type WaybackCdxOptionsWithoutResume<T extends WaybackCdxField[] | undefin
 export type WaybackCdxOptionsWithResume<T extends WaybackCdxField[] | undefined> = Prettify<Omit<WaybackCdxOptions<T>, 'showResume'> & { showResumeKey: true; }>;
 
 /**
+ * Wayback CDX match type, speficies how the URL will be matched in requests.
+ * 
  * `"exact"` (default if omitted) will return results matching exactly the domain
  * 
  * `"prefix"` will return results for all results under the given path
@@ -376,5 +378,7 @@ export type WaybackCdxOptionsWithResume<T extends WaybackCdxField[] | undefined>
  */
 export type WaybackCdxMatchType = "exact" | "prefix" | "host" | "domain";
 
-// TODO 
+/**
+ * Mime Type to search for. Can be any string
+ */
 export type WaybackSnapshotMimeType = "text/html" | "warc/revisit" | string & {};

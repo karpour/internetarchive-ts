@@ -1,8 +1,8 @@
-import { IaApiError, IaValueError } from "../error/index.js";
+import IaCatalog from "./IaCatalog.js";
 import IaSession from "../session/IaSession.js";
+import { IaApiError, IaValueError } from "../error/index.js";
 import { IaTaskColor, IaTaskMeta, IaTaskPriority } from "../types/index.js";
 import { handleIaApiError } from "../util/handleIaApiError.js";
-import IaCatalog from "./IaCatalog.js";
 
 
 /**
@@ -12,8 +12,8 @@ import IaCatalog from "./IaCatalog.js";
 export class IaCatalogTask implements IaTaskMeta {
     protected session: IaSession;
 
-    public constructor(protected taskMetadata: IaTaskMeta, catalogObj: IaCatalog) {
-        this.session = catalogObj.session;
+    public constructor(protected taskMetadata: IaTaskMeta, public readonly catalog: IaCatalog) {
+        this.session = catalog.session;
     }
 
     public get priority(): IaTaskPriority {

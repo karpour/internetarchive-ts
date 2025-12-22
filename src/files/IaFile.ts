@@ -115,14 +115,14 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
         params,
         chunkSize = 1048576,
         ors = false,
-        timeout = 12,
+        timeout = 12000,
     }: IaFileDownloadParams): Promise<boolean | Response> {
         let targetPath = typeof target == "string" && getTargetFile(target, this.name);
 
         const getWriteable: (targetPath?: string) => Writable = () => {
             if (typeof target === "string") {
                 let targetPath = getTargetFile(target, this.name);
-                return fs.createWriteStream(targetPath, { flags: 'wb' });
+                return fs.createWriteStream(targetPath, { flags: 'w' });
             } else {
                 return target;
             }
@@ -147,7 +147,8 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
             }
         }
 
-
+        let lastError: Error | undefined;
+        let success: boolean = false;
         const errCount = 0;
         do {
             if (errCount) log.verbose(`Retry ${errCount} for file ${this}`);
@@ -172,7 +173,8 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
                 if (ors) {
                     targetWritable.write(process?.env?.ORS ?? "\n");
                 }
-                continue;
+                success = true;
+                break;
             } catch (err: any) {
                 log.error(`Error downloading file "${targetPath}": ${err.message}`);
                 /*try {
@@ -180,15 +182,17 @@ export class IaFile<IaFileMeta extends IaBaseMetadataType = IaFileExtendedMetada
                 } catch (err: any) {
                     log.error(`Could not unlink file "${targetPath}"`)
                 }*/
-                if (ignoreErrors) {
-                    return false;
-                } else {
-                    throw err;
+                if (!ignoreErrors) {
+                    lastError = err;
                 }
             } finally {
                 targetWritable?.end();
             }
         } while (errCount < retries);
+
+        if (!success) {
+            throw lastError ?? new Error(`Error downloading file "${targetPath}"`);
+        }
 
         // Set mtime with mtime from files.xml.
         if (!noChangeTimestamp && targetPath) {
