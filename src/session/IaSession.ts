@@ -85,6 +85,7 @@ export class IaSession {
     public readonly secretKey?: string;
     public userEmail?: string;
     public readonly auth?: HttpHeaders;
+    protected readonly debug: boolean;
 
     protected readonly secure: boolean;
     protected readonly config: IaAuthConfig;
@@ -102,9 +103,10 @@ export class IaSession {
      */
     public constructor(
         config: IaAuthConfig = {},
-        protected debug: boolean = false,
+        debug: boolean = false,
     ) {
         this.config = config;
+        this.debug = debug;
         this.secure = this.config.general?.secure ?? true;
         this.host = this.config.general?.host ?? 'archive.org';
         this.protocol = this.secure ? 'https:' : 'http:';
